@@ -1,0 +1,6 @@
+testMode: assertion
+testLimit: 8000
+seqLen: 30
+workers: 1
+seed: 1
+balanceContract: 100000000000000000000

@@ -1,0 +1,3 @@
+9e4358e4a911633127819a3f367d661372b20051a9650c6622e14ca6e7e51333
+# sha256(canonical SWC ids, one per line, comments/blank lines stripped)
+# update via: bash scripts/update_mythril_allowlist_lock.sh

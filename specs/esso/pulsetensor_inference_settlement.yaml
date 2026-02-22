@@ -1,0 +1,421 @@
+ir_version: "esso-ir/v1"
+meta:
+  model_id: "pulsetensor_inference_settlement"
+  created_by: "codex"
+  seed: 0
+  notes: "Bounded model of queued policy updates, epoch-bound batch commits, and challenge/finalize settlement flows."
+observables:
+  state_vars:
+    [
+      "governance_ready",
+      "policy_enabled",
+      "policy_queued",
+      "current_block",
+      "policy_ready_block",
+      "subnet_paused",
+      "validator_eligible",
+      "current_epoch",
+      "batch_committed",
+      "batch_epoch",
+      "batch_item_count",
+      "challenge_deadline",
+      "batch_challenged",
+      "batch_finalized",
+      "settled_leaf",
+      "prior_settled_leaf",
+      "challenge_reward",
+    ]
+  effects: ["rc"]
+types: []
+state_vars:
+  - id: "governance_ready"
+    role: "control"
+    type: { kind: "bool" }
+  - id: "policy_enabled"
+    role: "control"
+    type: { kind: "bool" }
+  - id: "policy_queued"
+    role: "control"
+    type: { kind: "bool" }
+  - id: "current_block"
+    role: "data"
+    type: { kind: "int", min: 0, max: 200 }
+  - id: "policy_ready_block"
+    role: "data"
+    type: { kind: "int", min: 0, max: 200 }
+  - id: "subnet_paused"
+    role: "control"
+    type: { kind: "bool" }
+  - id: "validator_eligible"
+    role: "control"
+    type: { kind: "bool" }
+  - id: "current_epoch"
+    role: "data"
+    type: { kind: "int", min: 0, max: 20 }
+  - id: "batch_committed"
+    role: "control"
+    type: { kind: "bool" }
+  - id: "batch_epoch"
+    role: "data"
+    type: { kind: "int", min: 0, max: 20 }
+  - id: "batch_item_count"
+    role: "data"
+    type: { kind: "int", min: 0, max: 64 }
+  - id: "challenge_deadline"
+    role: "data"
+    type: { kind: "int", min: 0, max: 200 }
+  - id: "batch_challenged"
+    role: "control"
+    type: { kind: "bool" }
+  - id: "batch_finalized"
+    role: "control"
+    type: { kind: "bool" }
+  - id: "settled_leaf"
+    role: "control"
+    type: { kind: "bool" }
+  - id: "prior_settled_leaf"
+    role: "control"
+    type: { kind: "bool" }
+  - id: "challenge_reward"
+    role: "data"
+    type: { kind: "int", min: 0, max: 1000 }
+invariants:
+  - id: "QueuedPolicyRequiresGovernance"
+    kind: "safety"
+    expr:
+      op: "=>"
+      args:
+        - op: "="
+          args: [{ var: "policy_queued" }, { bool: true }]
+        - op: "="
+          args: [{ var: "governance_ready" }, { bool: true }]
+  - id: "EnabledPolicyRequiresGovernance"
+    kind: "safety"
+    expr:
+      op: "=>"
+      args:
+        - op: "="
+          args: [{ var: "policy_enabled" }, { bool: true }]
+        - op: "="
+          args: [{ var: "governance_ready" }, { bool: true }]
+  - id: "CommittedBatchRequiresPolicy"
+    kind: "safety"
+    expr:
+      op: "=>"
+      args:
+        - op: "="
+          args: [{ var: "batch_committed" }, { bool: true }]
+        - op: "="
+          args: [{ var: "policy_enabled" }, { bool: true }]
+  - id: "ChallengedBatchRequiresCommit"
+    kind: "safety"
+    expr:
+      op: "=>"
+      args:
+        - op: "="
+          args: [{ var: "batch_challenged" }, { bool: true }]
+        - op: "="
+          args: [{ var: "batch_committed" }, { bool: true }]
+  - id: "FinalizedBatchRequiresCommit"
+    kind: "safety"
+    expr:
+      op: "=>"
+      args:
+        - op: "="
+          args: [{ var: "batch_finalized" }, { bool: true }]
+        - op: "="
+          args: [{ var: "batch_committed" }, { bool: true }]
+  - id: "FinalizedBatchCannotBeChallenged"
+    kind: "safety"
+    expr:
+      op: "=>"
+      args:
+        - op: "="
+          args: [{ var: "batch_finalized" }, { bool: true }]
+        - op: "="
+          args: [{ var: "batch_challenged" }, { bool: false }]
+  - id: "SettledLeafRequiresFinalizedBatch"
+    kind: "safety"
+    expr:
+      op: "=>"
+      args:
+        - op: "="
+          args: [{ var: "settled_leaf" }, { bool: true }]
+        - op: "="
+          args: [{ var: "batch_finalized" }, { bool: true }]
+  - id: "ChallengeRewardNonNegative"
+    kind: "safety"
+    expr:
+      op: ">="
+      args: [{ var: "challenge_reward" }, { const: 0 }]
+init:
+  - var: "governance_ready"
+    expr: { bool: false }
+  - var: "policy_enabled"
+    expr: { bool: false }
+  - var: "policy_queued"
+    expr: { bool: false }
+  - var: "current_block"
+    expr: { const: 0 }
+  - var: "policy_ready_block"
+    expr: { const: 0 }
+  - var: "subnet_paused"
+    expr: { bool: false }
+  - var: "validator_eligible"
+    expr: { bool: false }
+  - var: "current_epoch"
+    expr: { const: 0 }
+  - var: "batch_committed"
+    expr: { bool: false }
+  - var: "batch_epoch"
+    expr: { const: 0 }
+  - var: "batch_item_count"
+    expr: { const: 0 }
+  - var: "challenge_deadline"
+    expr: { const: 0 }
+  - var: "batch_challenged"
+    expr: { bool: false }
+  - var: "batch_finalized"
+    expr: { bool: false }
+  - var: "settled_leaf"
+    expr: { bool: false }
+  - var: "prior_settled_leaf"
+    expr: { bool: false }
+  - var: "challenge_reward"
+    expr: { const: 0 }
+actions:
+  - id: "configure_governance"
+    params: []
+    guard:
+      op: "="
+      args: [{ var: "governance_ready" }, { bool: false }]
+    updates:
+      - var: "governance_ready"
+        expr: { bool: true }
+    effects:
+      rc: { const: 0 }
+  - id: "queue_policy_update"
+    params:
+      - id: "delay"
+        type: { kind: "int", min: 2, max: 2 }
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "governance_ready" }, { bool: true }]
+        - op: "="
+          args: [{ var: "policy_queued" }, { bool: false }]
+        - op: "<="
+          args:
+            - op: "+"
+              args: [{ var: "current_block" }, { param: "delay" }]
+            - { const: 200 }
+    updates:
+      - var: "policy_queued"
+        expr: { bool: true }
+      - var: "policy_ready_block"
+        expr: { op: "+", args: [{ var: "current_block" }, { param: "delay" }] }
+    effects:
+      rc: { const: 0 }
+  - id: "configure_batch_policy"
+    params: []
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "governance_ready" }, { bool: true }]
+        - op: "="
+          args: [{ var: "policy_queued" }, { bool: true }]
+        - op: "<="
+          args: [{ var: "policy_ready_block" }, { var: "current_block" }]
+    updates:
+      - var: "policy_enabled"
+        expr: { bool: true }
+      - var: "policy_queued"
+        expr: { bool: false }
+    effects:
+      rc: { const: 0 }
+  - id: "set_validator_eligible"
+    params: []
+    guard:
+      op: "="
+      args: [{ var: "policy_enabled" }, { bool: true }]
+    updates:
+      - var: "validator_eligible"
+        expr: { bool: true }
+    effects:
+      rc: { const: 0 }
+  - id: "advance_block"
+    params:
+      - id: "step"
+        type: { kind: "int", min: 1, max: 20 }
+    guard:
+      op: "<="
+      args:
+        - op: "+"
+          args: [{ var: "current_block" }, { param: "step" }]
+        - { const: 200 }
+    updates:
+      - var: "current_block"
+        expr: { op: "+", args: [{ var: "current_block" }, { param: "step" }] }
+    effects:
+      rc: { const: 0 }
+  - id: "advance_epoch"
+    params: []
+    guard:
+      op: "<"
+      args: [{ var: "current_epoch" }, { const: 20 }]
+    updates:
+      - var: "current_epoch"
+        expr: { op: "+", args: [{ var: "current_epoch" }, { const: 1 }] }
+    effects:
+      rc: { const: 0 }
+  - id: "pause_subnet"
+    params: []
+    guard:
+      op: "="
+      args: [{ var: "subnet_paused" }, { bool: false }]
+    updates:
+      - var: "subnet_paused"
+        expr: { bool: true }
+    effects:
+      rc: { const: 0 }
+  - id: "unpause_subnet"
+    params: []
+    guard:
+      op: "="
+      args: [{ var: "subnet_paused" }, { bool: true }]
+    updates:
+      - var: "subnet_paused"
+        expr: { bool: false }
+    effects:
+      rc: { const: 0 }
+  - id: "commit_batch"
+    params:
+      - id: "epoch"
+        type: { kind: "int", min: 0, max: 20 }
+      - id: "item_count"
+        type: { kind: "int", min: 1, max: 64 }
+      - id: "window"
+        type: { kind: "int", min: 1, max: 20 }
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "policy_enabled" }, { bool: true }]
+        - op: "="
+          args: [{ var: "validator_eligible" }, { bool: true }]
+        - op: "="
+          args: [{ var: "subnet_paused" }, { bool: false }]
+        - op: "="
+          args: [{ var: "batch_committed" }, { bool: false }]
+        - op: "="
+          args: [{ param: "epoch" }, { var: "current_epoch" }]
+        - op: "<="
+          args:
+            - op: "+"
+              args: [{ var: "current_block" }, { param: "window" }]
+            - { const: 200 }
+    updates:
+      - var: "batch_committed"
+        expr: { bool: true }
+      - var: "batch_epoch"
+        expr: { param: "epoch" }
+      - var: "batch_item_count"
+        expr: { param: "item_count" }
+      - var: "challenge_deadline"
+        expr: { op: "+", args: [{ var: "current_block" }, { param: "window" }] }
+      - var: "batch_challenged"
+        expr: { bool: false }
+      - var: "batch_finalized"
+        expr: { bool: false }
+      - var: "settled_leaf"
+        expr: { bool: false }
+    effects:
+      rc: { const: 0 }
+  - id: "mark_prior_settled_leaf"
+    params: []
+    guard:
+      op: "="
+      args: [{ var: "prior_settled_leaf" }, { bool: false }]
+    updates:
+      - var: "prior_settled_leaf"
+        expr: { bool: true }
+    effects:
+      rc: { const: 0 }
+  - id: "challenge_replay"
+    params: []
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "batch_committed" }, { bool: true }]
+        - op: "="
+          args: [{ var: "batch_finalized" }, { bool: false }]
+        - op: "="
+          args: [{ var: "batch_challenged" }, { bool: false }]
+        - op: "<="
+          args: [{ var: "current_block" }, { var: "challenge_deadline" }]
+        - op: "="
+          args: [{ var: "prior_settled_leaf" }, { bool: true }]
+        - op: "<"
+          args: [{ var: "challenge_reward" }, { const: 1000 }]
+    updates:
+      - var: "batch_challenged"
+        expr: { bool: true }
+      - var: "challenge_reward"
+        expr: { op: "+", args: [{ var: "challenge_reward" }, { const: 1 }] }
+    effects:
+      rc: { const: 0 }
+  - id: "finalize_batch"
+    params: []
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "batch_committed" }, { bool: true }]
+        - op: "="
+          args: [{ var: "batch_finalized" }, { bool: false }]
+        - op: "="
+          args: [{ var: "batch_challenged" }, { bool: false }]
+        - op: "<"
+          args: [{ var: "challenge_deadline" }, { var: "current_block" }]
+    updates:
+      - var: "batch_finalized"
+        expr: { bool: true }
+    effects:
+      rc: { const: 0 }
+  - id: "settle_leaf"
+    params:
+      - id: "index"
+        type: { kind: "int", min: 0, max: 63 }
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "batch_committed" }, { bool: true }]
+        - op: "="
+          args: [{ var: "batch_finalized" }, { bool: true }]
+        - op: "="
+          args: [{ var: "settled_leaf" }, { bool: false }]
+        - op: "<"
+          args: [{ param: "index" }, { var: "batch_item_count" }]
+    updates:
+      - var: "settled_leaf"
+        expr: { bool: true }
+      - var: "prior_settled_leaf"
+        expr: { bool: true }
+    effects:
+      rc: { const: 0 }
+  - id: "claim_challenge_reward"
+    params:
+      - id: "amount"
+        type: { kind: "int", min: 1, max: 100 }
+    guard:
+      op: "<="
+      args: [{ param: "amount" }, { var: "challenge_reward" }]
+    updates:
+      - var: "challenge_reward"
+        expr: { op: "-", args: [{ var: "challenge_reward" }, { param: "amount" }] }
+    effects:
+      rc: { const: 0 }

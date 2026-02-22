@@ -1,0 +1,3 @@
+c1d9e84fdb233748f5d5e52e955615658fa0390625a45444ea1d3f42818daec2
+# sha256(canonical detector ids, one per line, comments/blank lines stripped)
+# update via: bash scripts/update_slither_exclusions_lock.sh

@@ -1,0 +1,3 @@
+# SWC ids intentionally ignored by scripts/check_mythril.sh.
+# Keep this list minimal and reviewed.
+SWC-101

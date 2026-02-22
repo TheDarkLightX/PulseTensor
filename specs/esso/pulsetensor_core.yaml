@@ -1,0 +1,675 @@
+ir_version: "esso-ir/v1"
+meta:
+  model_id: "pulsetensor_core"
+  created_by: "codex"
+  seed: 0
+  notes: "Bounded model of subnet activation, stake accounting, and commit-reveal timing."
+observables:
+  state_vars:
+    [
+      "subnet_active",
+      "subnet_paused",
+      "validator_registered",
+      "total_stake",
+      "pending_commit",
+      "mechanism_pending_commit",
+      "current_block",
+      "reveal_after_block",
+      "governance_ready",
+      "owner_action_queued",
+      "owner_action_eta",
+      "emission_pool",
+      "mechanism_emission_pool",
+      "mechanism_schedule_ready",
+      "smooth_decay_enabled",
+    ]
+  effects: ["rc"]
+types: []
+state_vars:
+  - id: "subnet_active"
+    role: "control"
+    type: { kind: "bool" }
+  - id: "total_stake"
+    role: "data"
+    type: { kind: "int", min: 0, max: 10000 }
+  - id: "pending_commit"
+    role: "control"
+    type: { kind: "bool" }
+  - id: "mechanism_pending_commit"
+    role: "control"
+    type: { kind: "bool" }
+  - id: "subnet_paused"
+    role: "control"
+    type: { kind: "bool" }
+  - id: "validator_registered"
+    role: "control"
+    type: { kind: "bool" }
+  - id: "current_block"
+    role: "data"
+    type: { kind: "int", min: 0, max: 200 }
+  - id: "reveal_after_block"
+    role: "data"
+    type: { kind: "int", min: 0, max: 200 }
+  - id: "governance_ready"
+    role: "control"
+    type: { kind: "bool" }
+  - id: "owner_action_queued"
+    role: "control"
+    type: { kind: "bool" }
+  - id: "owner_action_eta"
+    role: "data"
+    type: { kind: "int", min: 0, max: 200 }
+  - id: "emission_pool"
+    role: "data"
+    type: { kind: "int", min: 0, max: 10000 }
+  - id: "mechanism_emission_pool"
+    role: "data"
+    type: { kind: "int", min: 0, max: 10000 }
+  - id: "mechanism_schedule_ready"
+    role: "control"
+    type: { kind: "bool" }
+  - id: "smooth_decay_enabled"
+    role: "control"
+    type: { kind: "bool" }
+invariants:
+  - id: "StakeNonNegative"
+    kind: "safety"
+    expr:
+      op: ">="
+      args: [{ var: "total_stake" }, { const: 0 }]
+  - id: "CommitRequiresActiveSubnet"
+    kind: "safety"
+    expr:
+      op: "=>"
+      args:
+        - op: "="
+          args: [{ var: "pending_commit" }, { bool: true }]
+        - op: "="
+          args: [{ var: "subnet_active" }, { bool: true }]
+  - id: "PendingCommitRequiresValidator"
+    kind: "safety"
+    expr:
+      op: "=>"
+      args:
+        - op: "="
+          args: [{ var: "pending_commit" }, { bool: true }]
+        - op: "="
+          args: [{ var: "validator_registered" }, { bool: true }]
+  - id: "MechanismPendingCommitRequiresValidator"
+    kind: "safety"
+    expr:
+      op: "=>"
+      args:
+        - op: "="
+          args: [{ var: "mechanism_pending_commit" }, { bool: true }]
+        - op: "="
+          args: [{ var: "validator_registered" }, { bool: true }]
+  - id: "QueuedOwnerActionRequiresGovernance"
+    kind: "safety"
+    expr:
+      op: "=>"
+      args:
+        - op: "="
+          args: [{ var: "owner_action_queued" }, { bool: true }]
+        - op: "="
+          args: [{ var: "governance_ready" }, { bool: true }]
+  - id: "EmissionPoolNonNegative"
+    kind: "safety"
+    expr:
+      op: ">="
+      args: [{ var: "emission_pool" }, { const: 0 }]
+  - id: "MechanismEmissionPoolNonNegative"
+    kind: "safety"
+    expr:
+      op: ">="
+      args: [{ var: "mechanism_emission_pool" }, { const: 0 }]
+  - id: "MechanismScheduleRequiresActiveSubnet"
+    kind: "safety"
+    expr:
+      op: "=>"
+      args:
+        - op: "="
+          args: [{ var: "mechanism_schedule_ready" }, { bool: true }]
+        - op: "="
+          args: [{ var: "subnet_active" }, { bool: true }]
+  - id: "SmoothDecayRequiresGovernance"
+    kind: "safety"
+    expr:
+      op: "=>"
+      args:
+        - op: "="
+          args: [{ var: "smooth_decay_enabled" }, { bool: true }]
+        - op: "="
+          args: [{ var: "governance_ready" }, { bool: true }]
+init:
+  - var: "subnet_active"
+    expr: { bool: false }
+  - var: "total_stake"
+    expr: { const: 0 }
+  - var: "pending_commit"
+    expr: { bool: false }
+  - var: "mechanism_pending_commit"
+    expr: { bool: false }
+  - var: "subnet_paused"
+    expr: { bool: false }
+  - var: "validator_registered"
+    expr: { bool: false }
+  - var: "current_block"
+    expr: { const: 0 }
+  - var: "reveal_after_block"
+    expr: { const: 0 }
+  - var: "governance_ready"
+    expr: { bool: false }
+  - var: "owner_action_queued"
+    expr: { bool: false }
+  - var: "owner_action_eta"
+    expr: { const: 0 }
+  - var: "emission_pool"
+    expr: { const: 0 }
+  - var: "mechanism_emission_pool"
+    expr: { const: 0 }
+  - var: "mechanism_schedule_ready"
+    expr: { bool: false }
+  - var: "smooth_decay_enabled"
+    expr: { bool: false }
+actions:
+  - id: "create_subnet"
+    params: []
+    guard:
+      op: "="
+      args: [{ var: "subnet_active" }, { bool: false }]
+    updates:
+      - var: "subnet_active"
+        expr: { bool: true }
+      - var: "subnet_paused"
+        expr: { bool: false }
+      - var: "validator_registered"
+        expr: { bool: false }
+      - var: "pending_commit"
+        expr: { bool: false }
+      - var: "mechanism_pending_commit"
+        expr: { bool: false }
+      - var: "governance_ready"
+        expr: { bool: false }
+      - var: "owner_action_queued"
+        expr: { bool: false }
+      - var: "owner_action_eta"
+        expr: { const: 0 }
+      - var: "emission_pool"
+        expr: { const: 0 }
+      - var: "mechanism_emission_pool"
+        expr: { const: 0 }
+      - var: "mechanism_schedule_ready"
+        expr: { bool: false }
+      - var: "smooth_decay_enabled"
+        expr: { bool: false }
+    effects:
+      rc: { const: 0 }
+  - id: "configure_governance"
+    params: []
+    guard:
+      op: "="
+      args: [{ var: "subnet_active" }, { bool: true }]
+    updates:
+      - var: "governance_ready"
+        expr: { bool: true }
+    effects:
+      rc: { const: 0 }
+  - id: "queue_owner_action"
+    params:
+      - id: "delay"
+        type: { kind: "int", min: 1, max: 10 }
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "subnet_active" }, { bool: true }]
+        - op: "="
+          args: [{ var: "governance_ready" }, { bool: true }]
+        - op: "="
+          args: [{ var: "owner_action_queued" }, { bool: false }]
+        - op: "<="
+          args:
+            - op: "+"
+              args: [{ var: "current_block" }, { param: "delay" }]
+            - { const: 200 }
+    updates:
+      - var: "owner_action_queued"
+        expr: { bool: true }
+      - var: "owner_action_eta"
+        expr: { op: "+", args: [{ var: "current_block" }, { param: "delay" }] }
+    effects:
+      rc: { const: 0 }
+  - id: "add_stake"
+    params:
+      - id: "amt"
+        type: { kind: "int", min: 1, max: 2000 }
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "subnet_active" }, { bool: true }]
+        - op: "="
+          args: [{ var: "subnet_paused" }, { bool: false }]
+        - op: "<="
+          args:
+            - op: "+"
+              args: [{ var: "total_stake" }, { param: "amt" }]
+            - { const: 10000 }
+    updates:
+      - var: "total_stake"
+        expr: { op: "+", args: [{ var: "total_stake" }, { param: "amt" }] }
+    effects:
+      rc: { const: 0 }
+  - id: "fund_emission"
+    params:
+      - id: "amt"
+        type: { kind: "int", min: 1, max: 2000 }
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "subnet_active" }, { bool: true }]
+        - op: "<="
+          args:
+            - op: "+"
+              args: [{ var: "emission_pool" }, { param: "amt" }]
+            - { const: 10000 }
+    updates:
+      - var: "emission_pool"
+        expr: { op: "+", args: [{ var: "emission_pool" }, { param: "amt" }] }
+    effects:
+      rc: { const: 0 }
+  - id: "fund_mechanism_emission"
+    params:
+      - id: "amt"
+        type: { kind: "int", min: 1, max: 2000 }
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "subnet_active" }, { bool: true }]
+        - op: "<="
+          args:
+            - op: "+"
+              args: [{ var: "mechanism_emission_pool" }, { param: "amt" }]
+            - { const: 10000 }
+    updates:
+      - var: "mechanism_emission_pool"
+        expr: { op: "+", args: [{ var: "mechanism_emission_pool" }, { param: "amt" }] }
+    effects:
+      rc: { const: 0 }
+  - id: "remove_stake"
+    params:
+      - id: "amt"
+        type: { kind: "int", min: 1, max: 2000 }
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "subnet_active" }, { bool: true }]
+        - op: "="
+          args: [{ var: "subnet_paused" }, { bool: false }]
+        - op: "="
+          args: [{ var: "pending_commit" }, { bool: false }]
+        - op: "="
+          args: [{ var: "mechanism_pending_commit" }, { bool: false }]
+        - op: "<="
+          args: [{ param: "amt" }, { var: "total_stake" }]
+    updates:
+      - var: "total_stake"
+        expr: { op: "-", args: [{ var: "total_stake" }, { param: "amt" }] }
+    effects:
+      rc: { const: 0 }
+  - id: "commit_weights"
+    params:
+      - id: "delay"
+        type: { kind: "int", min: 1, max: 10 }
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "subnet_active" }, { bool: true }]
+        - op: "="
+          args: [{ var: "subnet_paused" }, { bool: false }]
+        - op: "="
+          args: [{ var: "validator_registered" }, { bool: true }]
+        - op: "="
+          args: [{ var: "pending_commit" }, { bool: false }]
+        - op: "="
+          args: [{ var: "mechanism_pending_commit" }, { bool: false }]
+        - op: "<="
+          args:
+            - op: "+"
+              args: [{ var: "current_block" }, { param: "delay" }]
+            - { const: 200 }
+    updates:
+      - var: "pending_commit"
+        expr: { bool: true }
+      - var: "reveal_after_block"
+        expr: { op: "+", args: [{ var: "current_block" }, { param: "delay" }] }
+    effects:
+      rc: { const: 0 }
+  - id: "commit_mechanism_weights"
+    params:
+      - id: "delay"
+        type: { kind: "int", min: 1, max: 10 }
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "subnet_active" }, { bool: true }]
+        - op: "="
+          args: [{ var: "subnet_paused" }, { bool: false }]
+        - op: "="
+          args: [{ var: "validator_registered" }, { bool: true }]
+        - op: "="
+          args: [{ var: "mechanism_pending_commit" }, { bool: false }]
+        - op: "<="
+          args:
+            - op: "+"
+              args: [{ var: "current_block" }, { param: "delay" }]
+            - { const: 200 }
+    updates:
+      - var: "mechanism_pending_commit"
+        expr: { bool: true }
+      - var: "reveal_after_block"
+        expr: { op: "+", args: [{ var: "current_block" }, { param: "delay" }] }
+    effects:
+      rc: { const: 0 }
+  - id: "advance_block"
+    params: []
+    guard:
+      op: "<"
+      args: [{ var: "current_block" }, { const: 200 }]
+    updates:
+      - var: "current_block"
+        expr: { op: "+", args: [{ var: "current_block" }, { const: 1 }] }
+    effects:
+      rc: { const: 0 }
+  - id: "reveal_weights"
+    params: []
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "pending_commit" }, { bool: true }]
+        - op: "="
+          args: [{ var: "validator_registered" }, { bool: true }]
+        - op: "="
+          args: [{ var: "subnet_paused" }, { bool: false }]
+        - op: ">="
+          args: [{ var: "current_block" }, { var: "reveal_after_block" }]
+    updates:
+      - var: "pending_commit"
+        expr: { bool: false }
+    effects:
+      rc: { const: 0 }
+  - id: "reveal_mechanism_weights"
+    params: []
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "mechanism_pending_commit" }, { bool: true }]
+        - op: "="
+          args: [{ var: "validator_registered" }, { bool: true }]
+        - op: "="
+          args: [{ var: "subnet_paused" }, { bool: false }]
+        - op: ">="
+          args: [{ var: "current_block" }, { var: "reveal_after_block" }]
+    updates:
+      - var: "mechanism_pending_commit"
+        expr: { bool: false }
+    effects:
+      rc: { const: 0 }
+  - id: "challenge_expired_commit"
+    params: []
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "pending_commit" }, { bool: true }]
+        - op: ">"
+          args: [{ var: "current_block" }, { var: "reveal_after_block" }]
+        - op: ">="
+          args: [{ var: "total_stake" }, { const: 1 }]
+        - op: "<"
+          args: [{ var: "emission_pool" }, { const: 10000 }]
+    updates:
+      - var: "pending_commit"
+        expr: { bool: false }
+      - var: "total_stake"
+        expr: { op: "-", args: [{ var: "total_stake" }, { const: 1 }] }
+      - var: "emission_pool"
+        expr: { op: "+", args: [{ var: "emission_pool" }, { const: 1 }] }
+    effects:
+      rc: { const: 0 }
+  - id: "challenge_expired_mechanism_commit"
+    params: []
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "mechanism_pending_commit" }, { bool: true }]
+        - op: ">"
+          args: [{ var: "current_block" }, { var: "reveal_after_block" }]
+        - op: ">="
+          args: [{ var: "total_stake" }, { const: 1 }]
+        - op: "<"
+          args: [{ var: "emission_pool" }, { const: 10000 }]
+    updates:
+      - var: "mechanism_pending_commit"
+        expr: { bool: false }
+      - var: "total_stake"
+        expr: { op: "-", args: [{ var: "total_stake" }, { const: 1 }] }
+      - var: "emission_pool"
+        expr: { op: "+", args: [{ var: "emission_pool" }, { const: 1 }] }
+    effects:
+      rc: { const: 0 }
+  - id: "register_validator"
+    params: []
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "subnet_active" }, { bool: true }]
+        - op: "="
+          args: [{ var: "subnet_paused" }, { bool: false }]
+        - op: "="
+          args: [{ var: "validator_registered" }, { bool: false }]
+        - op: ">="
+          args: [{ var: "total_stake" }, { const: 2 }]
+    updates:
+      - var: "validator_registered"
+        expr: { bool: true }
+    effects:
+      rc: { const: 0 }
+  - id: "unregister_validator"
+    params: []
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "validator_registered" }, { bool: true }]
+        - op: "="
+          args: [{ var: "pending_commit" }, { bool: false }]
+        - op: "="
+          args: [{ var: "mechanism_pending_commit" }, { bool: false }]
+    updates:
+      - var: "validator_registered"
+        expr: { bool: false }
+    effects:
+      rc: { const: 0 }
+  - id: "pause_subnet"
+    params: []
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "subnet_active" }, { bool: true }]
+        - op: "="
+          args: [{ var: "subnet_paused" }, { bool: false }]
+        - op: "="
+          args: [{ var: "governance_ready" }, { bool: true }]
+        - op: "="
+          args: [{ var: "owner_action_queued" }, { bool: true }]
+        - op: ">="
+          args: [{ var: "current_block" }, { var: "owner_action_eta" }]
+    updates:
+      - var: "subnet_paused"
+        expr: { bool: true }
+      - var: "owner_action_queued"
+        expr: { bool: false }
+      - var: "owner_action_eta"
+        expr: { const: 0 }
+    effects:
+      rc: { const: 0 }
+  - id: "unpause_subnet"
+    params: []
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "subnet_active" }, { bool: true }]
+        - op: "="
+          args: [{ var: "subnet_paused" }, { bool: true }]
+        - op: "="
+          args: [{ var: "governance_ready" }, { bool: true }]
+        - op: "="
+          args: [{ var: "owner_action_queued" }, { bool: true }]
+        - op: ">="
+          args: [{ var: "current_block" }, { var: "owner_action_eta" }]
+    updates:
+      - var: "subnet_paused"
+        expr: { bool: false }
+      - var: "owner_action_queued"
+        expr: { bool: false }
+      - var: "owner_action_eta"
+        expr: { const: 0 }
+    effects:
+      rc: { const: 0 }
+  - id: "payout_emission"
+    params:
+      - id: "amt"
+        type: { kind: "int", min: 1, max: 2000 }
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "subnet_active" }, { bool: true }]
+        - op: "="
+          args: [{ var: "governance_ready" }, { bool: true }]
+        - op: "="
+          args: [{ var: "owner_action_queued" }, { bool: true }]
+        - op: ">="
+          args: [{ var: "current_block" }, { var: "owner_action_eta" }]
+        - op: "<="
+          args: [{ param: "amt" }, { var: "emission_pool" }]
+    updates:
+      - var: "emission_pool"
+        expr: { op: "-", args: [{ var: "emission_pool" }, { param: "amt" }] }
+      - var: "owner_action_queued"
+        expr: { bool: false }
+      - var: "owner_action_eta"
+        expr: { const: 0 }
+    effects:
+      rc: { const: 0 }
+  - id: "payout_mechanism_emission"
+    params:
+      - id: "amt"
+        type: { kind: "int", min: 1, max: 2000 }
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "subnet_active" }, { bool: true }]
+        - op: "="
+          args: [{ var: "governance_ready" }, { bool: true }]
+        - op: "="
+          args: [{ var: "owner_action_queued" }, { bool: true }]
+        - op: ">="
+          args: [{ var: "current_block" }, { var: "owner_action_eta" }]
+        - op: "<="
+          args: [{ param: "amt" }, { var: "mechanism_emission_pool" }]
+    updates:
+      - var: "mechanism_emission_pool"
+        expr: { op: "-", args: [{ var: "mechanism_emission_pool" }, { param: "amt" }] }
+      - var: "owner_action_queued"
+        expr: { bool: false }
+      - var: "owner_action_eta"
+        expr: { const: 0 }
+    effects:
+      rc: { const: 0 }
+  - id: "configure_mechanism_emission_schedule"
+    params: []
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "subnet_active" }, { bool: true }]
+        - op: "="
+          args: [{ var: "governance_ready" }, { bool: true }]
+        - op: "="
+          args: [{ var: "owner_action_queued" }, { bool: true }]
+        - op: ">="
+          args: [{ var: "current_block" }, { var: "owner_action_eta" }]
+    updates:
+      - var: "mechanism_schedule_ready"
+        expr: { bool: true }
+      - var: "owner_action_queued"
+        expr: { bool: false }
+      - var: "owner_action_eta"
+        expr: { const: 0 }
+    effects:
+      rc: { const: 0 }
+  - id: "configure_subnet_emission_smoothing"
+    params: []
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "subnet_active" }, { bool: true }]
+        - op: "="
+          args: [{ var: "governance_ready" }, { bool: true }]
+        - op: "="
+          args: [{ var: "owner_action_queued" }, { bool: true }]
+        - op: ">="
+          args: [{ var: "current_block" }, { var: "owner_action_eta" }]
+    updates:
+      - var: "smooth_decay_enabled"
+        expr: { bool: true }
+      - var: "owner_action_queued"
+        expr: { bool: false }
+      - var: "owner_action_eta"
+        expr: { const: 0 }
+    effects:
+      rc: { const: 0 }
+  - id: "payout_mechanism_epoch_emission"
+    params:
+      - id: "amt"
+        type: { kind: "int", min: 1, max: 2000 }
+    guard:
+      op: "and"
+      args:
+        - op: "="
+          args: [{ var: "subnet_active" }, { bool: true }]
+        - op: "="
+          args: [{ var: "governance_ready" }, { bool: true }]
+        - op: "="
+          args: [{ var: "mechanism_schedule_ready" }, { bool: true }]
+        - op: "="
+          args: [{ var: "owner_action_queued" }, { bool: true }]
+        - op: ">="
+          args: [{ var: "current_block" }, { var: "owner_action_eta" }]
+        - op: "<="
+          args: [{ param: "amt" }, { var: "mechanism_emission_pool" }]
+    updates:
+      - var: "mechanism_emission_pool"
+        expr: { op: "-", args: [{ var: "mechanism_emission_pool" }, { param: "amt" }] }
+      - var: "owner_action_queued"
+        expr: { bool: false }
+      - var: "owner_action_eta"
+        expr: { const: 0 }
+    effects:
+      rc: { const: 0 }

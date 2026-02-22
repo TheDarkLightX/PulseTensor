@@ -1,0 +1,14 @@
+external/
+out/
+out*/
+cache/
+cache*/
+crytic-export/
+crytic-export*/
+lib/
+broadcast/
+.env
+.env.*
+*.pyc
+.venv/
+runs/

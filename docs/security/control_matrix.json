@@ -1,0 +1,260 @@
+{
+  "schema": "pulsetensor/security-control-matrix/v1",
+  "as_of_utc": "2026-02-22",
+  "sources": {
+    "owasp_scsvs": "https://scs.owasp.org/SCSVS/",
+    "owasp_top10": "https://scs.owasp.org/sctop10/",
+    "eea_ethtrust": "https://entethalliance.org/groups/ethtrust/",
+    "solidity_bugs": "https://docs.soliditylang.org/en/latest/bugs.html",
+    "swc_registry": "https://github.com/SmartContractSecurity/SWC-registry"
+  },
+  "owasp_top10_2026": [
+    {
+      "id": "SC01",
+      "title": "Access Control Vulnerabilities",
+      "status": "mitigated",
+      "evidence": [
+        "src/PulseTensorCore.sol",
+        "src/PulseTensorInferenceSettlement.sol",
+        "test/PulseTensorCore.t.sol"
+      ]
+    },
+    {
+      "id": "SC02",
+      "title": "Error Handling Vulnerabilities",
+      "status": "mitigated",
+      "evidence": [
+        "src/PulseTensorCore.sol",
+        "src/PulseTensorInferenceSettlement.sol",
+        "scripts/check_slither.sh"
+      ]
+    },
+    {
+      "id": "SC03",
+      "title": "Logic Errors Vulnerabilities",
+      "status": "mitigated",
+      "evidence": [
+        "test/PulseTensorCore.t.sol",
+        "test/PulseTensorCore.fuzz.t.sol",
+        "test/PulseTensorCore.invariant.t.sol",
+        "specs/esso/pulsetensor_core.yaml",
+        "specs/esso/pulsetensor_inference_settlement.yaml"
+      ]
+    },
+    {
+      "id": "SC04",
+      "title": "Lack of Input Validation",
+      "status": "mitigated",
+      "evidence": [
+        "src/core/PulseTensorDomain.sol",
+        "src/PulseTensorCore.sol",
+        "src/PulseTensorInferenceSettlement.sol"
+      ]
+    },
+    {
+      "id": "SC05",
+      "title": "Insecure Randomness",
+      "status": "not_applicable",
+      "rationale": "Current contracts do not use randomness for security-critical decisions.",
+      "evidence": [
+        "src/PulseTensorCore.sol",
+        "src/PulseTensorInferenceSettlement.sol"
+      ]
+    },
+    {
+      "id": "SC06",
+      "title": "Front-running Attacks",
+      "status": "mitigated",
+      "evidence": [
+        "src/PulseTensorCore.sol",
+        "test/PulseTensorCore.t.sol",
+        "test/PulseTensorCore.fuzz.t.sol"
+      ]
+    },
+    {
+      "id": "SC07",
+      "title": "Oracle Price Manipulation",
+      "status": "not_applicable",
+      "rationale": "Current protocol contracts do not consume external price oracles.",
+      "evidence": [
+        "docs/roadmap.md",
+        "src/PulseTensorCore.sol",
+        "src/PulseTensorInferenceSettlement.sol"
+      ]
+    },
+    {
+      "id": "SC08",
+      "title": "Reentrancy Attacks",
+      "status": "mitigated",
+      "evidence": [
+        "src/PulseTensorCore.sol",
+        "src/PulseTensorInferenceSettlement.sol",
+        "test/PulseTensorCore.t.sol"
+      ]
+    },
+    {
+      "id": "SC09",
+      "title": "Integer Overflow and Underflow",
+      "status": "mitigated",
+      "evidence": [
+        "src/core/PulseTensorDomain.sol",
+        "src/PulseTensorCore.sol",
+        "src/PulseTensorInferenceSettlement.sol",
+        "test/PulseTensorCore.fuzz.t.sol"
+      ]
+    },
+    {
+      "id": "SC10",
+      "title": "Denial of Service",
+      "status": "mitigated",
+      "evidence": [
+        "src/PulseTensorCore.sol",
+        "src/PulseTensorInferenceSettlement.sol",
+        "test/PulseTensorCore.inference_emission.t.sol"
+      ]
+    }
+  ],
+  "owasp_scsvs_controls": [
+    {
+      "id": "SCSVS-AUTH-1",
+      "title": "Architecture, Design and Threat Modeling",
+      "status": "mitigated",
+      "evidence": [
+        "docs/formal_workflow.md",
+        "docs/bittensor_delta.md",
+        "specs/esso/pulsetensor_core.yaml"
+      ]
+    },
+    {
+      "id": "SCSVS-CODE-1",
+      "title": "Secure Coding Practices",
+      "status": "mitigated",
+      "evidence": [
+        "scripts/check_solhint.sh",
+        "scripts/check_slither_exclusions.sh",
+        "scripts/check_slither.sh",
+        "scripts/check_mythril_allowlist.sh",
+        "scripts/check_mythril.sh",
+        "scripts/check_security.sh"
+      ]
+    },
+    {
+      "id": "SCSVS-CODE-2",
+      "title": "Code Management and Testing",
+      "status": "mitigated",
+      "evidence": [
+        "test/PulseTensorCore.t.sol",
+        "test/PulseTensorCore.fuzz.t.sol",
+        "test/PulseTensorCore.invariant.t.sol",
+        "scripts/check_fuzz_invariant.sh"
+      ]
+    },
+    {
+      "id": "SCSVS-GOV-1",
+      "title": "Governance and Access Control",
+      "status": "mitigated",
+      "evidence": [
+        "src/PulseTensorCore.sol",
+        "src/PulseTensorInferenceSettlement.sol",
+        "test/PulseTensorCore.t.sol"
+      ]
+    },
+    {
+      "id": "SCSVS-DEFI-1",
+      "title": "DeFi and Economic Security",
+      "status": "mitigated",
+      "evidence": [
+        "src/PulseTensorCore.sol",
+        "src/PulseTensorInferenceSettlement.sol",
+        "test/PulseTensorCore.inference_emission.t.sol"
+      ]
+    },
+    {
+      "id": "SCSVS-COMP-1",
+      "title": "Component and Compiler Security",
+      "status": "mitigated",
+      "evidence": [
+        "scripts/check_compiler_known_bugs.sh",
+        "scripts/verify_toolchain.sh",
+        "foundry.toml"
+      ]
+    }
+  ],
+  "ethtrust_v3_controls": [
+    {
+      "id": "ETHTRUST-S-01",
+      "level": "S",
+      "title": "Minimal secure coding baseline",
+      "status": "mitigated",
+      "evidence": [
+        "scripts/check_security.sh",
+        "scripts/check_solhint.sh",
+        "scripts/check_slither.sh",
+        "scripts/check_mythril.sh",
+        "docs/security/slither_exclusions.allowlist",
+        "docs/security/slither_exclusions.lock",
+        "docs/security/mythril_ignored_swc.allowlist",
+        "docs/security/mythril_ignored_swc.lock"
+      ]
+    },
+    {
+      "id": "ETHTRUST-S-02",
+      "level": "S",
+      "title": "Authorization and privileged action controls",
+      "status": "mitigated",
+      "evidence": [
+        "src/PulseTensorCore.sol",
+        "src/PulseTensorInferenceSettlement.sol",
+        "test/PulseTensorCore.t.sol"
+      ]
+    },
+    {
+      "id": "ETHTRUST-M-01",
+      "level": "M",
+      "title": "Advanced testing and verification evidence",
+      "status": "mitigated",
+      "evidence": [
+        "scripts/check_fuzz_invariant.sh",
+        "scripts/check_esso.sh",
+        "scripts/check_artifact_freshness.sh",
+        "docs/security/artifact_manifest.release.txt",
+        "specs/esso/pulsetensor_core.yaml",
+        "specs/esso/pulsetensor_inference_settlement.yaml"
+      ]
+    },
+    {
+      "id": "ETHTRUST-M-02",
+      "level": "M",
+      "title": "Economic and liveness abuse resistance",
+      "status": "mitigated",
+      "evidence": [
+        "src/PulseTensorCore.sol",
+        "src/PulseTensorInferenceSettlement.sol",
+        "test/PulseTensorCore.inference_emission.t.sol"
+      ]
+    },
+    {
+      "id": "ETHTRUST-Q-TRACK",
+      "level": "Q",
+      "title": "Highest assurance controls for mainnet candidate",
+      "status": "mitigated",
+      "rationale": "Q-level readiness is handled through internal fail-closed verification gates and deterministic evidence artifacts.",
+      "evidence": [
+        "docs/roadmap.md",
+        "docs/formal_workflow.md",
+        "scripts/verify_release.sh",
+        "scripts/check_security.sh"
+      ]
+    }
+  ],
+  "solidity_compiler_policy": {
+    "min_solc_version": "0.8.34",
+    "disallow_known_bugs": true,
+    "fail_on_low_severity": true,
+    "bugs_source": "https://raw.githubusercontent.com/ethereum/solidity/develop/docs/"
+  },
+  "swc_registry_policy": {
+    "status": "legacy_reference_only",
+    "rationale": "SWC registry is not maintained as a primary standard; OWASP SCSVS/Top10 and EthTrust are primary."
+  }
+}

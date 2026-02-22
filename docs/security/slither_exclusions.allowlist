@@ -1,0 +1,5 @@
+# Detector ids intentionally excluded in scripts/check_slither.sh.
+# Keep this list minimal and reviewed.
+arbitrary-send-eth
+low-level-calls
+incorrect-equality
