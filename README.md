@@ -45,6 +45,18 @@ make ui-install
 make ui-dev
 ```
 
+Automated community release artifacts (deterministic hashes + tarball):
+
+```bash
+make ui-release
+```
+
+Publish release artifacts to IPFS (dist CID + tarball CID + receipt):
+
+```bash
+make ui-ipfs
+```
+
 `make verify-release` is the canonical merge gate and enforces ZAG quick mode plus mandatory Echidna.
 
 Fast local iteration without Morph/ZAG:
@@ -65,6 +77,7 @@ Build a static frontend bundle for host-anywhere deployments:
 
 ```bash
 make ui-build
+make ui-hash
 ```
 
 Launch the innovation swarm (Morph + ESSO + ZAG-oriented prompts):

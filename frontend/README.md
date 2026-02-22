@@ -36,6 +36,33 @@ Preview locally:
 npm run preview
 ```
 
+## Automated Community Distribution
+
+From repo root:
+
+```bash
+make ui-release
+```
+
+This creates a release kit under `runs/frontend_release/` with:
+
+- `frontend_dist.sha256.txt` (sorted per-file checksums)
+- `frontend_dist.tree.sha256` (single hash over checksum manifest)
+- `frontend_dist.tar.gz` (deterministic tarball)
+- `frontend_dist.tar.gz.sha256`
+- `frontend_release_receipt.json`
+
+Publish to IPFS (if `ipfs` CLI is installed):
+
+```bash
+make ui-ipfs
+```
+
+This additionally writes:
+
+- `frontend_ipfs_publish_receipt.json`
+- `frontend_ipfs_publish_receipt.txt`
+
 ## Runtime Configuration
 
 The app supports three configuration sources:

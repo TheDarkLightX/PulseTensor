@@ -1,4 +1,4 @@
-.PHONY: build test fmt ui-install ui-dev ui-build ui-preview verify-private verify-compiler-bugs verify-security-controls verify-security-antipatterns verify-solhint verify-slither-exclusions verify-slither verify-mythril-allowlist verify-mythril verify-fuzz-invariant verify-echidna verify-artifacts-security verify-artifacts-release verify-security verify-esso verify-morph verify-zag verify-orch verify-all verify-dev verify-release verify-release-full
+.PHONY: build test fmt ui-install ui-dev ui-build ui-preview ui-hash ui-release ui-ipfs verify-private verify-compiler-bugs verify-security-controls verify-security-antipatterns verify-solhint verify-slither-exclusions verify-slither verify-mythril-allowlist verify-mythril verify-fuzz-invariant verify-echidna verify-artifacts-security verify-artifacts-release verify-security verify-esso verify-morph verify-zag verify-orch verify-all verify-dev verify-release verify-release-full
 
 build:
 	forge build
@@ -20,6 +20,15 @@ ui-build:
 
 ui-preview:
 	npm --prefix frontend run preview
+
+ui-hash:
+	bash scripts/hash_frontend_dist.sh
+
+ui-release:
+	bash scripts/release_frontend_community.sh
+
+ui-ipfs:
+	bash scripts/publish_frontend_ipfs.sh
 
 verify-private:
 	bash scripts/check_private_boundaries.sh

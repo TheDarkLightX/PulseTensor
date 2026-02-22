@@ -27,3 +27,12 @@ Provide a permissionless interface model similar to other decentralized exchange
 - Encourage community mirrors and local builds.
 - Keep default contract addresses explicit, never hidden in remote config.
 - Prefer immutable/static hosting and content-addressed distribution where possible.
+
+## Distribution Automation
+
+- `make ui-release` generates deterministic frontend release artifacts under `runs/frontend_release/`.
+- `make ui-ipfs` builds the same release kit and publishes both the `dist/` directory and deterministic tarball to IPFS.
+- Community operators can verify:
+  - file-level checksums (`frontend_dist.sha256.txt`)
+  - tree hash (`frontend_dist.tree.sha256`)
+  - published CIDs (`frontend_ipfs_publish_receipt.json`)
