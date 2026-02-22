@@ -5,10 +5,13 @@ cache/
 cache*/
 crytic-export/
 crytic-export*/
-lib/
+/lib/
 broadcast/
 .env
 .env.*
 *.pyc
 .venv/
 runs/
+node_modules/
+frontend/dist/
+*.tsbuildinfo

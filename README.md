@@ -38,6 +38,13 @@ make verify-orch
 make verify-release
 ```
 
+For the decentralized UI:
+
+```bash
+make ui-install
+make ui-dev
+```
+
 `make verify-release` is the canonical merge gate and enforces ZAG quick mode plus mandatory Echidna.
 
 Fast local iteration without Morph/ZAG:
@@ -53,6 +60,12 @@ make verify-release-full
 ```
 
 `make verify-release-full` runs the same gate with ZAG full mode (Echidna still mandatory).
+
+Build a static frontend bundle for host-anywhere deployments:
+
+```bash
+make ui-build
+```
 
 Launch the innovation swarm (Morph + ESSO + ZAG-oriented prompts):
 
@@ -71,6 +84,7 @@ RUN_ECHIDNA=1 make verify-release
 - `src/`: PulseTensor smart contracts.
   - `src/PulseTensorCore.sol`: core subnet, stake, commit/reveal, slashing, and emission schedule logic.
   - `src/PulseTensorInferenceSettlement.sol`: optional inference batch-root settlement and fraud-challenge module.
+- `frontend/`: backend-free static dApp UI with dedicated Core + Settlement consoles (wallet + RPC direct contract access).
 - `test/`: Foundry tests.
 - `specs/esso/`: ESSO formal state-machine models.
 - `scripts/`: verification workflow scripts for ESSO, Morph, and ZAG.
@@ -82,6 +96,7 @@ RUN_ECHIDNA=1 make verify-release
 
 - `docs/bittensor_delta.md`: what we keep vs improve from Bittensor.
 - `docs/formal_workflow.md`: required verification gates.
+- `docs/frontend_decentralization.md`: host-anywhere frontend model and trust surface.
 - `docs/roadmap.md`: phased build plan.
 - `docs/security/security_standards.md`: OWASP/EthTrust/Solidity-bug standards baseline.
 - `docs/security/control_matrix.json`: security control-to-evidence mapping gate.

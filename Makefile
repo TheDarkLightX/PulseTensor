@@ -1,4 +1,4 @@
-.PHONY: build test fmt verify-private verify-compiler-bugs verify-security-controls verify-security-antipatterns verify-solhint verify-slither-exclusions verify-slither verify-mythril-allowlist verify-mythril verify-fuzz-invariant verify-echidna verify-artifacts-security verify-artifacts-release verify-security verify-esso verify-morph verify-zag verify-orch verify-all verify-dev verify-release verify-release-full
+.PHONY: build test fmt ui-install ui-dev ui-build ui-preview verify-private verify-compiler-bugs verify-security-controls verify-security-antipatterns verify-solhint verify-slither-exclusions verify-slither verify-mythril-allowlist verify-mythril verify-fuzz-invariant verify-echidna verify-artifacts-security verify-artifacts-release verify-security verify-esso verify-morph verify-zag verify-orch verify-all verify-dev verify-release verify-release-full
 
 build:
 	forge build
@@ -8,6 +8,18 @@ test:
 
 fmt:
 	forge fmt
+
+ui-install:
+	npm --prefix frontend ci
+
+ui-dev:
+	npm --prefix frontend run dev
+
+ui-build:
+	npm --prefix frontend run build
+
+ui-preview:
+	npm --prefix frontend run preview
 
 verify-private:
 	bash scripts/check_private_boundaries.sh
