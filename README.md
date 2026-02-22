@@ -45,6 +45,16 @@ make ui-install
 make ui-dev
 ```
 
+Deploy contracts (core + settlement) and write deployment receipt:
+
+```bash
+RPC_URL=https://rpc.v4.testnet.pulsechain.com \
+PRIVATE_KEY=0x... \
+make deploy
+```
+
+Receipt path: `runs/deployments/pulsetensor_deploy_receipt.json`.
+
 Automated community release artifacts (deterministic hashes + tarball):
 
 ```bash
@@ -58,6 +68,21 @@ make ui-ipfs
 ```
 
 `make verify-release` is the canonical merge gate and enforces ZAG quick mode plus mandatory Echidna.
+
+## Participation Modes
+
+- **Subnet owner**
+  - Create subnet with `createSubnet`.
+  - Set governance contract via `configureSubnetGovernance` (must be a contract account, not EOA).
+  - Governance then queues/executes privileged actions.
+- **Validator**
+  - Add stake (`addStake`), register (`registerValidator`), then run commit/reveal cycles.
+- **Miner**
+  - Register with `registerMiner`, serve inference workload off-chain.
+- **Settlement proposer/challenger**
+  - Proposer submits batch roots with bond (`commitInferenceBatchRoot`).
+  - Anyone can challenge invalid roots in challenge window.
+  - Proposers/challengers claim refunds/rewards through pull claims.
 
 Fast local iteration without Morph/ZAG:
 
