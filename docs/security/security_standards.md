@@ -1,11 +1,14 @@
 # Security Standards Baseline
 
-As of February 22, 2026, PulseTensor hardening tracks the following primary standards:
+As of February 23, 2026, PulseTensor hardening tracks the following primary standards:
 
 - OWASP SCSVS (control verification standard): `https://scs.owasp.org/SCSVS/`
 - OWASP Smart Contract Top 10 (risk taxonomy, 2026): `https://scs.owasp.org/sctop10/`
+- OWASP SCWE (weakness enumeration): `https://scs.owasp.org/SCWE/`
 - EEA EthTrust Security Levels v3 (specification baseline): `https://entethalliance.org/groups/ethtrust/`
 - Solidity known compiler bugs (official bug feed): `https://docs.soliditylang.org/en/latest/bugs.html`
+- OpenZeppelin Contracts governance/time-delay patterns: `https://docs.openzeppelin.com/contracts/5.x/api/governance#TimelockController`
+- Compound Timelock grace-period pattern (reference implementation): `https://raw.githubusercontent.com/compound-finance/compound-protocol/master/contracts/Timelock.sol`
 - SWC registry (legacy taxonomy; not primary due maintenance status): `https://github.com/SmartContractSecurity/SWC-registry`
 
 ## Operational policy
@@ -27,6 +30,7 @@ As of February 22, 2026, PulseTensor hardening tracks the following primary stan
   - `docs/security/artifact_manifest.esso.txt`
   - `docs/security/artifact_manifest.release.txt`
 - Governance queue policy requires explicit queue lifecycle controls for privileged updates (queue/cancel/readiness/expiry).
+- Governance queue policy requires bounded action expiry and requeue-on-stale semantics for both core owner-action queues and settlement policy queues.
 - Governance queue policy requires queue-origin binding: execution must be authorized by the same governance identity that queued the action, and governance rotations must explicitly cancel/requeue stale entries.
 - Governance queue policy requires queue-state observability (`readyAt`, `queuedBy`, readiness/expiry flags) for deterministic operator monitoring.
 - Pause policy requires resolution liveness: paused mode must not block reveal/challenge settlement for already pending commitments.

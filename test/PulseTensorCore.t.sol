@@ -705,11 +705,13 @@ contract PulseTensorCoreTest {
         core.configureSubnetGovernance(netuid, address(governanceA), 2);
 
         (bytes32 actionId, uint64 readyAtBlock) = governanceA.queueSubnetPause(core, netuid, true);
-        (uint64 queuedReadyAt, address queuedBy, bool queued, bool ready) = core.subnetOwnerActionState(netuid, actionId);
+        (uint64 queuedReadyAt, address queuedBy, bool queued, bool ready, bool expired) =
+            core.subnetOwnerActionState(netuid, actionId);
         assert(queuedReadyAt == readyAtBlock);
         assert(queuedBy == address(governanceA));
         assert(queued);
         assert(!ready);
+        assert(!expired);
 
         core.configureSubnetGovernance(netuid, address(governanceB), 2);
         vm.roll(readyAtBlock);
@@ -723,15 +725,53 @@ contract PulseTensorCoreTest {
         assert(!core.subnetPaused(netuid));
 
         governanceB.cancelSubnetOwnerAction(core, netuid, actionId);
-        (queuedReadyAt, queuedBy, queued, ready) = core.subnetOwnerActionState(netuid, actionId);
+        (queuedReadyAt, queuedBy, queued, ready, expired) = core.subnetOwnerActionState(netuid, actionId);
         assert(queuedReadyAt == 0);
         assert(queuedBy == address(0));
         assert(!queued);
         assert(!ready);
+        assert(!expired);
 
         (, uint64 replacementReadyAtBlock) = governanceB.queueSubnetPause(core, netuid, true);
         vm.roll(replacementReadyAtBlock);
         governanceB.setSubnetPaused(core, netuid, true);
+        assert(core.subnetPaused(netuid));
+    }
+
+    function testOwnerActionQueueExpiresAndCanBeRequeued() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
+        StakeActor governance = new StakeActor();
+        core.configureSubnetGovernance(netuid, address(governance), 2);
+
+        (bytes32 actionId, uint64 readyAtBlock) = governance.queueSubnetPause(core, netuid, true);
+        vm.roll(uint256(readyAtBlock) + core.OWNER_ACTION_EXPIRY_BLOCKS() + 1);
+
+        (uint64 queuedReadyAt, address queuedBy, bool queued, bool ready, bool expired) =
+            core.subnetOwnerActionState(netuid, actionId);
+        assert(queuedReadyAt == readyAtBlock);
+        assert(queuedBy == address(governance));
+        assert(queued);
+        assert(ready);
+        assert(expired);
+
+        bool expiredExecuteReverted = false;
+        try governance.setSubnetPaused(core, netuid, true) {}
+        catch {
+            expiredExecuteReverted = true;
+        }
+        assert(expiredExecuteReverted);
+        assert(!core.subnetPaused(netuid));
+
+        (queuedReadyAt, queuedBy, queued, ready, expired) = core.subnetOwnerActionState(netuid, actionId);
+        assert(queuedReadyAt == readyAtBlock);
+        assert(queuedBy == address(governance));
+        assert(queued);
+        assert(ready);
+        assert(expired);
+
+        (, uint64 replacementReadyAtBlock) = governance.queueSubnetPause(core, netuid, true);
+        vm.roll(replacementReadyAtBlock);
+        governance.setSubnetPaused(core, netuid, true);
         assert(core.subnetPaused(netuid));
     }
 

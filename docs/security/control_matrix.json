@@ -1,10 +1,13 @@
 {
   "schema": "pulsetensor/security-control-matrix/v1",
-  "as_of_utc": "2026-02-22",
+  "as_of_utc": "2026-02-23",
   "sources": {
     "owasp_scsvs": "https://scs.owasp.org/SCSVS/",
     "owasp_top10": "https://scs.owasp.org/sctop10/",
+    "owasp_scwe": "https://scs.owasp.org/SCWE/",
     "eea_ethtrust": "https://entethalliance.org/groups/ethtrust/",
+    "openzeppelin_timelock": "https://docs.openzeppelin.com/contracts/5.x/api/governance#TimelockController",
+    "compound_timelock": "https://raw.githubusercontent.com/compound-finance/compound-protocol/master/contracts/Timelock.sol",
     "solidity_bugs": "https://docs.soliditylang.org/en/latest/bugs.html",
     "swc_registry": "https://github.com/SmartContractSecurity/SWC-registry"
   },
@@ -110,6 +113,7 @@
       "evidence": [
         "src/PulseTensorCore.sol",
         "src/PulseTensorInferenceSettlement.sol",
+        "test/PulseTensorCore.t.sol",
         "test/PulseTensorCore.inference_emission.t.sol"
       ]
     }
