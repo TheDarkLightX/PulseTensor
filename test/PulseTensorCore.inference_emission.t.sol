@@ -124,7 +124,23 @@ contract FeatureActor {
         uint32 maxBatchItems,
         uint256 minProposerBondWei
     ) external {
-        settlement.configureBatchPolicy(netuid, mechid, enabled, challengeWindowBlocks, maxBatchItems, minProposerBondWei);
+        settlement.configureBatchPolicy(
+            netuid, mechid, enabled, challengeWindowBlocks, maxBatchItems, minProposerBondWei
+        );
+    }
+
+    function cancelInferenceBatchPolicyUpdate(
+        PulseTensorInferenceSettlement settlement,
+        uint16 netuid,
+        uint16 mechid,
+        bool enabled,
+        uint64 challengeWindowBlocks,
+        uint32 maxBatchItems,
+        uint256 minProposerBondWei
+    ) external {
+        settlement.cancelBatchPolicyUpdate(
+            netuid, mechid, enabled, challengeWindowBlocks, maxBatchItems, minProposerBondWei
+        );
     }
 
     function queueInferenceFeePolicyUpdate(
@@ -155,6 +171,21 @@ contract FeatureActor {
         settlement.configureFeePolicy(netuid, mechid, enabled, protocolFeeBps, treasuryFeeBps, treasurySink, minerSink);
     }
 
+    function cancelInferenceFeePolicyUpdate(
+        PulseTensorInferenceSettlement settlement,
+        uint16 netuid,
+        uint16 mechid,
+        bool enabled,
+        uint16 protocolFeeBps,
+        uint16 treasuryFeeBps,
+        address treasurySink,
+        address minerSink
+    ) external {
+        settlement.cancelFeePolicyUpdate(
+            netuid, mechid, enabled, protocolFeeBps, treasuryFeeBps, treasurySink, minerSink
+        );
+    }
+
     function commitInferenceBatchRoot(
         PulseTensorInferenceSettlement settlement,
         uint16 netuid,
@@ -167,10 +198,12 @@ contract FeatureActor {
         settlement.commitInferenceBatchRoot{value: msg.value}(netuid, mechid, epoch, batchRoot, itemCount, feeTotal);
     }
 
-    function fundInferenceBatchFees(PulseTensorInferenceSettlement settlement, uint16 netuid, uint16 mechid, uint64 epoch)
-        external
-        payable
-    {
+    function fundInferenceBatchFees(
+        PulseTensorInferenceSettlement settlement,
+        uint16 netuid,
+        uint16 mechid,
+        uint64 epoch
+    ) external payable {
         settlement.fundInferenceBatchFees{value: msg.value}(netuid, mechid, epoch);
     }
 
@@ -219,7 +252,9 @@ contract FeatureActor {
         settlement.claimChallengeReward(netuid, amount);
     }
 
-    function claimProposerBondRefund(PulseTensorInferenceSettlement settlement, uint16 netuid, uint256 amount) external {
+    function claimProposerBondRefund(PulseTensorInferenceSettlement settlement, uint16 netuid, uint256 amount)
+        external
+    {
         settlement.claimProposerBondRefund(netuid, amount);
     }
 
@@ -266,6 +301,20 @@ contract PulseTensorCoreInferenceEmissionTest {
         core = new PulseTensorCore();
         settlement = new PulseTensorInferenceSettlement(address(core));
         vm.deal(address(this), 1_000 ether);
+    }
+
+    function testComputeInferenceLeafDomainSeparatesEpochAndRequest() public view {
+        bytes32 requestId = keccak256("request-1");
+        bytes32 resultHash = keccak256("result-1");
+
+        bytes32 baseLeaf = settlement.computeInferenceLeaf(7, 3, 11, requestId, resultHash);
+        bytes32 sameLeaf = settlement.computeInferenceLeaf(7, 3, 11, requestId, resultHash);
+        bytes32 epochLeaf = settlement.computeInferenceLeaf(7, 3, 12, requestId, resultHash);
+        bytes32 requestLeaf = settlement.computeInferenceLeaf(7, 3, 11, keccak256("request-2"), resultHash);
+
+        assert(baseLeaf == sameLeaf);
+        assert(baseLeaf != epochLeaf);
+        assert(baseLeaf != requestLeaf);
     }
 
     function _hashPair(bytes32 left, bytes32 right) internal pure returns (bytes32) {
@@ -343,8 +392,7 @@ contract PulseTensorCoreInferenceEmissionTest {
         (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
         uint16 mechid = 1;
 
-        uint64 readyAt =
-            governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
+        uint64 readyAt = governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
         vm.roll(readyAt);
         governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
 
@@ -428,6 +476,72 @@ contract PulseTensorCoreInferenceEmissionTest {
         assert(miner == address(minerSink));
     }
 
+    function testInferenceBatchPolicyQueueCanBeCancelled() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
+        FeatureActor governance = new FeatureActor();
+        core.configureSubnetGovernance(netuid, address(governance), 2);
+        uint16 mechid = 22;
+
+        governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 6, 8, 0.1 ether);
+        governance.cancelInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 6, 8, 0.1 ether);
+
+        bool configureAfterCancelReverted = false;
+        try governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 6, 8, 0.1 ether) {}
+        catch {
+            configureAfterCancelReverted = true;
+        }
+        assert(configureAfterCancelReverted);
+
+        uint64 readyAt = governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 6, 8, 0.1 ether);
+        vm.roll(readyAt);
+        governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 6, 8, 0.1 ether);
+
+        (bool enabled, uint64 challengeWindowBlocks, uint32 maxBatchItems, uint256 minProposerBondWei) =
+            settlement.batchPolicies(netuid, mechid);
+        assert(enabled);
+        assert(challengeWindowBlocks == 6);
+        assert(maxBatchItems == 8);
+        assert(minProposerBondWei == 0.1 ether);
+    }
+
+    function testInferenceFeePolicyQueueExpiresAndCanBeRequeued() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
+        FeatureActor governance = new FeatureActor();
+        FeatureActor treasurySink = new FeatureActor();
+        FeatureActor minerSink = new FeatureActor();
+        core.configureSubnetGovernance(netuid, address(governance), 2);
+        uint16 mechid = 23;
+
+        uint64 readyAt = governance.queueInferenceFeePolicyUpdate(
+            settlement, netuid, mechid, true, 1_200, 3_500, address(treasurySink), address(minerSink)
+        );
+        vm.roll(uint256(readyAt) + settlement.POLICY_UPDATE_EXPIRY_BLOCKS() + 1);
+
+        bool expiredConfigureReverted = false;
+        try governance.configureInferenceFeePolicy(
+            settlement, netuid, mechid, true, 1_200, 3_500, address(treasurySink), address(minerSink)
+        ) {} catch {
+            expiredConfigureReverted = true;
+        }
+        assert(expiredConfigureReverted);
+
+        uint64 requeueReadyAt = governance.queueInferenceFeePolicyUpdate(
+            settlement, netuid, mechid, true, 1_200, 3_500, address(treasurySink), address(minerSink)
+        );
+        vm.roll(requeueReadyAt);
+        governance.configureInferenceFeePolicy(
+            settlement, netuid, mechid, true, 1_200, 3_500, address(treasurySink), address(minerSink)
+        );
+
+        (bool enabled, uint16 protocolFeeBps, uint16 treasuryFeeBps, address treasury, address miner) =
+            settlement.feePolicies(netuid, mechid);
+        assert(enabled);
+        assert(protocolFeeBps == 1_200);
+        assert(treasuryFeeBps == 3_500);
+        assert(treasury == address(treasurySink));
+        assert(miner == address(minerSink));
+    }
+
     function testInferenceBatchFeeFundingWithdrawAndFinalizeDistribution() public {
         uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
         (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
@@ -501,13 +615,14 @@ contract PulseTensorCoreInferenceEmissionTest {
         vm.deal(address(payer), 10 ether);
         uint16 mechid = 18;
 
-        uint64 readyAt =
-            governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 4, 8, 0.1 ether);
+        uint64 readyAt = governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 4, 8, 0.1 ether);
         vm.roll(readyAt);
         governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 4, 8, 0.1 ether);
 
         uint64 epoch = core.currentEpoch(netuid);
-        validator.commitInferenceBatchRoot{value: 0.2 ether}(settlement, netuid, mechid, epoch, keccak256("cap"), 1, 1 ether);
+        validator.commitInferenceBatchRoot{value: 0.2 ether}(
+            settlement, netuid, mechid, epoch, keccak256("cap"), 1, 1 ether
+        );
         payer.fundInferenceBatchFees{value: 0.8 ether}(settlement, netuid, mechid, epoch);
 
         bool overflowFundingReverted = false;
@@ -578,8 +693,7 @@ contract PulseTensorCoreInferenceEmissionTest {
         vm.deal(address(payer), 10 ether);
         uint16 mechid = 19;
 
-        uint64 readyAt =
-            governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 4, 8, 0.1 ether);
+        uint64 readyAt = governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 4, 8, 0.1 ether);
         vm.roll(readyAt);
         governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 4, 8, 0.1 ether);
 
@@ -606,8 +720,7 @@ contract PulseTensorCoreInferenceEmissionTest {
         (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
         uint16 mechid = 2;
 
-        uint64 readyAt =
-            governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 8, 8, 0.1 ether);
+        uint64 readyAt = governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 8, 8, 0.1 ether);
         vm.roll(readyAt);
         governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 8, 8, 0.1 ether);
 
@@ -625,15 +738,7 @@ contract PulseTensorCoreInferenceEmissionTest {
         uint64 secondEpoch = core.currentEpoch(netuid);
         validator.commitInferenceBatchRoot{value: 0.2 ether}(settlement, netuid, mechid, secondEpoch, leaf, 1, 2 ether);
         settlement.challengeInferenceLeafReplay(
-            netuid,
-            mechid,
-            secondEpoch,
-            leaf,
-            0,
-            emptyProof,
-            firstEpoch,
-            0,
-            emptyProof
+            netuid, mechid, secondEpoch, leaf, 0, emptyProof, firstEpoch, 0, emptyProof
         );
 
         (,,,,,,, bool challenged, bool finalized) = settlement.inferenceBatches(netuid, mechid, secondEpoch);
@@ -654,8 +759,7 @@ contract PulseTensorCoreInferenceEmissionTest {
         (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
         uint16 mechid = 11;
 
-        uint64 readyAt =
-            governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 8, 8, 0.1 ether);
+        uint64 readyAt = governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 8, 8, 0.1 ether);
         vm.roll(readyAt);
         governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 8, 8, 0.1 ether);
 
@@ -670,15 +774,7 @@ contract PulseTensorCoreInferenceEmissionTest {
         bytes32[] memory emptyProof = new bytes32[](0);
         bool replayChallengeReverted = false;
         try settlement.challengeInferenceLeafReplay(
-            netuid,
-            mechid,
-            secondEpoch,
-            leaf,
-            0,
-            emptyProof,
-            firstEpoch,
-            0,
-            emptyProof
+            netuid, mechid, secondEpoch, leaf, 0, emptyProof, firstEpoch, 0, emptyProof
         ) {} catch {
             replayChallengeReverted = true;
         }
@@ -696,8 +792,7 @@ contract PulseTensorCoreInferenceEmissionTest {
         validator.registerValidator(core, netuid);
 
         uint16 mechid = 12;
-        uint64 readyAt =
-            governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
+        uint64 readyAt = governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
         vm.roll(readyAt);
         governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
 
@@ -716,8 +811,7 @@ contract PulseTensorCoreInferenceEmissionTest {
         (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
         uint16 mechid = 7;
 
-        uint64 readyAt =
-            governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 6, 8, 0.1 ether);
+        uint64 readyAt = governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 6, 8, 0.1 ether);
         vm.roll(readyAt);
         governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 6, 8, 0.1 ether);
 
@@ -743,8 +837,7 @@ contract PulseTensorCoreInferenceEmissionTest {
         (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
         uint16 mechid = 20;
 
-        uint64 readyAt =
-            governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 6, 8, 0.1 ether);
+        uint64 readyAt = governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 6, 8, 0.1 ether);
         vm.roll(readyAt);
         governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 6, 8, 0.1 ether);
 
@@ -758,7 +851,9 @@ contract PulseTensorCoreInferenceEmissionTest {
         bytes32[] memory proofIndex1 = new bytes32[](1);
         proofIndex1[0] = leaf;
 
-        validator.challengeInferenceLeafDuplicate(settlement, netuid, mechid, epoch, leaf, 0, proofIndex0, 1, proofIndex1);
+        validator.challengeInferenceLeafDuplicate(
+            settlement, netuid, mechid, epoch, leaf, 0, proofIndex0, 1, proofIndex1
+        );
         assert(settlement.challengeRewardOf(netuid, address(validator)) == 0);
     }
 
@@ -775,8 +870,7 @@ contract PulseTensorCoreInferenceEmissionTest {
         }
         assert(immediateConfigureReverted);
 
-        uint64 readyAt =
-            governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 4, 4, 0.1 ether);
+        uint64 readyAt = governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 4, 4, 0.1 ether);
         bool prematureConfigureReverted = false;
         try governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 4, 4, 0.1 ether) {}
         catch {
@@ -798,8 +892,7 @@ contract PulseTensorCoreInferenceEmissionTest {
         uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
         (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
         uint16 mechid = 8;
-        uint64 readyAt =
-            governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
+        uint64 readyAt = governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
         vm.roll(readyAt);
         governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
 
@@ -817,8 +910,7 @@ contract PulseTensorCoreInferenceEmissionTest {
         uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
         (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
         uint16 mechid = 9;
-        uint64 readyAt =
-            governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
+        uint64 readyAt = governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
         vm.roll(readyAt);
         governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
 
@@ -842,8 +934,7 @@ contract PulseTensorCoreInferenceEmissionTest {
         uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
         (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
         uint16 mechid = 10;
-        uint64 readyAt =
-            governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
+        uint64 readyAt = governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
         vm.roll(readyAt);
         governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
 
@@ -866,8 +957,7 @@ contract PulseTensorCoreInferenceEmissionTest {
         uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
         (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
         uint16 mechid = 13;
-        uint64 readyAt =
-            governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
+        uint64 readyAt = governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
         vm.roll(readyAt);
         governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
 
@@ -877,8 +967,8 @@ contract PulseTensorCoreInferenceEmissionTest {
 
         bytes32[] memory emptyProof = new bytes32[](0);
         bool forgedChallengeReverted = false;
-        try settlement.challengeInferenceLeafDuplicate(netuid, mechid, epoch, forgedRoot, 0, emptyProof, 1, emptyProof) {}
-        catch {
+        try settlement.challengeInferenceLeafDuplicate(netuid, mechid, epoch, forgedRoot, 0, emptyProof, 1, emptyProof)
+        {} catch {
             forgedChallengeReverted = true;
         }
         assert(forgedChallengeReverted);
@@ -888,8 +978,7 @@ contract PulseTensorCoreInferenceEmissionTest {
         uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
         (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
         uint16 mechid = 14;
-        uint64 readyAt =
-            governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
+        uint64 readyAt = governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
         vm.roll(readyAt);
         governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
 
@@ -913,8 +1002,7 @@ contract PulseTensorCoreInferenceEmissionTest {
         uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
         (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
         uint16 mechid = 15;
-        uint64 readyAt =
-            governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
+        uint64 readyAt = governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
         vm.roll(readyAt);
         governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 5, 8, 0.1 ether);
 

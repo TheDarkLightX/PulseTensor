@@ -139,3 +139,6 @@ A protocol change is complete only if:
 11. Self-challenge cannot capture challenge bounty; if validator self-challenges, full slash routes to emission pool.
 12. Commit revealability is preserved under governance config drift (e.g., epoch-length updates cannot invalidate an otherwise valid reveal window).
 13. Validator auto-unregister on under-min stake only happens when pending commitment count is zero; unresolved commitments keep accountability live until final resolution.
+14. Emergency pause must not deadlock pending commitment resolution; reveal/challenge flows remain callable while paused.
+15. Settlement policy governance queues have explicit lifecycle controls (queue, cancel, ready check, bounded expiry, requeue after expiry).
+16. Inference leaf construction is domain-separated by `(netuid, mechid, epoch, requestId, resultHash)` (or an equivalent collision-resistant encoding).

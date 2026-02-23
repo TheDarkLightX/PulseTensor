@@ -26,6 +26,8 @@ As of February 22, 2026, PulseTensor hardening tracks the following primary stan
   - `docs/security/artifact_manifest.security.txt`
   - `docs/security/artifact_manifest.esso.txt`
   - `docs/security/artifact_manifest.release.txt`
+- Governance queue policy requires explicit queue lifecycle controls for privileged settlement updates (queue/cancel/readiness/expiry).
+- Pause policy requires resolution liveness: paused mode must not block reveal/challenge settlement for already pending commitments.
 
 ## Practical interpretation
 

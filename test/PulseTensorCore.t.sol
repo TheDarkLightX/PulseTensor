@@ -1329,6 +1329,67 @@ contract PulseTensorCoreTest {
         assert(reverted);
     }
 
+    function testRevealWeightsWorksWhileSubnetPaused() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 8);
+        StakeActor governance = new StakeActor();
+        core.configureSubnetGovernance(netuid, address(governance), 2);
+
+        StakeActor actor = new StakeActor();
+        vm.deal(address(actor), 10 ether);
+        actor.addStake{value: 2 ether}(core, netuid);
+        actor.registerValidator(core, netuid);
+
+        uint64 epoch = core.currentEpoch(netuid);
+        bytes32 weightsHash = keccak256(abi.encodePacked("reveal-paused"));
+        bytes32 salt = bytes32(uint256(145));
+        bytes32 commitment = core.computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
+        actor.commitWeights(core, netuid, commitment);
+
+        governance.queueSubnetPause(core, netuid, true);
+        vm.roll(block.number + 2);
+        governance.setSubnetPaused(core, netuid, true);
+        assert(core.subnetPaused(netuid));
+
+        vm.roll(block.number + 1);
+        actor.revealWeights(core, netuid, epoch, weightsHash, salt);
+
+        assert(core.epochRevealed(netuid, epoch, address(actor)));
+        (bytes32 pending,,) = core.epochCommitments(netuid, epoch, address(actor));
+        assert(pending == bytes32(0));
+        assert(core.pendingCommitmentCount(netuid, address(actor)) == 0);
+    }
+
+    function testRevealMechanismWeightsWorksWhileSubnetPaused() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 8);
+        StakeActor governance = new StakeActor();
+        core.configureSubnetGovernance(netuid, address(governance), 2);
+
+        StakeActor actor = new StakeActor();
+        vm.deal(address(actor), 10 ether);
+        actor.addStake{value: 2 ether}(core, netuid);
+        actor.registerValidator(core, netuid);
+
+        uint16 mechid = 7;
+        uint64 epoch = core.currentEpoch(netuid);
+        bytes32 weightsHash = keccak256(abi.encodePacked("reveal-mechanism-paused"));
+        bytes32 salt = bytes32(uint256(246));
+        bytes32 commitment = core.computeMechanismCommitment(weightsHash, salt, address(actor), netuid, mechid, epoch);
+        actor.commitMechanismWeights(core, netuid, mechid, commitment);
+
+        governance.queueSubnetPause(core, netuid, true);
+        vm.roll(block.number + 2);
+        governance.setSubnetPaused(core, netuid, true);
+        assert(core.subnetPaused(netuid));
+
+        vm.roll(block.number + 1);
+        actor.revealMechanismWeights(core, netuid, mechid, epoch, weightsHash, salt);
+
+        assert(core.mechanismEpochRevealed(netuid, mechid, epoch, address(actor)));
+        (bytes32 pending,,) = core.mechanismEpochCommitments(netuid, mechid, epoch, address(actor));
+        assert(pending == bytes32(0));
+        assert(core.pendingCommitmentCount(netuid, address(actor)) == 0);
+    }
+
     function testChallengeExpiredCommitWorksWhileSubnetPaused() public {
         uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 4);
         StakeActor governance = new StakeActor();

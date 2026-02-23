@@ -12,13 +12,18 @@ contract PulseTensorInferenceSettlement {
     uint16 public constant BPS_DENOMINATOR = 10_000;
     uint16 public constant CHALLENGE_REWARD_BPS = 2_000;
     uint16 public constant MAX_PROTOCOL_FEE_BPS = 3_000;
+    bytes32 public constant INFERENCE_LEAF_DOMAIN_TAG = keccak256("PULSETENSOR_INFERENCE_LEAF_V1");
     uint64 public constant POLICY_UPDATE_DELAY_BLOCKS = 2;
+    uint64 public constant POLICY_UPDATE_EXPIRY_BLOCKS = 200_000;
     uint64 public constant MIN_CHALLENGE_WINDOW_BLOCKS = 1;
     uint64 public constant MAX_CHALLENGE_WINDOW_BLOCKS = 200_000;
     uint32 public constant MAX_BATCH_ITEMS = 4096;
 
     error UnauthorizedGovernance();
+    error GovernanceActionAlreadyQueued();
+    error GovernanceActionNotQueued();
     error GovernanceActionNotReady();
+    error GovernanceActionExpired();
     error InvalidPolicy();
     error InferenceBatchDisabled();
     error CoreSubnetPaused();
@@ -111,6 +116,7 @@ contract PulseTensorInferenceSettlement {
         bytes32 actionId,
         uint64 readyAtBlock
     );
+    event BatchPolicyUpdateCancelled(uint16 indexed netuid, uint16 indexed mechid, bytes32 indexed actionId);
     event FeePolicyConfigured(
         uint16 indexed netuid,
         uint16 indexed mechid,
@@ -131,6 +137,7 @@ contract PulseTensorInferenceSettlement {
         bytes32 actionId,
         uint64 readyAtBlock
     );
+    event FeePolicyUpdateCancelled(uint16 indexed netuid, uint16 indexed mechid, bytes32 indexed actionId);
     event InferenceBatchCommitted(
         uint16 indexed netuid,
         uint16 indexed mechid,
@@ -217,22 +224,38 @@ contract PulseTensorInferenceSettlement {
         if (CORE.subnetGovernance(netuid) != msg.sender) revert UnauthorizedGovernance();
         _validatePolicy(enabled, challengeWindowBlocks, maxBatchItems, minProposerBondWei);
 
-        actionId = _batchPolicyActionId(netuid, mechid, enabled, challengeWindowBlocks, maxBatchItems, minProposerBondWei);
+        actionId =
+            _batchPolicyActionId(netuid, mechid, enabled, challengeWindowBlocks, maxBatchItems, minProposerBondWei);
+        uint64 existingReadyAtBlock = queuedBatchPolicyReadyAt[netuid][actionId];
+        if (existingReadyAtBlock != 0) {
+            if (!_isGovernanceActionExpired(existingReadyAtBlock)) revert GovernanceActionAlreadyQueued();
+            delete queuedBatchPolicyReadyAt[netuid][actionId];
+        }
+
         uint256 readyAt = block.number + POLICY_UPDATE_DELAY_BLOCKS;
         if (readyAt > type(uint64).max) revert InvalidPolicy();
         readyAtBlock = uint64(readyAt);
         queuedBatchPolicyReadyAt[netuid][actionId] = readyAtBlock;
 
         emit BatchPolicyUpdateQueued(
-            netuid,
-            mechid,
-            enabled,
-            challengeWindowBlocks,
-            maxBatchItems,
-            minProposerBondWei,
-            actionId,
-            readyAtBlock
+            netuid, mechid, enabled, challengeWindowBlocks, maxBatchItems, minProposerBondWei, actionId, readyAtBlock
         );
+    }
+
+    function cancelBatchPolicyUpdate(
+        uint16 netuid,
+        uint16 mechid,
+        bool enabled,
+        uint64 challengeWindowBlocks,
+        uint32 maxBatchItems,
+        uint256 minProposerBondWei
+    ) external {
+        if (CORE.subnetGovernance(netuid) != msg.sender) revert UnauthorizedGovernance();
+        bytes32 actionId =
+            _batchPolicyActionId(netuid, mechid, enabled, challengeWindowBlocks, maxBatchItems, minProposerBondWei);
+        if (queuedBatchPolicyReadyAt[netuid][actionId] == 0) revert GovernanceActionNotQueued();
+        delete queuedBatchPolicyReadyAt[netuid][actionId];
+        emit BatchPolicyUpdateCancelled(netuid, mechid, actionId);
     }
 
     function configureBatchPolicy(
@@ -249,7 +272,12 @@ contract PulseTensorInferenceSettlement {
         bytes32 actionId =
             _batchPolicyActionId(netuid, mechid, enabled, challengeWindowBlocks, maxBatchItems, minProposerBondWei);
         uint64 readyAtBlock = queuedBatchPolicyReadyAt[netuid][actionId];
-        if (readyAtBlock == 0 || block.number < readyAtBlock) revert GovernanceActionNotReady();
+        if (readyAtBlock == 0) revert GovernanceActionNotQueued();
+        if (block.number < readyAtBlock) revert GovernanceActionNotReady();
+        if (_isGovernanceActionExpired(readyAtBlock)) {
+            delete queuedBatchPolicyReadyAt[netuid][actionId];
+            revert GovernanceActionExpired();
+        }
         delete queuedBatchPolicyReadyAt[netuid][actionId];
 
         batchPolicies[netuid][mechid] = BatchPolicy({
@@ -273,24 +301,38 @@ contract PulseTensorInferenceSettlement {
         if (CORE.subnetGovernance(netuid) != msg.sender) revert UnauthorizedGovernance();
         _validateFeePolicy(enabled, protocolFeeBps, treasuryFeeBps, treasurySink, minerSink);
 
-        actionId =
-            _feePolicyActionId(netuid, mechid, enabled, protocolFeeBps, treasuryFeeBps, treasurySink, minerSink);
+        actionId = _feePolicyActionId(netuid, mechid, enabled, protocolFeeBps, treasuryFeeBps, treasurySink, minerSink);
+        uint64 existingReadyAtBlock = queuedFeePolicyReadyAt[netuid][actionId];
+        if (existingReadyAtBlock != 0) {
+            if (!_isGovernanceActionExpired(existingReadyAtBlock)) revert GovernanceActionAlreadyQueued();
+            delete queuedFeePolicyReadyAt[netuid][actionId];
+        }
+
         uint256 readyAt = block.number + POLICY_UPDATE_DELAY_BLOCKS;
         if (readyAt > type(uint64).max) revert InvalidPolicy();
         readyAtBlock = uint64(readyAt);
         queuedFeePolicyReadyAt[netuid][actionId] = readyAtBlock;
 
         emit FeePolicyUpdateQueued(
-            netuid,
-            mechid,
-            enabled,
-            protocolFeeBps,
-            treasuryFeeBps,
-            treasurySink,
-            minerSink,
-            actionId,
-            readyAtBlock
+            netuid, mechid, enabled, protocolFeeBps, treasuryFeeBps, treasurySink, minerSink, actionId, readyAtBlock
         );
+    }
+
+    function cancelFeePolicyUpdate(
+        uint16 netuid,
+        uint16 mechid,
+        bool enabled,
+        uint16 protocolFeeBps,
+        uint16 treasuryFeeBps,
+        address treasurySink,
+        address minerSink
+    ) external {
+        if (CORE.subnetGovernance(netuid) != msg.sender) revert UnauthorizedGovernance();
+        bytes32 actionId =
+            _feePolicyActionId(netuid, mechid, enabled, protocolFeeBps, treasuryFeeBps, treasurySink, minerSink);
+        if (queuedFeePolicyReadyAt[netuid][actionId] == 0) revert GovernanceActionNotQueued();
+        delete queuedFeePolicyReadyAt[netuid][actionId];
+        emit FeePolicyUpdateCancelled(netuid, mechid, actionId);
     }
 
     function configureFeePolicy(
@@ -308,7 +350,12 @@ contract PulseTensorInferenceSettlement {
         bytes32 actionId =
             _feePolicyActionId(netuid, mechid, enabled, protocolFeeBps, treasuryFeeBps, treasurySink, minerSink);
         uint64 readyAtBlock = queuedFeePolicyReadyAt[netuid][actionId];
-        if (readyAtBlock == 0 || block.number < readyAtBlock) revert GovernanceActionNotReady();
+        if (readyAtBlock == 0) revert GovernanceActionNotQueued();
+        if (block.number < readyAtBlock) revert GovernanceActionNotReady();
+        if (_isGovernanceActionExpired(readyAtBlock)) {
+            delete queuedFeePolicyReadyAt[netuid][actionId];
+            revert GovernanceActionExpired();
+        }
         delete queuedFeePolicyReadyAt[netuid][actionId];
 
         feePolicies[netuid][mechid] = FeePolicy({
@@ -376,7 +423,10 @@ contract PulseTensorInferenceSettlement {
         emit InferenceBatchFeeFunded(netuid, mechid, epoch, msg.sender, msg.value, fundedTotal, batch.feeTotal);
     }
 
-    function withdrawInferenceBatchFees(uint16 netuid, uint16 mechid, uint64 epoch, uint256 amount) external nonReentrant {
+    function withdrawInferenceBatchFees(uint16 netuid, uint16 mechid, uint64 epoch, uint256 amount)
+        external
+        nonReentrant
+    {
         if (amount == 0) revert InvalidFeeAmount();
         InferenceBatch storage batch = inferenceBatches[netuid][mechid][epoch];
         if (batch.batchRoot == bytes32(0)) revert BatchNotCommitted();
@@ -432,7 +482,9 @@ contract PulseTensorInferenceSettlement {
         if (!batch.finalized) revert BatchNotFinalized();
         if (settledLeaves[netuid][mechid][leafHash]) revert LeafAlreadySettled();
         _validateBatchIndex(index, batch.itemCount);
-        if (!_verifyMerkleProof(leafHash, index, merkleProof, batch.batchRoot, batch.itemCount)) revert InvalidMerkleProof();
+        if (!_verifyMerkleProof(leafHash, index, merkleProof, batch.batchRoot, batch.itemCount)) {
+            revert InvalidMerkleProof();
+        }
 
         settledLeaves[netuid][mechid][leafHash] = true;
         emit InferenceLeafSettled(netuid, mechid, epoch, leafHash);
@@ -455,7 +507,9 @@ contract PulseTensorInferenceSettlement {
         if (batch.challenged) revert BatchAlreadyChallenged();
         if (block.number > batch.challengeDeadlineBlock) revert ChallengeWindowClosed();
         _validateBatchIndex(index, batch.itemCount);
-        if (!_verifyMerkleProof(leafHash, index, merkleProof, batch.batchRoot, batch.itemCount)) revert InvalidMerkleProof();
+        if (!_verifyMerkleProof(leafHash, index, merkleProof, batch.batchRoot, batch.itemCount)) {
+            revert InvalidMerkleProof();
+        }
         if (priorEpoch >= epoch) revert InvalidReplayEpoch();
 
         InferenceBatch storage priorBatch = inferenceBatches[netuid][mechid][priorEpoch];
@@ -487,8 +541,12 @@ contract PulseTensorInferenceSettlement {
         if (block.number > batch.challengeDeadlineBlock) revert ChallengeWindowClosed();
         _validateBatchIndex(indexA, batch.itemCount);
         _validateBatchIndex(indexB, batch.itemCount);
-        if (!_verifyMerkleProof(leafHash, indexA, proofA, batch.batchRoot, batch.itemCount)) revert InvalidMerkleProof();
-        if (!_verifyMerkleProof(leafHash, indexB, proofB, batch.batchRoot, batch.itemCount)) revert InvalidMerkleProof();
+        if (!_verifyMerkleProof(leafHash, indexA, proofA, batch.batchRoot, batch.itemCount)) {
+            revert InvalidMerkleProof();
+        }
+        if (!_verifyMerkleProof(leafHash, indexB, proofB, batch.batchRoot, batch.itemCount)) {
+            revert InvalidMerkleProof();
+        }
 
         _slashBatchBond(netuid, mechid, epoch, leafHash);
     }
@@ -518,6 +576,17 @@ contract PulseTensorInferenceSettlement {
         inferenceFeeClaimOf[netuid][msg.sender] = claimableAmount - amount;
         _transferValue(payable(msg.sender), amount);
         emit InferenceFeeClaimed(netuid, msg.sender, amount, inferenceFeeClaimOf[netuid][msg.sender]);
+    }
+
+    /// @notice Canonical domain-separated leaf helper for off-chain batch construction.
+    /// @dev The settlement contract verifies only merkle inclusion; callers should use this helper
+    ///      (or an equivalent domain-separated scheme) to avoid accidental cross-epoch/request collisions.
+    function computeInferenceLeaf(uint16 netuid, uint16 mechid, uint64 epoch, bytes32 requestId, bytes32 resultHash)
+        public
+        pure
+        returns (bytes32)
+    {
+        return keccak256(abi.encode(INFERENCE_LEAF_DOMAIN_TAG, netuid, mechid, epoch, requestId, resultHash));
     }
 
     function _slashBatchBond(uint16 netuid, uint16 mechid, uint64 epoch, bytes32 leafHash) internal {
@@ -609,13 +678,7 @@ contract PulseTensorInferenceSettlement {
     ) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
-                "BATCH_POLICY",
-                netuid,
-                mechid,
-                enabled,
-                challengeWindowBlocks,
-                maxBatchItems,
-                minProposerBondWei
+                "BATCH_POLICY", netuid, mechid, enabled, challengeWindowBlocks, maxBatchItems, minProposerBondWei
             )
         );
     }
@@ -630,17 +693,12 @@ contract PulseTensorInferenceSettlement {
         address minerSink
     ) internal pure returns (bytes32) {
         return keccak256(
-            abi.encode(
-                "FEE_POLICY",
-                netuid,
-                mechid,
-                enabled,
-                protocolFeeBps,
-                treasuryFeeBps,
-                treasurySink,
-                minerSink
-            )
+            abi.encode("FEE_POLICY", netuid, mechid, enabled, protocolFeeBps, treasuryFeeBps, treasurySink, minerSink)
         );
+    }
+
+    function _isGovernanceActionExpired(uint64 readyAtBlock) internal view returns (bool) {
+        return block.number > uint256(readyAtBlock) + POLICY_UPDATE_EXPIRY_BLOCKS;
     }
 
     function _snapshotFeePolicy(uint16 netuid, uint16 mechid, uint64 epoch) internal {
@@ -723,11 +781,7 @@ contract PulseTensorInferenceSettlement {
         bytes32[] calldata merkleProof,
         bytes32 root,
         uint32 itemCount
-    )
-        internal
-        pure
-        returns (bool)
-    {
+    ) internal pure returns (bool) {
         if (itemCount > 1 && merkleProof.length == 0) {
             return false;
         }

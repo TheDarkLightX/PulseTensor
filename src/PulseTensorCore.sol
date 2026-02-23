@@ -999,7 +999,7 @@ contract PulseTensorCore {
 
     function revealWeights(uint16 netuid, uint64 epoch, bytes32 weightsHash, bytes32 salt)
         external
-        whenSubnetActive(netuid)
+        subnetExists(netuid)
     {
         PulseTensorDomain.verifyReveal(
             epochCommitments[netuid][epoch][msg.sender],
@@ -1029,7 +1029,7 @@ contract PulseTensorCore {
 
     function revealMechanismWeights(uint16 netuid, uint16 mechid, uint64 epoch, bytes32 weightsHash, bytes32 salt)
         external
-        whenSubnetActive(netuid)
+        subnetExists(netuid)
     {
         _validateMechanismId(mechid);
 
