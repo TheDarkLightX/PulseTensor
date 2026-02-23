@@ -57,6 +57,7 @@ contract PulseTensorCore {
     error OwnerActionAlreadyQueued();
     error OwnerActionNotQueued();
     error OwnerActionNotReady();
+    error OwnerActionQueuedByMismatch();
     error PendingOwnerMismatch();
     error PendingCommitmentExists();
     error InvalidMechanismId();
@@ -78,6 +79,7 @@ contract PulseTensorCore {
     mapping(uint16 => address) public subnetGovernance;
     mapping(uint16 => uint64) public subnetOwnerActionDelayBlocks;
     mapping(uint16 => mapping(bytes32 => uint64)) public subnetOwnerActionReadyAtBlock;
+    mapping(uint16 => mapping(bytes32 => address)) public subnetOwnerActionQueuedBy;
     mapping(uint16 => bool) public subnetPaused;
     mapping(uint16 => uint16) public validatorCount;
     mapping(uint16 => mapping(address => uint256)) public stakeOf;
@@ -523,7 +525,23 @@ contract PulseTensorCore {
     {
         if (subnetOwnerActionReadyAtBlock[netuid][actionId] == 0) revert OwnerActionNotQueued();
         delete subnetOwnerActionReadyAtBlock[netuid][actionId];
+        delete subnetOwnerActionQueuedBy[netuid][actionId];
         emit SubnetOwnerActionCancelled(netuid, actionId, msg.sender);
+    }
+
+    function subnetOwnerActionState(uint16 netuid, bytes32 actionId)
+        external
+        view
+        returns (uint64 readyAtBlock, address queuedBy, bool queued, bool ready)
+    {
+        readyAtBlock = subnetOwnerActionReadyAtBlock[netuid][actionId];
+        if (readyAtBlock == 0) {
+            return (0, address(0), false, false);
+        }
+
+        queuedBy = subnetOwnerActionQueuedBy[netuid][actionId];
+        queued = true;
+        ready = block.number >= readyAtBlock;
     }
 
     function updateSubnetConfig(
@@ -1165,6 +1183,7 @@ contract PulseTensorCore {
         if (readyAt > type(uint64).max) revert PulseTensorDomain.InvalidConfig();
         readyAtBlock = uint64(readyAt);
         subnetOwnerActionReadyAtBlock[netuid][actionId] = readyAtBlock;
+        subnetOwnerActionQueuedBy[netuid][actionId] = msg.sender;
 
         emit SubnetOwnerActionQueued(netuid, actionId, readyAtBlock, msg.sender);
     }
@@ -1172,9 +1191,12 @@ contract PulseTensorCore {
     function _consumeOwnerAction(uint16 netuid, bytes32 actionId) internal {
         uint64 readyAtBlock = subnetOwnerActionReadyAtBlock[netuid][actionId];
         if (readyAtBlock == 0) revert OwnerActionNotQueued();
+        address queuedBy = subnetOwnerActionQueuedBy[netuid][actionId];
+        if (queuedBy == address(0) || queuedBy != msg.sender) revert OwnerActionQueuedByMismatch();
         if (block.number < readyAtBlock) revert OwnerActionNotReady();
 
         delete subnetOwnerActionReadyAtBlock[netuid][actionId];
+        delete subnetOwnerActionQueuedBy[netuid][actionId];
         emit SubnetOwnerActionExecuted(netuid, actionId, msg.sender);
     }
 

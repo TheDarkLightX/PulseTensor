@@ -33,6 +33,7 @@ Security/economic constraints:
 
 - Policy changes are governance-queued (timelocked).
 - Queued policy updates are cancellable and expire if not executed within `POLICY_UPDATE_EXPIRY_BLOCKS`.
+- Queued policy updates are bound to the governance identity that queued them (`queuedBy`), so governance rotations must cancel/requeue stale entries before execution.
 - `protocolFeeBps <= 3000` (30% hard cap).
 - Fee policy is snapshotted at batch commit, so governance cannot raise fees after work is posted.
 - Settlement leaves should use domain separation (for example via `computeInferenceLeaf(netuid, mechid, epoch, requestId, resultHash)`) to prevent accidental cross-epoch or cross-request hash reuse.

@@ -24,6 +24,7 @@ contract PulseTensorInferenceSettlement {
     error GovernanceActionNotQueued();
     error GovernanceActionNotReady();
     error GovernanceActionExpired();
+    error GovernanceActionQueuedByMismatch();
     error InvalidPolicy();
     error InferenceBatchDisabled();
     error CoreSubnetPaused();
@@ -84,8 +85,10 @@ contract PulseTensorInferenceSettlement {
 
     mapping(uint16 => mapping(uint16 => BatchPolicy)) public batchPolicies;
     mapping(uint16 => mapping(bytes32 => uint64)) public queuedBatchPolicyReadyAt;
+    mapping(uint16 => mapping(bytes32 => address)) public queuedBatchPolicyQueuedBy;
     mapping(uint16 => mapping(uint16 => FeePolicy)) public feePolicies;
     mapping(uint16 => mapping(bytes32 => uint64)) public queuedFeePolicyReadyAt;
+    mapping(uint16 => mapping(bytes32 => address)) public queuedFeePolicyQueuedBy;
     mapping(uint16 => mapping(uint16 => mapping(uint64 => InferenceBatch))) public inferenceBatches;
     mapping(uint16 => mapping(uint16 => mapping(uint64 => uint256))) public batchFeeFunded;
     mapping(uint16 => mapping(uint16 => mapping(uint64 => mapping(address => uint256)))) public batchFeeEscrowOf;
@@ -230,12 +233,14 @@ contract PulseTensorInferenceSettlement {
         if (existingReadyAtBlock != 0) {
             if (!_isGovernanceActionExpired(existingReadyAtBlock)) revert GovernanceActionAlreadyQueued();
             delete queuedBatchPolicyReadyAt[netuid][actionId];
+            delete queuedBatchPolicyQueuedBy[netuid][actionId];
         }
 
         uint256 readyAt = block.number + POLICY_UPDATE_DELAY_BLOCKS;
         if (readyAt > type(uint64).max) revert InvalidPolicy();
         readyAtBlock = uint64(readyAt);
         queuedBatchPolicyReadyAt[netuid][actionId] = readyAtBlock;
+        queuedBatchPolicyQueuedBy[netuid][actionId] = msg.sender;
 
         emit BatchPolicyUpdateQueued(
             netuid, mechid, enabled, challengeWindowBlocks, maxBatchItems, minProposerBondWei, actionId, readyAtBlock
@@ -255,6 +260,7 @@ contract PulseTensorInferenceSettlement {
             _batchPolicyActionId(netuid, mechid, enabled, challengeWindowBlocks, maxBatchItems, minProposerBondWei);
         if (queuedBatchPolicyReadyAt[netuid][actionId] == 0) revert GovernanceActionNotQueued();
         delete queuedBatchPolicyReadyAt[netuid][actionId];
+        delete queuedBatchPolicyQueuedBy[netuid][actionId];
         emit BatchPolicyUpdateCancelled(netuid, mechid, actionId);
     }
 
@@ -273,12 +279,16 @@ contract PulseTensorInferenceSettlement {
             _batchPolicyActionId(netuid, mechid, enabled, challengeWindowBlocks, maxBatchItems, minProposerBondWei);
         uint64 readyAtBlock = queuedBatchPolicyReadyAt[netuid][actionId];
         if (readyAtBlock == 0) revert GovernanceActionNotQueued();
+        address queuedBy = queuedBatchPolicyQueuedBy[netuid][actionId];
+        if (queuedBy == address(0) || queuedBy != msg.sender) revert GovernanceActionQueuedByMismatch();
         if (block.number < readyAtBlock) revert GovernanceActionNotReady();
         if (_isGovernanceActionExpired(readyAtBlock)) {
             delete queuedBatchPolicyReadyAt[netuid][actionId];
+            delete queuedBatchPolicyQueuedBy[netuid][actionId];
             revert GovernanceActionExpired();
         }
         delete queuedBatchPolicyReadyAt[netuid][actionId];
+        delete queuedBatchPolicyQueuedBy[netuid][actionId];
 
         batchPolicies[netuid][mechid] = BatchPolicy({
             enabled: enabled,
@@ -306,12 +316,14 @@ contract PulseTensorInferenceSettlement {
         if (existingReadyAtBlock != 0) {
             if (!_isGovernanceActionExpired(existingReadyAtBlock)) revert GovernanceActionAlreadyQueued();
             delete queuedFeePolicyReadyAt[netuid][actionId];
+            delete queuedFeePolicyQueuedBy[netuid][actionId];
         }
 
         uint256 readyAt = block.number + POLICY_UPDATE_DELAY_BLOCKS;
         if (readyAt > type(uint64).max) revert InvalidPolicy();
         readyAtBlock = uint64(readyAt);
         queuedFeePolicyReadyAt[netuid][actionId] = readyAtBlock;
+        queuedFeePolicyQueuedBy[netuid][actionId] = msg.sender;
 
         emit FeePolicyUpdateQueued(
             netuid, mechid, enabled, protocolFeeBps, treasuryFeeBps, treasurySink, minerSink, actionId, readyAtBlock
@@ -332,6 +344,7 @@ contract PulseTensorInferenceSettlement {
             _feePolicyActionId(netuid, mechid, enabled, protocolFeeBps, treasuryFeeBps, treasurySink, minerSink);
         if (queuedFeePolicyReadyAt[netuid][actionId] == 0) revert GovernanceActionNotQueued();
         delete queuedFeePolicyReadyAt[netuid][actionId];
+        delete queuedFeePolicyQueuedBy[netuid][actionId];
         emit FeePolicyUpdateCancelled(netuid, mechid, actionId);
     }
 
@@ -351,12 +364,16 @@ contract PulseTensorInferenceSettlement {
             _feePolicyActionId(netuid, mechid, enabled, protocolFeeBps, treasuryFeeBps, treasurySink, minerSink);
         uint64 readyAtBlock = queuedFeePolicyReadyAt[netuid][actionId];
         if (readyAtBlock == 0) revert GovernanceActionNotQueued();
+        address queuedBy = queuedFeePolicyQueuedBy[netuid][actionId];
+        if (queuedBy == address(0) || queuedBy != msg.sender) revert GovernanceActionQueuedByMismatch();
         if (block.number < readyAtBlock) revert GovernanceActionNotReady();
         if (_isGovernanceActionExpired(readyAtBlock)) {
             delete queuedFeePolicyReadyAt[netuid][actionId];
+            delete queuedFeePolicyQueuedBy[netuid][actionId];
             revert GovernanceActionExpired();
         }
         delete queuedFeePolicyReadyAt[netuid][actionId];
+        delete queuedFeePolicyQueuedBy[netuid][actionId];
 
         feePolicies[netuid][mechid] = FeePolicy({
             enabled: enabled,
@@ -699,6 +716,36 @@ contract PulseTensorInferenceSettlement {
 
     function _isGovernanceActionExpired(uint64 readyAtBlock) internal view returns (bool) {
         return block.number > uint256(readyAtBlock) + POLICY_UPDATE_EXPIRY_BLOCKS;
+    }
+
+    function batchPolicyQueueState(uint16 netuid, bytes32 actionId)
+        external
+        view
+        returns (uint64 readyAtBlock, address queuedBy, bool queued, bool ready, bool expired)
+    {
+        readyAtBlock = queuedBatchPolicyReadyAt[netuid][actionId];
+        if (readyAtBlock == 0) {
+            return (0, address(0), false, false, false);
+        }
+        queuedBy = queuedBatchPolicyQueuedBy[netuid][actionId];
+        queued = true;
+        ready = block.number >= readyAtBlock;
+        expired = _isGovernanceActionExpired(readyAtBlock);
+    }
+
+    function feePolicyQueueState(uint16 netuid, bytes32 actionId)
+        external
+        view
+        returns (uint64 readyAtBlock, address queuedBy, bool queued, bool ready, bool expired)
+    {
+        readyAtBlock = queuedFeePolicyReadyAt[netuid][actionId];
+        if (readyAtBlock == 0) {
+            return (0, address(0), false, false, false);
+        }
+        queuedBy = queuedFeePolicyQueuedBy[netuid][actionId];
+        queued = true;
+        ready = block.number >= readyAtBlock;
+        expired = _isGovernanceActionExpired(readyAtBlock);
     }
 
     function _snapshotFeePolicy(uint16 netuid, uint16 mechid, uint64 epoch) internal {

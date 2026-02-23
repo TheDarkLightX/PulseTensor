@@ -698,6 +698,43 @@ contract PulseTensorCoreTest {
         assert(reverted);
     }
 
+    function testQueuedOwnerActionBindsToQueuingGovernanceAfterRotation() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
+        StakeActor governanceA = new StakeActor();
+        StakeActor governanceB = new StakeActor();
+        core.configureSubnetGovernance(netuid, address(governanceA), 2);
+
+        (bytes32 actionId, uint64 readyAtBlock) = governanceA.queueSubnetPause(core, netuid, true);
+        (uint64 queuedReadyAt, address queuedBy, bool queued, bool ready) = core.subnetOwnerActionState(netuid, actionId);
+        assert(queuedReadyAt == readyAtBlock);
+        assert(queuedBy == address(governanceA));
+        assert(queued);
+        assert(!ready);
+
+        core.configureSubnetGovernance(netuid, address(governanceB), 2);
+        vm.roll(readyAtBlock);
+
+        bool executeByNewGovernanceReverted = false;
+        try governanceB.setSubnetPaused(core, netuid, true) {}
+        catch {
+            executeByNewGovernanceReverted = true;
+        }
+        assert(executeByNewGovernanceReverted);
+        assert(!core.subnetPaused(netuid));
+
+        governanceB.cancelSubnetOwnerAction(core, netuid, actionId);
+        (queuedReadyAt, queuedBy, queued, ready) = core.subnetOwnerActionState(netuid, actionId);
+        assert(queuedReadyAt == 0);
+        assert(queuedBy == address(0));
+        assert(!queued);
+        assert(!ready);
+
+        (, uint64 replacementReadyAtBlock) = governanceB.queueSubnetPause(core, netuid, true);
+        vm.roll(replacementReadyAtBlock);
+        governanceB.setSubnetPaused(core, netuid, true);
+        assert(core.subnetPaused(netuid));
+    }
+
     function testMinerRegisterAndUnregister() public {
         uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
         StakeActor actor = new StakeActor();

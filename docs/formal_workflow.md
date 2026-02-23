@@ -140,5 +140,7 @@ A protocol change is complete only if:
 12. Commit revealability is preserved under governance config drift (e.g., epoch-length updates cannot invalidate an otherwise valid reveal window).
 13. Validator auto-unregister on under-min stake only happens when pending commitment count is zero; unresolved commitments keep accountability live until final resolution.
 14. Emergency pause must not deadlock pending commitment resolution; reveal/challenge flows remain callable while paused.
-15. Settlement policy governance queues have explicit lifecycle controls (queue, cancel, ready check, bounded expiry, requeue after expiry).
-16. Inference leaf construction is domain-separated by `(netuid, mechid, epoch, requestId, resultHash)` (or an equivalent collision-resistant encoding).
+15. Settlement policy governance queues have explicit lifecycle controls (queue, cancel, ready check, bounded expiry, requeue after expiry) and queue-origin binding (`queuedBy == executor`) to prevent governance-rotation execution drift.
+16. Subnet owner-action queues keep the same queue-origin binding invariant, while still allowing current governance to cancel stale queued actions after rotation.
+17. Queue-state observability exists for operator monitoring (`readyAt`, `queuedBy`, readiness/expiry status) without event replay.
+18. Inference leaf construction is domain-separated by `(netuid, mechid, epoch, requestId, resultHash)` (or an equivalent collision-resistant encoding).

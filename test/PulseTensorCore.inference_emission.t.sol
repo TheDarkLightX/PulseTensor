@@ -115,6 +115,20 @@ contract FeatureActor {
         );
     }
 
+    function queueInferenceBatchPolicyUpdateWithAction(
+        PulseTensorInferenceSettlement settlement,
+        uint16 netuid,
+        uint16 mechid,
+        bool enabled,
+        uint64 challengeWindowBlocks,
+        uint32 maxBatchItems,
+        uint256 minProposerBondWei
+    ) external returns (bytes32 actionId, uint64 readyAtBlock) {
+        (actionId, readyAtBlock) = settlement.queueBatchPolicyUpdate(
+            netuid, mechid, enabled, challengeWindowBlocks, maxBatchItems, minProposerBondWei
+        );
+    }
+
     function configureInferenceBatchPolicy(
         PulseTensorInferenceSettlement settlement,
         uint16 netuid,
@@ -154,6 +168,21 @@ contract FeatureActor {
         address minerSink
     ) external returns (uint64 readyAtBlock) {
         (, readyAtBlock) = settlement.queueFeePolicyUpdate(
+            netuid, mechid, enabled, protocolFeeBps, treasuryFeeBps, treasurySink, minerSink
+        );
+    }
+
+    function queueInferenceFeePolicyUpdateWithAction(
+        PulseTensorInferenceSettlement settlement,
+        uint16 netuid,
+        uint16 mechid,
+        bool enabled,
+        uint16 protocolFeeBps,
+        uint16 treasuryFeeBps,
+        address treasurySink,
+        address minerSink
+    ) external returns (bytes32 actionId, uint64 readyAtBlock) {
+        (actionId, readyAtBlock) = settlement.queueFeePolicyUpdate(
             netuid, mechid, enabled, protocolFeeBps, treasuryFeeBps, treasurySink, minerSink
         );
     }
@@ -504,6 +533,53 @@ contract PulseTensorCoreInferenceEmissionTest {
         assert(minProposerBondWei == 0.1 ether);
     }
 
+    function testInferenceBatchPolicyQueueBindsToQueuingGovernanceAfterRotation() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
+        FeatureActor governanceA = new FeatureActor();
+        FeatureActor governanceB = new FeatureActor();
+        core.configureSubnetGovernance(netuid, address(governanceA), 2);
+        uint16 mechid = 24;
+
+        (bytes32 actionId, uint64 readyAt) =
+            governanceA.queueInferenceBatchPolicyUpdateWithAction(settlement, netuid, mechid, true, 6, 8, 0.1 ether);
+        (uint64 queuedReadyAt, address queuedBy, bool queued, bool ready, bool expired) =
+            settlement.batchPolicyQueueState(netuid, actionId);
+        assert(queuedReadyAt == readyAt);
+        assert(queuedBy == address(governanceA));
+        assert(queued);
+        assert(!ready);
+        assert(!expired);
+
+        core.configureSubnetGovernance(netuid, address(governanceB), 2);
+        vm.roll(readyAt);
+
+        bool executeByNewGovernanceReverted = false;
+        try governanceB.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 6, 8, 0.1 ether) {}
+        catch {
+            executeByNewGovernanceReverted = true;
+        }
+        assert(executeByNewGovernanceReverted);
+
+        governanceB.cancelInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 6, 8, 0.1 ether);
+        (queuedReadyAt, queuedBy, queued, ready, expired) = settlement.batchPolicyQueueState(netuid, actionId);
+        assert(queuedReadyAt == 0);
+        assert(queuedBy == address(0));
+        assert(!queued);
+        assert(!ready);
+        assert(!expired);
+
+        uint64 replacementReadyAt =
+            governanceB.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 6, 8, 0.1 ether);
+        vm.roll(replacementReadyAt);
+        governanceB.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 6, 8, 0.1 ether);
+        (bool enabled, uint64 challengeWindowBlocks, uint32 maxBatchItems, uint256 minProposerBondWei) =
+            settlement.batchPolicies(netuid, mechid);
+        assert(enabled);
+        assert(challengeWindowBlocks == 6);
+        assert(maxBatchItems == 8);
+        assert(minProposerBondWei == 0.1 ether);
+    }
+
     function testInferenceFeePolicyQueueExpiresAndCanBeRequeued() public {
         uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
         FeatureActor governance = new FeatureActor();
@@ -512,10 +588,17 @@ contract PulseTensorCoreInferenceEmissionTest {
         core.configureSubnetGovernance(netuid, address(governance), 2);
         uint16 mechid = 23;
 
-        uint64 readyAt = governance.queueInferenceFeePolicyUpdate(
+        (bytes32 actionId, uint64 readyAt) = governance.queueInferenceFeePolicyUpdateWithAction(
             settlement, netuid, mechid, true, 1_200, 3_500, address(treasurySink), address(minerSink)
         );
         vm.roll(uint256(readyAt) + settlement.POLICY_UPDATE_EXPIRY_BLOCKS() + 1);
+        (uint64 queuedReadyAt, address queuedBy, bool queued, bool ready, bool expired) =
+            settlement.feePolicyQueueState(netuid, actionId);
+        assert(queuedReadyAt == readyAt);
+        assert(queuedBy == address(governance));
+        assert(queued);
+        assert(ready);
+        assert(expired);
 
         bool expiredConfigureReverted = false;
         try governance.configureInferenceFeePolicy(
@@ -524,12 +607,76 @@ contract PulseTensorCoreInferenceEmissionTest {
             expiredConfigureReverted = true;
         }
         assert(expiredConfigureReverted);
+        (queuedReadyAt, queuedBy, queued, ready, expired) = settlement.feePolicyQueueState(netuid, actionId);
+        assert(queuedReadyAt == readyAt);
+        assert(queuedBy == address(governance));
+        assert(queued);
+        assert(ready);
+        assert(expired);
 
         uint64 requeueReadyAt = governance.queueInferenceFeePolicyUpdate(
             settlement, netuid, mechid, true, 1_200, 3_500, address(treasurySink), address(minerSink)
         );
         vm.roll(requeueReadyAt);
         governance.configureInferenceFeePolicy(
+            settlement, netuid, mechid, true, 1_200, 3_500, address(treasurySink), address(minerSink)
+        );
+
+        (bool enabled, uint16 protocolFeeBps, uint16 treasuryFeeBps, address treasury, address miner) =
+            settlement.feePolicies(netuid, mechid);
+        assert(enabled);
+        assert(protocolFeeBps == 1_200);
+        assert(treasuryFeeBps == 3_500);
+        assert(treasury == address(treasurySink));
+        assert(miner == address(minerSink));
+    }
+
+    function testInferenceFeePolicyQueueBindsToQueuingGovernanceAfterRotation() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
+        FeatureActor governanceA = new FeatureActor();
+        FeatureActor governanceB = new FeatureActor();
+        FeatureActor treasurySink = new FeatureActor();
+        FeatureActor minerSink = new FeatureActor();
+        core.configureSubnetGovernance(netuid, address(governanceA), 2);
+        uint16 mechid = 25;
+
+        (bytes32 actionId, uint64 readyAt) = governanceA.queueInferenceFeePolicyUpdateWithAction(
+            settlement, netuid, mechid, true, 1_200, 3_500, address(treasurySink), address(minerSink)
+        );
+        (uint64 queuedReadyAt, address queuedBy, bool queued, bool ready, bool expired) =
+            settlement.feePolicyQueueState(netuid, actionId);
+        assert(queuedReadyAt == readyAt);
+        assert(queuedBy == address(governanceA));
+        assert(queued);
+        assert(!ready);
+        assert(!expired);
+
+        core.configureSubnetGovernance(netuid, address(governanceB), 2);
+        vm.roll(readyAt);
+
+        bool executeByNewGovernanceReverted = false;
+        try governanceB.configureInferenceFeePolicy(
+            settlement, netuid, mechid, true, 1_200, 3_500, address(treasurySink), address(minerSink)
+        ) {} catch {
+            executeByNewGovernanceReverted = true;
+        }
+        assert(executeByNewGovernanceReverted);
+
+        governanceB.cancelInferenceFeePolicyUpdate(
+            settlement, netuid, mechid, true, 1_200, 3_500, address(treasurySink), address(minerSink)
+        );
+        (queuedReadyAt, queuedBy, queued, ready, expired) = settlement.feePolicyQueueState(netuid, actionId);
+        assert(queuedReadyAt == 0);
+        assert(queuedBy == address(0));
+        assert(!queued);
+        assert(!ready);
+        assert(!expired);
+
+        uint64 replacementReadyAt = governanceB.queueInferenceFeePolicyUpdate(
+            settlement, netuid, mechid, true, 1_200, 3_500, address(treasurySink), address(minerSink)
+        );
+        vm.roll(replacementReadyAt);
+        governanceB.configureInferenceFeePolicy(
             settlement, netuid, mechid, true, 1_200, 3_500, address(treasurySink), address(minerSink)
         );
 
