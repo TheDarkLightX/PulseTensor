@@ -29,17 +29,26 @@ export const pulsetensorCoreAbi = parseAbi([
 
 export const pulsetensorSettlementAbi = parseAbi([
   "function batchPolicies(uint16 netuid, uint16 mechid) view returns (bool enabled, uint64 challengeWindowBlocks, uint32 maxBatchItems, uint256 minProposerBondWei)",
+  "function feePolicies(uint16 netuid, uint16 mechid) view returns (bool enabled, uint16 protocolFeeBps, uint16 treasuryFeeBps, address treasurySink, address minerSink)",
   "function inferenceBatches(uint16 netuid, uint16 mechid, uint64 epoch) view returns (bytes32 batchRoot, uint32 itemCount, uint256 feeTotal, uint256 bond, address proposer, uint64 committedAtBlock, uint64 challengeDeadlineBlock, bool challenged, bool finalized)",
+  "function batchFeeFunded(uint16 netuid, uint16 mechid, uint64 epoch) view returns (uint256)",
+  "function batchFeeEscrowOf(uint16 netuid, uint16 mechid, uint64 epoch, address funder) view returns (uint256)",
   "function challengeRewardOf(uint16 netuid, address challenger) view returns (uint256)",
   "function proposerBondRefundOf(uint16 netuid, address proposer) view returns (uint256)",
+  "function inferenceFeeClaimOf(uint16 netuid, address recipient) view returns (uint256)",
   "function settledLeaves(uint16 netuid, uint16 mechid, bytes32 leafHash) view returns (bool)",
   "function queueBatchPolicyUpdate(uint16 netuid, uint16 mechid, bool enabled, uint64 challengeWindowBlocks, uint32 maxBatchItems, uint256 minProposerBondWei) returns (bytes32 actionId, uint64 readyAtBlock)",
   "function configureBatchPolicy(uint16 netuid, uint16 mechid, bool enabled, uint64 challengeWindowBlocks, uint32 maxBatchItems, uint256 minProposerBondWei)",
+  "function queueFeePolicyUpdate(uint16 netuid, uint16 mechid, bool enabled, uint16 protocolFeeBps, uint16 treasuryFeeBps, address treasurySink, address minerSink) returns (bytes32 actionId, uint64 readyAtBlock)",
+  "function configureFeePolicy(uint16 netuid, uint16 mechid, bool enabled, uint16 protocolFeeBps, uint16 treasuryFeeBps, address treasurySink, address minerSink)",
   "function commitInferenceBatchRoot(uint16 netuid, uint16 mechid, uint64 epoch, bytes32 batchRoot, uint32 itemCount, uint256 feeTotal) payable",
+  "function fundInferenceBatchFees(uint16 netuid, uint16 mechid, uint64 epoch) payable",
+  "function withdrawInferenceBatchFees(uint16 netuid, uint16 mechid, uint64 epoch, uint256 amount)",
   "function finalizeInferenceBatch(uint16 netuid, uint16 mechid, uint64 epoch)",
   "function settleFinalizedInferenceLeaf(uint16 netuid, uint16 mechid, uint64 epoch, bytes32 leafHash, uint256 index, bytes32[] merkleProof)",
   "function challengeInferenceLeafReplay(uint16 netuid, uint16 mechid, uint64 epoch, bytes32 leafHash, uint256 index, bytes32[] merkleProof, uint64 priorEpoch, uint256 priorIndex, bytes32[] priorMerkleProof)",
   "function challengeInferenceLeafDuplicate(uint16 netuid, uint16 mechid, uint64 epoch, bytes32 leafHash, uint256 indexA, bytes32[] proofA, uint256 indexB, bytes32[] proofB)",
   "function claimChallengeReward(uint16 netuid, uint256 amount)",
-  "function claimProposerBondRefund(uint16 netuid, uint256 amount)"
+  "function claimProposerBondRefund(uint16 netuid, uint256 amount)",
+  "function claimInferenceFee(uint16 netuid, uint256 amount)"
 ]);

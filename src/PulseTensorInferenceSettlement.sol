@@ -11,6 +11,7 @@ interface IPulseTensorCore {
 contract PulseTensorInferenceSettlement {
     uint16 public constant BPS_DENOMINATOR = 10_000;
     uint16 public constant CHALLENGE_REWARD_BPS = 2_000;
+    uint16 public constant MAX_PROTOCOL_FEE_BPS = 3_000;
     uint64 public constant POLICY_UPDATE_DELAY_BLOCKS = 2;
     uint64 public constant MIN_CHALLENGE_WINDOW_BLOCKS = 1;
     uint64 public constant MAX_CHALLENGE_WINDOW_BLOCKS = 200_000;
@@ -27,6 +28,9 @@ contract PulseTensorInferenceSettlement {
     error InvalidBatchItemCount();
     error InvalidBatchIndex();
     error BondTooLow();
+    error InvalidFeePolicy();
+    error InvalidFeeAmount();
+    error FeeFundingExceedsBatchTotal();
     error BatchAlreadyCommitted();
     error BatchNotCommitted();
     error BatchAlreadyFinalized();
@@ -62,15 +66,32 @@ contract PulseTensorInferenceSettlement {
         bool finalized;
     }
 
+    struct FeePolicy {
+        bool enabled;
+        uint16 protocolFeeBps;
+        uint16 treasuryFeeBps;
+        address treasurySink;
+        address minerSink;
+    }
+
     IPulseTensorCore public immutable CORE;
     uint256 private lockState = 1;
 
     mapping(uint16 => mapping(uint16 => BatchPolicy)) public batchPolicies;
     mapping(uint16 => mapping(bytes32 => uint64)) public queuedBatchPolicyReadyAt;
+    mapping(uint16 => mapping(uint16 => FeePolicy)) public feePolicies;
+    mapping(uint16 => mapping(bytes32 => uint64)) public queuedFeePolicyReadyAt;
     mapping(uint16 => mapping(uint16 => mapping(uint64 => InferenceBatch))) public inferenceBatches;
+    mapping(uint16 => mapping(uint16 => mapping(uint64 => uint256))) public batchFeeFunded;
+    mapping(uint16 => mapping(uint16 => mapping(uint64 => mapping(address => uint256)))) public batchFeeEscrowOf;
+    mapping(uint16 => mapping(uint16 => mapping(uint64 => uint16))) public batchProtocolFeeBps;
+    mapping(uint16 => mapping(uint16 => mapping(uint64 => uint16))) public batchTreasuryFeeBps;
+    mapping(uint16 => mapping(uint16 => mapping(uint64 => address))) public batchTreasurySink;
+    mapping(uint16 => mapping(uint16 => mapping(uint64 => address))) public batchMinerSink;
     mapping(uint16 => mapping(uint16 => mapping(bytes32 => bool))) public settledLeaves;
     mapping(uint16 => mapping(address => uint256)) public challengeRewardOf;
     mapping(uint16 => mapping(address => uint256)) public proposerBondRefundOf;
+    mapping(uint16 => mapping(address => uint256)) public inferenceFeeClaimOf;
 
     event BatchPolicyConfigured(
         uint16 indexed netuid,
@@ -90,6 +111,26 @@ contract PulseTensorInferenceSettlement {
         bytes32 actionId,
         uint64 readyAtBlock
     );
+    event FeePolicyConfigured(
+        uint16 indexed netuid,
+        uint16 indexed mechid,
+        bool enabled,
+        uint16 protocolFeeBps,
+        uint16 treasuryFeeBps,
+        address treasurySink,
+        address minerSink
+    );
+    event FeePolicyUpdateQueued(
+        uint16 indexed netuid,
+        uint16 indexed mechid,
+        bool enabled,
+        uint16 protocolFeeBps,
+        uint16 treasuryFeeBps,
+        address treasurySink,
+        address minerSink,
+        bytes32 actionId,
+        uint64 readyAtBlock
+    );
     event InferenceBatchCommitted(
         uint16 indexed netuid,
         uint16 indexed mechid,
@@ -100,6 +141,38 @@ contract PulseTensorInferenceSettlement {
         address proposer,
         uint256 bond,
         uint64 challengeDeadlineBlock
+    );
+    event InferenceBatchFeeFunded(
+        uint16 indexed netuid,
+        uint16 indexed mechid,
+        uint64 indexed epoch,
+        address funder,
+        uint256 amount,
+        uint256 fundedTotal,
+        uint256 declaredFeeTotal
+    );
+    event InferenceBatchFeeWithdrawn(
+        uint16 indexed netuid,
+        uint16 indexed mechid,
+        uint64 indexed epoch,
+        address funder,
+        uint256 amount,
+        uint256 fundedTotal
+    );
+    event InferenceBatchFeesDistributed(
+        uint16 indexed netuid,
+        uint16 indexed mechid,
+        uint64 indexed epoch,
+        address proposer,
+        address treasurySink,
+        address minerSink,
+        uint256 fundedTotal,
+        uint256 proposerAmount,
+        uint256 treasuryAmount,
+        uint256 minerAmount
+    );
+    event InferenceFeeClaimed(
+        uint16 indexed netuid, address indexed recipient, uint256 amount, uint256 remainingClaimableBalance
     );
     event InferenceBatchFinalized(
         uint16 indexed netuid, uint16 indexed mechid, uint64 indexed epoch, address proposer, uint256 bondRefunded
@@ -188,6 +261,66 @@ contract PulseTensorInferenceSettlement {
         emit BatchPolicyConfigured(netuid, mechid, enabled, challengeWindowBlocks, maxBatchItems, minProposerBondWei);
     }
 
+    function queueFeePolicyUpdate(
+        uint16 netuid,
+        uint16 mechid,
+        bool enabled,
+        uint16 protocolFeeBps,
+        uint16 treasuryFeeBps,
+        address treasurySink,
+        address minerSink
+    ) external returns (bytes32 actionId, uint64 readyAtBlock) {
+        if (CORE.subnetGovernance(netuid) != msg.sender) revert UnauthorizedGovernance();
+        _validateFeePolicy(enabled, protocolFeeBps, treasuryFeeBps, treasurySink, minerSink);
+
+        actionId =
+            _feePolicyActionId(netuid, mechid, enabled, protocolFeeBps, treasuryFeeBps, treasurySink, minerSink);
+        uint256 readyAt = block.number + POLICY_UPDATE_DELAY_BLOCKS;
+        if (readyAt > type(uint64).max) revert InvalidPolicy();
+        readyAtBlock = uint64(readyAt);
+        queuedFeePolicyReadyAt[netuid][actionId] = readyAtBlock;
+
+        emit FeePolicyUpdateQueued(
+            netuid,
+            mechid,
+            enabled,
+            protocolFeeBps,
+            treasuryFeeBps,
+            treasurySink,
+            minerSink,
+            actionId,
+            readyAtBlock
+        );
+    }
+
+    function configureFeePolicy(
+        uint16 netuid,
+        uint16 mechid,
+        bool enabled,
+        uint16 protocolFeeBps,
+        uint16 treasuryFeeBps,
+        address treasurySink,
+        address minerSink
+    ) external {
+        if (CORE.subnetGovernance(netuid) != msg.sender) revert UnauthorizedGovernance();
+        _validateFeePolicy(enabled, protocolFeeBps, treasuryFeeBps, treasurySink, minerSink);
+
+        bytes32 actionId =
+            _feePolicyActionId(netuid, mechid, enabled, protocolFeeBps, treasuryFeeBps, treasurySink, minerSink);
+        uint64 readyAtBlock = queuedFeePolicyReadyAt[netuid][actionId];
+        if (readyAtBlock == 0 || block.number < readyAtBlock) revert GovernanceActionNotReady();
+        delete queuedFeePolicyReadyAt[netuid][actionId];
+
+        feePolicies[netuid][mechid] = FeePolicy({
+            enabled: enabled,
+            protocolFeeBps: protocolFeeBps,
+            treasuryFeeBps: treasuryFeeBps,
+            treasurySink: treasurySink,
+            minerSink: minerSink
+        });
+        emit FeePolicyConfigured(netuid, mechid, enabled, protocolFeeBps, treasuryFeeBps, treasurySink, minerSink);
+    }
+
     function commitInferenceBatchRoot(
         uint16 netuid,
         uint16 mechid,
@@ -210,6 +343,7 @@ contract PulseTensorInferenceSettlement {
 
         uint256 challengeDeadline = block.number + policy.challengeWindowBlocks;
         if (challengeDeadline > type(uint64).max) revert InvalidPolicy();
+        _snapshotFeePolicy(netuid, mechid, epoch);
         inferenceBatches[netuid][mechid][epoch] = InferenceBatch({
             batchRoot: batchRoot,
             itemCount: itemCount,
@@ -227,6 +361,41 @@ contract PulseTensorInferenceSettlement {
         );
     }
 
+    function fundInferenceBatchFees(uint16 netuid, uint16 mechid, uint64 epoch) external payable {
+        if (msg.value == 0) revert InvalidFeeAmount();
+        InferenceBatch storage batch = inferenceBatches[netuid][mechid][epoch];
+        if (batch.batchRoot == bytes32(0)) revert BatchNotCommitted();
+        if (batch.finalized) revert BatchAlreadyFinalized();
+        if (batch.challenged) revert BatchAlreadyChallenged();
+
+        uint256 fundedTotal = batchFeeFunded[netuid][mechid][epoch] + msg.value;
+        if (fundedTotal > batch.feeTotal) revert FeeFundingExceedsBatchTotal();
+        batchFeeFunded[netuid][mechid][epoch] = fundedTotal;
+        batchFeeEscrowOf[netuid][mechid][epoch][msg.sender] += msg.value;
+
+        emit InferenceBatchFeeFunded(netuid, mechid, epoch, msg.sender, msg.value, fundedTotal, batch.feeTotal);
+    }
+
+    function withdrawInferenceBatchFees(uint16 netuid, uint16 mechid, uint64 epoch, uint256 amount) external nonReentrant {
+        if (amount == 0) revert InvalidFeeAmount();
+        InferenceBatch storage batch = inferenceBatches[netuid][mechid][epoch];
+        if (batch.batchRoot == bytes32(0)) revert BatchNotCommitted();
+        if (batch.finalized) revert BatchAlreadyFinalized();
+
+        uint256 escrowed = batchFeeEscrowOf[netuid][mechid][epoch][msg.sender];
+        if (amount > escrowed) revert TransferFailed();
+
+        uint256 fundedTotal = batchFeeFunded[netuid][mechid][epoch];
+        if (amount > fundedTotal) revert TransferFailed();
+
+        batchFeeEscrowOf[netuid][mechid][epoch][msg.sender] = escrowed - amount;
+        fundedTotal -= amount;
+        batchFeeFunded[netuid][mechid][epoch] = fundedTotal;
+
+        _transferValue(payable(msg.sender), amount);
+        emit InferenceBatchFeeWithdrawn(netuid, mechid, epoch, msg.sender, amount, fundedTotal);
+    }
+
     function finalizeInferenceBatch(uint16 netuid, uint16 mechid, uint64 epoch) external nonReentrant {
         InferenceBatch storage batch = inferenceBatches[netuid][mechid][epoch];
         if (batch.batchRoot == bytes32(0)) revert BatchNotCommitted();
@@ -239,6 +408,12 @@ contract PulseTensorInferenceSettlement {
         batch.bond = 0;
         if (bondRefunded != 0) {
             proposerBondRefundOf[netuid][batch.proposer] += bondRefunded;
+        }
+
+        uint256 fundedTotal = batchFeeFunded[netuid][mechid][epoch];
+        if (fundedTotal != 0) {
+            batchFeeFunded[netuid][mechid][epoch] = 0;
+            _distributeBatchFees(netuid, mechid, epoch, batch.proposer, fundedTotal);
         }
 
         emit InferenceBatchFinalized(netuid, mechid, epoch, batch.proposer, bondRefunded);
@@ -336,23 +511,37 @@ contract PulseTensorInferenceSettlement {
         emit ProposerBondRefundClaimed(netuid, msg.sender, amount, proposerBondRefundOf[netuid][msg.sender]);
     }
 
+    function claimInferenceFee(uint16 netuid, uint256 amount) external nonReentrant {
+        uint256 claimableAmount = inferenceFeeClaimOf[netuid][msg.sender];
+        if (amount == 0 || amount > claimableAmount) revert TransferFailed();
+
+        inferenceFeeClaimOf[netuid][msg.sender] = claimableAmount - amount;
+        _transferValue(payable(msg.sender), amount);
+        emit InferenceFeeClaimed(netuid, msg.sender, amount, inferenceFeeClaimOf[netuid][msg.sender]);
+    }
+
     function _slashBatchBond(uint16 netuid, uint16 mechid, uint64 epoch, bytes32 leafHash) internal {
         InferenceBatch storage batch = inferenceBatches[netuid][mechid][epoch];
         batch.challenged = true;
         uint256 slashedBond = batch.bond;
         batch.bond = 0;
 
-        uint256 challengerRewardAmount = (slashedBond * CHALLENGE_REWARD_BPS) / BPS_DENOMINATOR;
-        if (challengerRewardAmount == 0 && slashedBond != 0) {
-            challengerRewardAmount = 1;
+        bool selfChallenge = msg.sender == batch.proposer;
+        uint256 challengerRewardAmount = 0;
+        if (!selfChallenge) {
+            challengerRewardAmount = (slashedBond * CHALLENGE_REWARD_BPS) / BPS_DENOMINATOR;
+            if (challengerRewardAmount == 0 && slashedBond != 0) {
+                challengerRewardAmount = 1;
+            }
+            if (challengerRewardAmount > slashedBond) {
+                challengerRewardAmount = slashedBond;
+            }
+            if (challengerRewardAmount != 0) {
+                challengeRewardOf[netuid][msg.sender] += challengerRewardAmount;
+            }
         }
-        if (challengerRewardAmount > slashedBond) {
-            challengerRewardAmount = slashedBond;
-        }
+
         uint256 retainedBondAmount = slashedBond - challengerRewardAmount;
-        if (challengerRewardAmount != 0) {
-            challengeRewardOf[netuid][msg.sender] += challengerRewardAmount;
-        }
 
         emit InferenceBatchChallenged(
             netuid, mechid, epoch, msg.sender, leafHash, challengerRewardAmount, retainedBondAmount
@@ -380,6 +569,32 @@ contract PulseTensorInferenceSettlement {
         if (minProposerBondWei == 0) revert InvalidPolicy();
     }
 
+    function _validateFeePolicy(
+        bool enabled,
+        uint16 protocolFeeBps,
+        uint16 treasuryFeeBps,
+        address treasurySink,
+        address minerSink
+    ) internal pure {
+        if (!enabled) {
+            if (protocolFeeBps != 0 || treasuryFeeBps != 0 || treasurySink != address(0) || minerSink != address(0)) {
+                revert InvalidFeePolicy();
+            }
+            return;
+        }
+
+        if (protocolFeeBps > MAX_PROTOCOL_FEE_BPS) revert InvalidFeePolicy();
+        if (treasuryFeeBps > BPS_DENOMINATOR) revert InvalidFeePolicy();
+
+        if (protocolFeeBps == 0) {
+            if (treasuryFeeBps != 0 || treasurySink != address(0) || minerSink != address(0)) {
+                revert InvalidFeePolicy();
+            }
+            return;
+        }
+        if (treasurySink == address(0) || minerSink == address(0)) revert InvalidFeePolicy();
+    }
+
     function _validateBatchIndex(uint256 index, uint32 itemCount) internal pure {
         if (index >= itemCount) revert InvalidBatchIndex();
     }
@@ -403,6 +618,103 @@ contract PulseTensorInferenceSettlement {
                 minProposerBondWei
             )
         );
+    }
+
+    function _feePolicyActionId(
+        uint16 netuid,
+        uint16 mechid,
+        bool enabled,
+        uint16 protocolFeeBps,
+        uint16 treasuryFeeBps,
+        address treasurySink,
+        address minerSink
+    ) internal pure returns (bytes32) {
+        return keccak256(
+            abi.encode(
+                "FEE_POLICY",
+                netuid,
+                mechid,
+                enabled,
+                protocolFeeBps,
+                treasuryFeeBps,
+                treasurySink,
+                minerSink
+            )
+        );
+    }
+
+    function _snapshotFeePolicy(uint16 netuid, uint16 mechid, uint64 epoch) internal {
+        FeePolicy memory policy = feePolicies[netuid][mechid];
+        if (!policy.enabled) {
+            batchProtocolFeeBps[netuid][mechid][epoch] = 0;
+            batchTreasuryFeeBps[netuid][mechid][epoch] = 0;
+            batchTreasurySink[netuid][mechid][epoch] = address(0);
+            batchMinerSink[netuid][mechid][epoch] = address(0);
+            return;
+        }
+
+        batchProtocolFeeBps[netuid][mechid][epoch] = policy.protocolFeeBps;
+        batchTreasuryFeeBps[netuid][mechid][epoch] = policy.treasuryFeeBps;
+        batchTreasurySink[netuid][mechid][epoch] = policy.treasurySink;
+        batchMinerSink[netuid][mechid][epoch] = policy.minerSink;
+    }
+
+    function _distributeBatchFees(uint16 netuid, uint16 mechid, uint64 epoch, address proposer, uint256 fundedTotal)
+        internal
+    {
+        uint16 protocolFeeBps = batchProtocolFeeBps[netuid][mechid][epoch];
+        uint16 treasuryFeeBps = batchTreasuryFeeBps[netuid][mechid][epoch];
+        address treasurySink = batchTreasurySink[netuid][mechid][epoch];
+        address minerSink = batchMinerSink[netuid][mechid][epoch];
+
+        uint256 protocolAmount = _mulBps(fundedTotal, protocolFeeBps);
+        uint256 proposerAmount = fundedTotal - protocolAmount;
+        uint256 treasuryAmount = 0;
+        uint256 minerAmount = 0;
+        if (protocolAmount != 0) {
+            treasuryAmount = _mulDualBps(fundedTotal, protocolFeeBps, treasuryFeeBps);
+            if (treasuryAmount > protocolAmount) {
+                treasuryAmount = protocolAmount;
+            }
+            minerAmount = protocolAmount - treasuryAmount;
+        }
+
+        if (proposerAmount != 0) {
+            inferenceFeeClaimOf[netuid][proposer] += proposerAmount;
+        }
+        if (treasuryAmount != 0) {
+            inferenceFeeClaimOf[netuid][treasurySink] += treasuryAmount;
+        }
+        if (minerAmount != 0) {
+            inferenceFeeClaimOf[netuid][minerSink] += minerAmount;
+        }
+
+        emit InferenceBatchFeesDistributed(
+            netuid,
+            mechid,
+            epoch,
+            proposer,
+            treasurySink,
+            minerSink,
+            fundedTotal,
+            proposerAmount,
+            treasuryAmount,
+            minerAmount
+        );
+    }
+
+    function _mulBps(uint256 amount, uint16 bps) internal pure returns (uint256) {
+        if (amount == 0 || bps == 0) return 0;
+        uint256 bpsValue = uint256(bps);
+        if (amount > type(uint256).max / bpsValue) revert InvalidFeeAmount();
+        return (amount * bpsValue) / BPS_DENOMINATOR;
+    }
+
+    function _mulDualBps(uint256 amount, uint16 firstBps, uint16 secondBps) internal pure returns (uint256) {
+        if (amount == 0 || firstBps == 0 || secondBps == 0) return 0;
+        uint256 combinedBps = uint256(firstBps) * uint256(secondBps);
+        if (amount > type(uint256).max / combinedBps) revert InvalidFeeAmount();
+        return (amount * combinedBps) / (uint256(BPS_DENOMINATOR) * uint256(BPS_DENOMINATOR));
     }
 
     function _verifyMerkleProof(

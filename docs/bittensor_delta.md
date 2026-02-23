@@ -155,6 +155,17 @@ This is the baseline design transfer for PulseTensor.
      - `scripts/check_mythril.sh`
      - `scripts/check_artifact_freshness.sh`
 
+11. **Protocol-native fee-lane tokenomics (PLS-denominated)**
+   - Added governance-queued inference fee policy per `(netuid, mechid)` with hard cap (`protocolFeeBps <= 3000`).
+   - Fee policy is snapshotted at batch commit so governance cannot retroactively raise protocol fees before finalization.
+   - Added per-batch fee escrow funding/withdrawal:
+     - funders can escrow up to declared batch fee total,
+     - funders can withdraw before finalization (including challenged batches),
+     - finalized batches distribute funded fees to proposer + treasury sink + miner sink via pull claims.
+   - Settlement self-challenge now mirrors core self-challenge posture: no bounty paid to self-challenger.
+   - Covered by:
+     - `test/PulseTensorCore.inference_emission.t.sol` (`testInferenceFeePolicyRequiresQueuedGovernanceAction`, `testInferenceBatchFeeFundingWithdrawAndFinalizeDistribution`, `testInferenceBatchFeeFundingCannotExceedDeclaredTotal`, `testInferenceFeeWithdrawBlockedAfterFinalize`, `testInferenceSelfChallengeGetsNoBounty`)
+
 ## Deterministic Evidence Artifacts
 
 - Security manifest: `docs/security/artifact_manifest.security.txt`

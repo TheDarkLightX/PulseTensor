@@ -1,0 +1,70 @@
+# PulseTensor Tokenomics (Game-Theoretic Draft v1)
+
+## Scope
+
+PulseTensor is currently PLS-native: incentives are denominated in PLS and paid from explicit pools or escrowed usage fees.
+This avoids bootstrapping risk from launching an unaudited new token too early.
+
+## Roles and Economic Flows
+
+- **Validators / proposers**
+  - Post proposer bonds to commit inference batch roots.
+  - Receive proposer-bond refunds only after unchallenged finalization.
+  - Receive proposer share of finalized batch fees.
+- **Challengers**
+  - Earn challenge bounties from slashed proposer bonds for valid fraud proofs.
+  - Self-challenges receive no bounty.
+- **Miners**
+  - Receive miner-sink fee flow from finalized batch fees.
+- **Treasury**
+  - Receives treasury-sink fee flow from finalized batch fees.
+  - Intended use: protocol R&D, audits, grants, and operations.
+
+## Fee Policy Mechanism
+
+Inference settlement supports per-`(netuid, mechid)` fee policies:
+
+- `protocolFeeBps`: protocol cut from funded batch fees.
+- `treasuryFeeBps`: share of protocol cut routed to treasury sink.
+- `minerSink`: recipient of miner portion of protocol cut.
+- `treasurySink`: recipient of treasury portion of protocol cut.
+
+Security/economic constraints:
+
+- Policy changes are governance-queued (timelocked).
+- `protocolFeeBps <= 3000` (30% hard cap).
+- Fee policy is snapshotted at batch commit, so governance cannot raise fees after work is posted.
+
+Distribution on finalization for funded amount `F`:
+
+- `protocol = F * protocolFeeBps / 10000`
+- `treasury = protocol * treasuryFeeBps / 10000`
+- `miner = protocol - treasury`
+- `proposer = F - protocol`
+
+## Why This Is Incentive-Aligned
+
+- **Fraud deterrence**: proposer bond + permissionless challenges penalize invalid commitments.
+- **No retroactive rent extraction**: fee snapshot prevents governance from changing economics after batch commit.
+- **Liveness under dispute**: fee payers can withdraw escrow before finalization; challenged batches do not trap user funds.
+- **Protocol sustainability**: treasury funding grows with real usage, not with inflation assumptions.
+- **Miner retention**: miner sink creates direct demand-side revenue, complementing emission schedules.
+
+## Suggested Initial Parameters
+
+For early mainnet safety:
+
+- `protocolFeeBps = 1200` (12%)
+- `treasuryFeeBps = 3500` (35% of protocol fee, 4.2% of gross)
+- effective split of gross funded fees:
+  - proposer: 88.0%
+  - miner sink: 7.8%
+  - treasury sink: 4.2%
+
+This keeps service providers strongly incentivized while still generating protocol-native development revenue.
+
+## Relation to Bittensor-Inspired Design
+
+- Keep Bittensor-style subnet/mechanism incentives and slashing discipline.
+- Add EVM-native settlement fee routing with timelocked governance and explicit caps.
+- Preserve conservative launch posture: use PLS flows first, only add a separate token after sustained product-market usage and additional formal/audit evidence.

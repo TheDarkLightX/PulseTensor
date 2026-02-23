@@ -127,6 +127,34 @@ contract FeatureActor {
         settlement.configureBatchPolicy(netuid, mechid, enabled, challengeWindowBlocks, maxBatchItems, minProposerBondWei);
     }
 
+    function queueInferenceFeePolicyUpdate(
+        PulseTensorInferenceSettlement settlement,
+        uint16 netuid,
+        uint16 mechid,
+        bool enabled,
+        uint16 protocolFeeBps,
+        uint16 treasuryFeeBps,
+        address treasurySink,
+        address minerSink
+    ) external returns (uint64 readyAtBlock) {
+        (, readyAtBlock) = settlement.queueFeePolicyUpdate(
+            netuid, mechid, enabled, protocolFeeBps, treasuryFeeBps, treasurySink, minerSink
+        );
+    }
+
+    function configureInferenceFeePolicy(
+        PulseTensorInferenceSettlement settlement,
+        uint16 netuid,
+        uint16 mechid,
+        bool enabled,
+        uint16 protocolFeeBps,
+        uint16 treasuryFeeBps,
+        address treasurySink,
+        address minerSink
+    ) external {
+        settlement.configureFeePolicy(netuid, mechid, enabled, protocolFeeBps, treasuryFeeBps, treasurySink, minerSink);
+    }
+
     function commitInferenceBatchRoot(
         PulseTensorInferenceSettlement settlement,
         uint16 netuid,
@@ -139,12 +167,64 @@ contract FeatureActor {
         settlement.commitInferenceBatchRoot{value: msg.value}(netuid, mechid, epoch, batchRoot, itemCount, feeTotal);
     }
 
+    function fundInferenceBatchFees(PulseTensorInferenceSettlement settlement, uint16 netuid, uint16 mechid, uint64 epoch)
+        external
+        payable
+    {
+        settlement.fundInferenceBatchFees{value: msg.value}(netuid, mechid, epoch);
+    }
+
+    function withdrawInferenceBatchFees(
+        PulseTensorInferenceSettlement settlement,
+        uint16 netuid,
+        uint16 mechid,
+        uint64 epoch,
+        uint256 amount
+    ) external {
+        settlement.withdrawInferenceBatchFees(netuid, mechid, epoch, amount);
+    }
+
+    function challengeInferenceLeafReplay(
+        PulseTensorInferenceSettlement settlement,
+        uint16 netuid,
+        uint16 mechid,
+        uint64 epoch,
+        bytes32 leafHash,
+        uint256 index,
+        bytes32[] calldata merkleProof,
+        uint64 priorEpoch,
+        uint256 priorIndex,
+        bytes32[] calldata priorMerkleProof
+    ) external {
+        settlement.challengeInferenceLeafReplay(
+            netuid, mechid, epoch, leafHash, index, merkleProof, priorEpoch, priorIndex, priorMerkleProof
+        );
+    }
+
+    function challengeInferenceLeafDuplicate(
+        PulseTensorInferenceSettlement settlement,
+        uint16 netuid,
+        uint16 mechid,
+        uint64 epoch,
+        bytes32 leafHash,
+        uint256 indexA,
+        bytes32[] calldata proofA,
+        uint256 indexB,
+        bytes32[] calldata proofB
+    ) external {
+        settlement.challengeInferenceLeafDuplicate(netuid, mechid, epoch, leafHash, indexA, proofA, indexB, proofB);
+    }
+
     function claimChallengeReward(PulseTensorInferenceSettlement settlement, uint16 netuid, uint256 amount) external {
         settlement.claimChallengeReward(netuid, amount);
     }
 
     function claimProposerBondRefund(PulseTensorInferenceSettlement settlement, uint16 netuid, uint256 amount) external {
         settlement.claimProposerBondRefund(netuid, amount);
+    }
+
+    function claimInferenceFee(PulseTensorInferenceSettlement settlement, uint16 netuid, uint256 amount) external {
+        settlement.claimInferenceFee(netuid, amount);
     }
 
     receive() external payable {}
@@ -307,6 +387,220 @@ contract PulseTensorCoreInferenceEmissionTest {
         assert(duplicateSettlementReverted);
     }
 
+    function testInferenceFeePolicyRequiresQueuedGovernanceAction() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
+        FeatureActor governance = new FeatureActor();
+        FeatureActor treasurySink = new FeatureActor();
+        FeatureActor minerSink = new FeatureActor();
+        core.configureSubnetGovernance(netuid, address(governance), 2);
+        uint16 mechid = 16;
+
+        bool immediateConfigureReverted = false;
+        try governance.configureInferenceFeePolicy(
+            settlement, netuid, mechid, true, 1_200, 3_500, address(treasurySink), address(minerSink)
+        ) {} catch {
+            immediateConfigureReverted = true;
+        }
+        assert(immediateConfigureReverted);
+
+        uint64 readyAt = governance.queueInferenceFeePolicyUpdate(
+            settlement, netuid, mechid, true, 1_200, 3_500, address(treasurySink), address(minerSink)
+        );
+
+        bool prematureConfigureReverted = false;
+        try governance.configureInferenceFeePolicy(
+            settlement, netuid, mechid, true, 1_200, 3_500, address(treasurySink), address(minerSink)
+        ) {} catch {
+            prematureConfigureReverted = true;
+        }
+        assert(prematureConfigureReverted);
+
+        vm.roll(readyAt);
+        governance.configureInferenceFeePolicy(
+            settlement, netuid, mechid, true, 1_200, 3_500, address(treasurySink), address(minerSink)
+        );
+        (bool enabled, uint16 protocolFeeBps, uint16 treasuryFeeBps, address treasury, address miner) =
+            settlement.feePolicies(netuid, mechid);
+        assert(enabled);
+        assert(protocolFeeBps == 1_200);
+        assert(treasuryFeeBps == 3_500);
+        assert(treasury == address(treasurySink));
+        assert(miner == address(minerSink));
+    }
+
+    function testInferenceBatchFeeFundingWithdrawAndFinalizeDistribution() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
+        (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
+        FeatureActor payer = new FeatureActor();
+        FeatureActor treasurySink = new FeatureActor();
+        FeatureActor minerSink = new FeatureActor();
+        vm.deal(address(payer), 10 ether);
+        uint16 mechid = 17;
+
+        uint64 batchReadyAt =
+            governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 4, 8, 0.1 ether);
+        uint64 feeReadyAt = governance.queueInferenceFeePolicyUpdate(
+            settlement, netuid, mechid, true, 1_500, 4_000, address(treasurySink), address(minerSink)
+        );
+        vm.roll(batchReadyAt > feeReadyAt ? batchReadyAt : feeReadyAt);
+        governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 4, 8, 0.1 ether);
+        governance.configureInferenceFeePolicy(
+            settlement, netuid, mechid, true, 1_500, 4_000, address(treasurySink), address(minerSink)
+        );
+
+        uint64 epoch = core.currentEpoch(netuid);
+        bytes32 leaf = keccak256("funded-leaf");
+        validator.commitInferenceBatchRoot{value: 0.2 ether}(settlement, netuid, mechid, epoch, leaf, 1, 1 ether);
+
+        payer.fundInferenceBatchFees{value: 0.8 ether}(settlement, netuid, mechid, epoch);
+        assert(settlement.batchFeeFunded(netuid, mechid, epoch) == 0.8 ether);
+        assert(settlement.batchFeeEscrowOf(netuid, mechid, epoch, address(payer)) == 0.8 ether);
+
+        payer.withdrawInferenceBatchFees(settlement, netuid, mechid, epoch, 0.2 ether);
+        assert(settlement.batchFeeFunded(netuid, mechid, epoch) == 0.6 ether);
+        assert(settlement.batchFeeEscrowOf(netuid, mechid, epoch, address(payer)) == 0.6 ether);
+
+        payer.fundInferenceBatchFees{value: 0.4 ether}(settlement, netuid, mechid, epoch);
+        assert(settlement.batchFeeFunded(netuid, mechid, epoch) == 1 ether);
+        assert(settlement.batchFeeEscrowOf(netuid, mechid, epoch, address(payer)) == 1 ether);
+
+        (,,,,,, uint64 challengeDeadline,,) = settlement.inferenceBatches(netuid, mechid, epoch);
+        vm.roll(challengeDeadline + 1);
+        settlement.finalizeInferenceBatch(netuid, mechid, epoch);
+
+        uint256 protocolAmount = (1 ether * 1_500) / 10_000;
+        uint256 treasuryAmount = (protocolAmount * 4_000) / 10_000;
+        uint256 minerAmount = protocolAmount - treasuryAmount;
+        uint256 proposerAmount = 1 ether - protocolAmount;
+
+        assert(settlement.batchFeeFunded(netuid, mechid, epoch) == 0);
+        assert(settlement.inferenceFeeClaimOf(netuid, address(validator)) == proposerAmount);
+        assert(settlement.inferenceFeeClaimOf(netuid, address(treasurySink)) == treasuryAmount);
+        assert(settlement.inferenceFeeClaimOf(netuid, address(minerSink)) == minerAmount);
+
+        uint256 proposerBalanceBefore = address(validator).balance;
+        uint256 treasuryBalanceBefore = address(treasurySink).balance;
+        uint256 minerBalanceBefore = address(minerSink).balance;
+
+        validator.claimInferenceFee(settlement, netuid, proposerAmount);
+        treasurySink.claimInferenceFee(settlement, netuid, treasuryAmount);
+        minerSink.claimInferenceFee(settlement, netuid, minerAmount);
+
+        assert(address(validator).balance == proposerBalanceBefore + proposerAmount);
+        assert(address(treasurySink).balance == treasuryBalanceBefore + treasuryAmount);
+        assert(address(minerSink).balance == minerBalanceBefore + minerAmount);
+        assert(settlement.inferenceFeeClaimOf(netuid, address(validator)) == 0);
+        assert(settlement.inferenceFeeClaimOf(netuid, address(treasurySink)) == 0);
+        assert(settlement.inferenceFeeClaimOf(netuid, address(minerSink)) == 0);
+    }
+
+    function testInferenceBatchFeeFundingCannotExceedDeclaredTotal() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
+        (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
+        FeatureActor payer = new FeatureActor();
+        vm.deal(address(payer), 10 ether);
+        uint16 mechid = 18;
+
+        uint64 readyAt =
+            governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 4, 8, 0.1 ether);
+        vm.roll(readyAt);
+        governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 4, 8, 0.1 ether);
+
+        uint64 epoch = core.currentEpoch(netuid);
+        validator.commitInferenceBatchRoot{value: 0.2 ether}(settlement, netuid, mechid, epoch, keccak256("cap"), 1, 1 ether);
+        payer.fundInferenceBatchFees{value: 0.8 ether}(settlement, netuid, mechid, epoch);
+
+        bool overflowFundingReverted = false;
+        try payer.fundInferenceBatchFees{value: 0.3 ether}(settlement, netuid, mechid, epoch) {}
+        catch {
+            overflowFundingReverted = true;
+        }
+        assert(overflowFundingReverted);
+    }
+
+    function testInferenceFeePolicyIsSnapshottedAtCommit() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
+        (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
+        FeatureActor payer = new FeatureActor();
+        FeatureActor treasurySinkA = new FeatureActor();
+        FeatureActor minerSinkA = new FeatureActor();
+        FeatureActor treasurySinkB = new FeatureActor();
+        FeatureActor minerSinkB = new FeatureActor();
+        vm.deal(address(payer), 10 ether);
+        uint16 mechid = 21;
+
+        uint64 batchReadyAt =
+            governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 12, 8, 0.1 ether);
+        uint64 feeReadyAt = governance.queueInferenceFeePolicyUpdate(
+            settlement, netuid, mechid, true, 1_000, 5_000, address(treasurySinkA), address(minerSinkA)
+        );
+        vm.roll(batchReadyAt > feeReadyAt ? batchReadyAt : feeReadyAt);
+        governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 12, 8, 0.1 ether);
+        governance.configureInferenceFeePolicy(
+            settlement, netuid, mechid, true, 1_000, 5_000, address(treasurySinkA), address(minerSinkA)
+        );
+
+        uint64 epoch = core.currentEpoch(netuid);
+        validator.commitInferenceBatchRoot{value: 0.2 ether}(
+            settlement, netuid, mechid, epoch, keccak256("snapshotted-policy"), 1, 1 ether
+        );
+
+        uint64 feeUpdateReadyAt = governance.queueInferenceFeePolicyUpdate(
+            settlement, netuid, mechid, true, 2_500, 8_000, address(treasurySinkB), address(minerSinkB)
+        );
+        vm.roll(feeUpdateReadyAt);
+        governance.configureInferenceFeePolicy(
+            settlement, netuid, mechid, true, 2_500, 8_000, address(treasurySinkB), address(minerSinkB)
+        );
+
+        payer.fundInferenceBatchFees{value: 1 ether}(settlement, netuid, mechid, epoch);
+
+        (,,,,,, uint64 challengeDeadline,,) = settlement.inferenceBatches(netuid, mechid, epoch);
+        vm.roll(challengeDeadline + 1);
+        settlement.finalizeInferenceBatch(netuid, mechid, epoch);
+
+        uint256 expectedProtocol = (1 ether * 1_000) / 10_000;
+        uint256 expectedTreasury = (expectedProtocol * 5_000) / 10_000;
+        uint256 expectedMiner = expectedProtocol - expectedTreasury;
+        uint256 expectedProposer = 1 ether - expectedProtocol;
+
+        assert(settlement.inferenceFeeClaimOf(netuid, address(validator)) == expectedProposer);
+        assert(settlement.inferenceFeeClaimOf(netuid, address(treasurySinkA)) == expectedTreasury);
+        assert(settlement.inferenceFeeClaimOf(netuid, address(minerSinkA)) == expectedMiner);
+        assert(settlement.inferenceFeeClaimOf(netuid, address(treasurySinkB)) == 0);
+        assert(settlement.inferenceFeeClaimOf(netuid, address(minerSinkB)) == 0);
+    }
+
+    function testInferenceFeeWithdrawBlockedAfterFinalize() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
+        (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
+        FeatureActor payer = new FeatureActor();
+        vm.deal(address(payer), 10 ether);
+        uint16 mechid = 19;
+
+        uint64 readyAt =
+            governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 4, 8, 0.1 ether);
+        vm.roll(readyAt);
+        governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 4, 8, 0.1 ether);
+
+        uint64 epoch = core.currentEpoch(netuid);
+        validator.commitInferenceBatchRoot{value: 0.2 ether}(
+            settlement, netuid, mechid, epoch, keccak256("withdraw-after-finalize"), 1, 1 ether
+        );
+        payer.fundInferenceBatchFees{value: 0.5 ether}(settlement, netuid, mechid, epoch);
+
+        (,,,,,, uint64 challengeDeadline,,) = settlement.inferenceBatches(netuid, mechid, epoch);
+        vm.roll(challengeDeadline + 1);
+        settlement.finalizeInferenceBatch(netuid, mechid, epoch);
+
+        bool withdrawReverted = false;
+        try payer.withdrawInferenceBatchFees(settlement, netuid, mechid, epoch, 0.1 ether) {}
+        catch {
+            withdrawReverted = true;
+        }
+        assert(withdrawReverted);
+    }
+
     function testInferenceBatchReplayChallengeSlashesBond() public {
         uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
         (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
@@ -442,6 +736,30 @@ contract PulseTensorCoreInferenceEmissionTest {
         assert(challenged);
         assert(!finalized);
         assert(settlement.challengeRewardOf(netuid, address(this)) > 0);
+    }
+
+    function testInferenceSelfChallengeGetsNoBounty() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
+        (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
+        uint16 mechid = 20;
+
+        uint64 readyAt =
+            governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 6, 8, 0.1 ether);
+        vm.roll(readyAt);
+        governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 6, 8, 0.1 ether);
+
+        bytes32 leaf = keccak256("self-challenge");
+        bytes32 root = _hashPair(leaf, leaf);
+        uint64 epoch = core.currentEpoch(netuid);
+        validator.commitInferenceBatchRoot{value: 0.2 ether}(settlement, netuid, mechid, epoch, root, 2, 1 ether);
+
+        bytes32[] memory proofIndex0 = new bytes32[](1);
+        proofIndex0[0] = leaf;
+        bytes32[] memory proofIndex1 = new bytes32[](1);
+        proofIndex1[0] = leaf;
+
+        validator.challengeInferenceLeafDuplicate(settlement, netuid, mechid, epoch, leaf, 0, proofIndex0, 1, proofIndex1);
+        assert(settlement.challengeRewardOf(netuid, address(validator)) == 0);
     }
 
     function testInferenceBatchPolicyRequiresQueuedGovernanceAction() public {

@@ -12,6 +12,7 @@ the default development workflow.
 - Add optional smooth-decay emission quotes (timelocked governance toggle) to reduce step shocks from pure halving schedules.
 - Settle high-volume inference receipts in a separate optimistic batch-root contract with challenge windows and bonds.
 - Keep settlement governance fail-closed with queued policy updates and enforce current-epoch-only batch commits.
+- Add a governance-capped inference fee policy (batch-snapshotted) so protocol usage can fund miners and a development treasury without retroactive fee changes.
 - Ship smart contracts in a correct-by-construction process.
 
 ## Local Setup
@@ -81,8 +82,20 @@ make ui-ipfs
   - Register with `registerMiner`, serve inference workload off-chain.
 - **Settlement proposer/challenger**
   - Proposer submits batch roots with bond (`commitInferenceBatchRoot`).
+  - Fee payers escrow inference fees per batch (`fundInferenceBatchFees`) and can withdraw before finalization (`withdrawInferenceBatchFees`).
+  - Finalization routes funded fees to proposer + miner sink + treasury sink using the batch-snapshotted fee policy.
   - Anyone can challenge invalid roots in challenge window.
   - Proposers/challengers claim refunds/rewards through pull claims.
+
+## Tokenomics (PLS-native)
+
+- PulseTensor currently uses **PLS-native flows** (no separate protocol token required to launch).
+- Subnet/mechanism emissions are liabilities from explicit pools and optional halving/smoothing schedules.
+- Inference settlement introduces a **capped protocol fee lane**:
+  - `protocolFeeBps <= 3000` (max 30% of funded batch fees).
+  - Protocol fee split between treasury and miner sink (`treasuryFeeBps`), with proposer receiving the remainder.
+  - Fee policy is governance-timelocked and snapshotted at batch commit to prevent ex-post governance fee extraction.
+- Development funding can come from treasury sink claims from real usage, rather than foundation grants.
 
 Fast local iteration without Morph/ZAG:
 
@@ -136,6 +149,7 @@ RUN_ECHIDNA=1 make verify-release
 - `docs/formal_workflow.md`: required verification gates.
 - `docs/frontend_decentralization.md`: host-anywhere frontend model and trust surface.
 - `docs/roadmap.md`: phased build plan.
+- `docs/tokenomics.md`: game-theoretic tokenomics design and parameter recommendations.
 - `docs/security/security_standards.md`: OWASP/EthTrust/Solidity-bug standards baseline.
 - `docs/security/control_matrix.json`: security control-to-evidence mapping gate.
 - `docs/security/slither_exclusions.allowlist`: locked Slither detector exclusions.
