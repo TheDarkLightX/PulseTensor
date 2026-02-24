@@ -1,4 +1,4 @@
-ir_version: "esso-ir/v1"
+ir_version: "pulsetensor-formal-ir/v1"
 meta:
   model_id: "pulsetensor_inference_settlement"
   created_by: "codex"

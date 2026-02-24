@@ -177,5 +177,3 @@ This is the baseline design transfer for PulseTensor.
 - `runs/security/mythril_core_findings.json`
 - `runs/security/mythril_settlement_findings.json`
 - `runs/security/mythril_summary.json`
-- `runs/esso_verify/pulsetensor_core/verification_report.json`
-- `runs/esso_verify/pulsetensor_inference_settlement/verification_report.json`

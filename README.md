@@ -59,6 +59,13 @@ bash scripts/render_launch_preset.sh --preset balanced --netuid 1 --mechid 0 \
   --out runs/deployments/preset_balanced_netuid1.json
 ```
 
+Run deterministic emergency-mode goal-frontier synthesis (design-space tradeoff extraction):
+
+```bash
+make synth-goal-frontier
+make verify-goal-frontier
+```
+
 Automated community release artifacts (deterministic hashes + tarball):
 
 ```bash
@@ -147,6 +154,7 @@ RUN_ECHIDNA=1 make verify-release
 - `docs/frontend_decentralization.md`: host-anywhere frontend model and trust surface.
 - `docs/roadmap.md`: phased build plan.
 - `docs/launch_presets.md`: safe launch parameter tiers + game-theoretic rationale.
+- `docs/goal_frontier_synthesis.md`: deterministic multi-goal frontier synthesis for mechanism/design exploration.
 - `docs/tokenomics.md`: game-theoretic tokenomics design and parameter recommendations.
 - `docs/security/security_standards.md`: OWASP/EthTrust/Solidity-bug standards baseline.
 - `docs/security/control_matrix.json`: security control-to-evidence mapping gate.

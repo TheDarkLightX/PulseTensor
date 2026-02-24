@@ -1,0 +1,152 @@
+{
+  "schema": "pulsetensor/goal-frontier-model/v1",
+  "description": "PulseTensor emergency-mode design tradeoff model: withdrawals liveness vs ordering fairness under stress while preserving solvency/accounting.",
+  "initial_state": "normal_env",
+  "states": {
+    "normal_env": {
+      "controller": "environment",
+      "labels": [
+        "solvent",
+        "withdrawals_enabled",
+        "fairness_ok",
+        "accounting_ok",
+        "mode_normal"
+      ],
+      "transitions": [
+        {
+          "action": "stable",
+          "to": "normal_env"
+        },
+        {
+          "action": "market_shock",
+          "to": "stress_sys"
+        }
+      ]
+    },
+    "stress_sys": {
+      "controller": "system",
+      "labels": [
+        "solvent",
+        "accounting_ok",
+        "mode_stress"
+      ],
+      "transitions": [
+        {
+          "action": "pause_withdrawals",
+          "to": "stress_paused_env"
+        },
+        {
+          "action": "throttle_open_withdrawals",
+          "to": "stress_open_throttled_env"
+        },
+        {
+          "action": "unsafe_hotfix",
+          "to": "accounting_break_env"
+        }
+      ]
+    },
+    "stress_paused_env": {
+      "controller": "environment",
+      "labels": [
+        "solvent",
+        "withdrawals_paused",
+        "fairness_ok",
+        "accounting_ok"
+      ],
+      "transitions": [
+        {
+          "action": "persistent_stress",
+          "to": "stress_paused_env"
+        },
+        {
+          "action": "recovery",
+          "to": "recovery_sys"
+        }
+      ]
+    },
+    "stress_open_throttled_env": {
+      "controller": "environment",
+      "labels": [
+        "solvent",
+        "withdrawals_enabled",
+        "fairness_violated",
+        "accounting_ok"
+      ],
+      "transitions": [
+        {
+          "action": "persistent_stress",
+          "to": "stress_open_throttled_env"
+        },
+        {
+          "action": "recovery",
+          "to": "recovery_sys"
+        }
+      ]
+    },
+    "recovery_sys": {
+      "controller": "system",
+      "labels": [
+        "solvent",
+        "withdrawals_enabled",
+        "fairness_ok",
+        "accounting_ok",
+        "mode_recovery"
+      ],
+      "transitions": [
+        {
+          "action": "resume_normal",
+          "to": "normal_env"
+        },
+        {
+          "action": "hold_guardrails",
+          "to": "stress_paused_env"
+        }
+      ]
+    },
+    "accounting_break_env": {
+      "controller": "environment",
+      "labels": [
+        "solvent",
+        "withdrawals_paused",
+        "fairness_violated",
+        "accounting_broken"
+      ],
+      "transitions": [
+        {
+          "action": "stuck",
+          "to": "accounting_break_env"
+        }
+      ]
+    }
+  },
+  "goals": [
+    {
+      "id": "G1_NEVER_UNDERCOLLATERALIZED",
+      "description": "Never enter an insolvent state.",
+      "forbidden_labels": [
+        "insolvent"
+      ]
+    },
+    {
+      "id": "G2_WITHDRAWALS_ALWAYS_ENABLED",
+      "description": "Do not pause withdrawals.",
+      "forbidden_labels": [
+        "withdrawals_paused"
+      ]
+    },
+    {
+      "id": "G3_FAIR_LIQUIDATION_ORDERING",
+      "description": "Preserve liquidation ordering fairness.",
+      "forbidden_labels": [
+        "fairness_violated"
+      ]
+    },
+    {
+      "id": "G4_ACCOUNTING_CONSERVATION",
+      "description": "Preserve accounting conservation invariants.",
+      "forbidden_labels": [
+        "accounting_broken"
+      ]
+    }
+  ]
+}

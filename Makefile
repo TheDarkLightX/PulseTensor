@@ -1,4 +1,4 @@
-.PHONY: build test fmt deploy preset ui-install ui-dev ui-build ui-preview ui-hash ui-release ui-ipfs verify-private verify-compiler-bugs verify-security-controls verify-security-antipatterns verify-solhint verify-slither-exclusions verify-slither verify-mythril-allowlist verify-mythril verify-fuzz-invariant verify-echidna verify-artifacts-security verify-artifacts-release verify-security verify-all verify-dev verify-release verify-release-full
+.PHONY: build test fmt deploy preset synth-goal-frontier ui-install ui-dev ui-build ui-preview ui-hash ui-release ui-ipfs verify-private verify-goal-frontier verify-compiler-bugs verify-security-controls verify-security-antipatterns verify-solhint verify-slither-exclusions verify-slither verify-mythril-allowlist verify-mythril verify-fuzz-invariant verify-echidna verify-artifacts-security verify-artifacts-release verify-security verify-all verify-dev verify-release verify-release-full
 
 build:
 	forge build
@@ -14,6 +14,9 @@ deploy:
 
 preset:
 	bash scripts/render_launch_preset.sh --preset "$${PRESET:?set PRESET}" --netuid "$${NETUID:?set NETUID}" $${MECHID:+--mechid "$${MECHID}"} $${CORE:+--core "$${CORE}"} $${SETTLEMENT:+--settlement "$${SETTLEMENT}"} $${GOVERNANCE:+--governance "$${GOVERNANCE}"} $${OUT:+--out "$${OUT}"}
+
+synth-goal-frontier:
+	python3 scripts/synthesize_goal_frontier.py --model configs/formal/pulsetensor_emergency_mode_goal_frontier.json --out runs/formal/pulsetensor_emergency_mode_goal_frontier.report.json
 
 ui-install:
 	npm --prefix frontend ci
@@ -38,6 +41,9 @@ ui-ipfs:
 
 verify-private:
 	bash scripts/check_private_boundaries.sh
+
+verify-goal-frontier:
+	bash scripts/check_goal_frontier_example.sh
 
 verify-compiler-bugs:
 	bash scripts/check_compiler_known_bugs.sh

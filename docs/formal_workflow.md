@@ -41,6 +41,18 @@ Required outcome:
 
 - No spec-to-implementation drift for promoted protocol behavior.
 
+## Gate 4 (Recommended): Multi-Goal Frontier Synthesis
+
+- Run:
+  - `make synth-goal-frontier`
+  - `make verify-goal-frontier`
+
+Required outcome:
+
+- Goal-frontier report is generated under `runs/formal/`.
+- Maximal realizable goal sets and minimal relaxations are reviewed for the change.
+- Example frontier regression check passes for the emergency-mode reference model.
+
 ## Determinism and Privacy Controls
 
 - Keep private dependency directories untracked and out of release artifacts.
@@ -57,6 +69,9 @@ Required outcome:
 - Fast local iteration (not release/merge gate):
   - `make verify-dev`
   - Runs boundary checks + build/tests.
+- Design-space exploration check (recommended pre-promotion for mechanism/policy changes):
+  - `make verify-goal-frontier`
+  - Verifies deterministic frontier synthesis behavior on the reference model.
 - Extended release entrypoint:
   - `make verify-release-full`
   - Same security posture as `make verify-release`, with a dedicated entrypoint for CI profile separation.
@@ -72,6 +87,12 @@ Required outcome:
 - `scripts/check_security.sh`
   - Exit `0`: compiler known-bug gate + control matrix + anti-pattern + readiness docs + Solhint + Slither allowlist lock + Slither + Mythril + deterministic fuzz/invariant checks pass (and Echidna when `RUN_ECHIDNA=1`), and security artifact freshness manifest passes.
   - Exit non-zero: any security gate fails.
+- `scripts/synthesize_goal_frontier.py`
+  - Exit `0`: valid model is parsed, all goal subsets are evaluated deterministically, and frontier report is produced.
+  - Exit non-zero: malformed model, inconsistent transitions, or synthesis failure.
+- `scripts/check_goal_frontier_example.sh`
+  - Exit `0`: reference emergency-mode model yields expected maximal frontier and minimal relaxations.
+  - Exit non-zero: synthesized frontier deviates from expected deterministic result.
 - `scripts/verify_release.sh`
   - Exit `0`: toolchain lock + release gate pass with `RUN_ECHIDNA=1`.
   - Exit non-zero: any upstream gate failure.
@@ -86,19 +107,20 @@ A protocol change is complete only if:
 1. Specification updates are reflected in contracts and tests.
 2. Solidity implementation matches intended behavior.
 3. Foundry tests cover happy-path and adversarial-path behavior.
-4. Privileged subnet actions use on-chain governance-contract + timelock queue/execute controls.
-5. Commit/reveal dispute and slashing paths are covered by regression tests.
-6. Slash and emission accounting remain explicit liabilities (`totalStake`, `challengeRewardOf`, `subnetEmissionPool`, `mechanismEmissionPool`) with payout tests.
-7. Pending commitments keep slash collateral enforceable (no stake withdrawal or validator unregister until reveal/challenge resolution).
-8. Epoch emission schedules (subnet + mechanism) are governance-timelocked and payout only finalized epochs once.
-9. Mechanism-scoped commit/reveal lanes preserve validator accountability and challengeability (`mechid`-scoped commitments).
-10. Self-challenge cannot capture challenge bounty; if validator self-challenges, full slash routes to emission pool.
-11. Commit revealability is preserved under governance config drift (e.g., epoch-length updates cannot invalidate an otherwise valid reveal window).
-12. Validator auto-unregister on under-min stake only happens when pending commitment count is zero; unresolved commitments keep accountability live until final resolution.
-13. Emergency pause must not deadlock pending commitment resolution; reveal/challenge flows remain callable while paused.
-14. Settlement policy governance queues have explicit lifecycle controls (queue, cancel, ready check, bounded expiry, requeue after expiry) and queue-origin binding (`queuedBy == executor`) to prevent governance-rotation execution drift.
-15. Subnet owner-action queues enforce the same bounded-expiry and queue-origin-binding invariants while still allowing current governance to cancel stale queued actions after rotation.
-16. Queue-state observability exists for operator monitoring (`readyAt`, `queuedBy`, readiness/expiry status) without event replay.
-17. Inference leaf construction is domain-separated by `(netuid, mechid, epoch, requestId, resultHash)` (or an equivalent collision-resistant encoding).
-18. External audit packet and scope are current (`docs/security/external_audit_plan.md`).
-19. Governance queue incident runbook and staged launch controls are current (`docs/security/governance_queue_runbook.md`, `docs/security/launch_controls.md`).
+4. For mechanism/policy changes, deterministic goal-frontier exploration artifacts are reviewed (`runs/formal/*goal_frontier*.report.json`).
+5. Privileged subnet actions use on-chain governance-contract + timelock queue/execute controls.
+6. Commit/reveal dispute and slashing paths are covered by regression tests.
+7. Slash and emission accounting remain explicit liabilities (`totalStake`, `challengeRewardOf`, `subnetEmissionPool`, `mechanismEmissionPool`) with payout tests.
+8. Pending commitments keep slash collateral enforceable (no stake withdrawal or validator unregister until reveal/challenge resolution).
+9. Epoch emission schedules (subnet + mechanism) are governance-timelocked and payout only finalized epochs once.
+10. Mechanism-scoped commit/reveal lanes preserve validator accountability and challengeability (`mechid`-scoped commitments).
+11. Self-challenge cannot capture challenge bounty; if validator self-challenges, full slash routes to emission pool.
+12. Commit revealability is preserved under governance config drift (e.g., epoch-length updates cannot invalidate an otherwise valid reveal window).
+13. Validator auto-unregister on under-min stake only happens when pending commitment count is zero; unresolved commitments keep accountability live until final resolution.
+14. Emergency pause must not deadlock pending commitment resolution; reveal/challenge flows remain callable while paused.
+15. Settlement policy governance queues have explicit lifecycle controls (queue, cancel, ready check, bounded expiry, requeue after expiry) and queue-origin binding (`queuedBy == executor`) to prevent governance-rotation execution drift.
+16. Subnet owner-action queues enforce the same bounded-expiry and queue-origin-binding invariants while still allowing current governance to cancel stale queued actions after rotation.
+17. Queue-state observability exists for operator monitoring (`readyAt`, `queuedBy`, readiness/expiry status) without event replay.
+18. Inference leaf construction is domain-separated by `(netuid, mechid, epoch, requestId, resultHash)` (or an equivalent collision-resistant encoding).
+19. External audit packet and scope are current (`docs/security/external_audit_plan.md`).
+20. Governance queue incident runbook and staged launch controls are current (`docs/security/governance_queue_runbook.md`, `docs/security/launch_controls.md`).
