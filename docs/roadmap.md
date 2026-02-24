@@ -3,8 +3,8 @@
 ## Phase 0: Environment + Baseline (Current)
 
 - Foundry workspace and protocol skeleton.
-- ESSO model for core transitions.
-- Verification scripts for ESSO, Morph, and ZAG.
+- Formalized protocol-state specifications.
+- Deterministic verification scripts for build, test, and security gates.
 
 ## Phase 1: Core Contracts
 
@@ -16,7 +16,7 @@
 
 Exit criteria:
 
-- Module-level ESSO specs + `verify-multi` passing.
+- Specification coverage for core transitions.
 - Foundry unit tests and invariants passing.
 
 ## Phase 2: Incentive and Security Hardening
@@ -27,12 +27,12 @@ Exit criteria:
 - Add optimistic inference batch-root settlement module with bonded fraud challenges.
 - Harden settlement module with queued policy updates, current-epoch batch binding, and strict batch-index checks.
 - Maintain OWASP/EthTrust control-matrix coverage with fail-closed CI security gates.
-- Run Morph adversarial campaigns against incentive design.
+- Expand adversarial testing across incentive and governance paths.
 
 Exit criteria:
 
-- No unresolved high-severity adversarial findings from Morph campaigns.
-- Formal model coverage expanded for dispute and slashing flows.
+- No unresolved high-severity adversarial findings.
+- Formal specification coverage expanded for dispute and slashing flows.
 
 ## Phase 3: Testnet Integration on Pulsechain
 

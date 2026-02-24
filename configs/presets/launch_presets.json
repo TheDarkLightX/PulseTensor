@@ -1,0 +1,120 @@
+{
+  "version": 1,
+  "updated_at_utc": "2026-02-23T00:00:00Z",
+  "presets": {
+    "conservative": {
+      "description": "Security-first launch profile with slower governance and stronger Sybil friction.",
+      "subnet": {
+        "max_validators": 32,
+        "min_validator_stake_wei": "50000000000000000000000",
+        "owner_fee_bps": 800,
+        "reveal_delay_blocks": 40,
+        "epoch_length_blocks": 240,
+        "owner_action_delay_blocks": 600
+      },
+      "emission": {
+        "subnet_schedule": {
+          "base_per_epoch_wei": "3000000000000000000000",
+          "floor_per_epoch_wei": "375000000000000000000",
+          "halving_period_epochs": 8192,
+          "start_epoch": 0,
+          "smooth_decay_enabled": true
+        },
+        "mechanism_schedule": {
+          "base_per_epoch_wei": "1200000000000000000000",
+          "floor_per_epoch_wei": "150000000000000000000",
+          "halving_period_epochs": 4096,
+          "start_epoch": 0,
+          "smooth_decay_enabled": true
+        }
+      },
+      "settlement": {
+        "batch_policy": {
+          "challenge_window_blocks": 180,
+          "max_batch_items": 512,
+          "min_proposer_bond_wei": "10000000000000000000000"
+        },
+        "fee_policy": {
+          "protocol_fee_bps": 900,
+          "treasury_fee_bps": 3500
+        }
+      }
+    },
+    "balanced": {
+      "description": "Default profile balancing decentralization, liveness, and protocol revenue.",
+      "subnet": {
+        "max_validators": 64,
+        "min_validator_stake_wei": "20000000000000000000000",
+        "owner_fee_bps": 1000,
+        "reveal_delay_blocks": 24,
+        "epoch_length_blocks": 160,
+        "owner_action_delay_blocks": 300
+      },
+      "emission": {
+        "subnet_schedule": {
+          "base_per_epoch_wei": "5000000000000000000000",
+          "floor_per_epoch_wei": "625000000000000000000",
+          "halving_period_epochs": 4096,
+          "start_epoch": 0,
+          "smooth_decay_enabled": true
+        },
+        "mechanism_schedule": {
+          "base_per_epoch_wei": "1800000000000000000000",
+          "floor_per_epoch_wei": "225000000000000000000",
+          "halving_period_epochs": 2048,
+          "start_epoch": 0,
+          "smooth_decay_enabled": true
+        }
+      },
+      "settlement": {
+        "batch_policy": {
+          "challenge_window_blocks": 120,
+          "max_batch_items": 1024,
+          "min_proposer_bond_wei": "5000000000000000000000"
+        },
+        "fee_policy": {
+          "protocol_fee_bps": 1200,
+          "treasury_fee_bps": 3500
+        }
+      }
+    },
+    "growth": {
+      "description": "Throughput-first profile with faster cadence and lower participation thresholds.",
+      "subnet": {
+        "max_validators": 128,
+        "min_validator_stake_wei": "10000000000000000000000",
+        "owner_fee_bps": 1200,
+        "reveal_delay_blocks": 16,
+        "epoch_length_blocks": 128,
+        "owner_action_delay_blocks": 180
+      },
+      "emission": {
+        "subnet_schedule": {
+          "base_per_epoch_wei": "7000000000000000000000",
+          "floor_per_epoch_wei": "875000000000000000000",
+          "halving_period_epochs": 2048,
+          "start_epoch": 0,
+          "smooth_decay_enabled": true
+        },
+        "mechanism_schedule": {
+          "base_per_epoch_wei": "2500000000000000000000",
+          "floor_per_epoch_wei": "312000000000000000000",
+          "halving_period_epochs": 1024,
+          "start_epoch": 0,
+          "smooth_decay_enabled": true
+        }
+      },
+      "settlement": {
+        "batch_policy": {
+          "challenge_window_blocks": 90,
+          "max_batch_items": 2048,
+          "min_proposer_bond_wei": "2500000000000000000000"
+        },
+        "fee_policy": {
+          "protocol_fee_bps": 1500,
+          "treasury_fee_bps": 3000
+        }
+      }
+    }
+  }
+}

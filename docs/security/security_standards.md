@@ -27,8 +27,11 @@ As of February 23, 2026, PulseTensor hardening tracks the following primary stan
 - Mythril SWC ignores are allowlisted in `docs/security/mythril_ignored_swc.allowlist` and hash-locked in `docs/security/mythril_ignored_swc.lock`.
 - Deterministic evidence artifacts are listed in:
   - `docs/security/artifact_manifest.security.txt`
-  - `docs/security/artifact_manifest.esso.txt`
   - `docs/security/artifact_manifest.release.txt`
+- Security readiness docs are mandatory and validated by gate:
+  - `docs/security/external_audit_plan.md`
+  - `docs/security/governance_queue_runbook.md`
+  - `docs/security/launch_controls.md`
 - Governance queue policy requires explicit queue lifecycle controls for privileged updates (queue/cancel/readiness/expiry).
 - Governance queue policy requires bounded action expiry and requeue-on-stale semantics for both core owner-action queues and settlement policy queues.
 - Governance queue policy requires queue-origin binding: execution must be authorized by the same governance identity that queued the action, and governance rotations must explicitly cancel/requeue stale entries.

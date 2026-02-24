@@ -18,18 +18,18 @@ This is the baseline design transfer for PulseTensor.
    - Lower operational friction for integrations with Pulsechain DeFi and wallets.
 
 2. **Formal-first protocol evolution**
-   - Every contract-level transition has a corresponding ESSO model.
-   - Promotion requires `validate` + `verify-multi` gates before implementation merge.
+   - Every contract-level transition has a corresponding formalized specification.
+   - Promotion requires deterministic specification-consistency and security gates before implementation merge.
 
 3. **Stronger anti-collusion and anti-copying controls**
    - Commit/reveal tied to explicit timing windows and validator-bound commitments.
    - Mechanism-scoped commit/reveal lanes (`mechid`) for independent incentive channels within a subnet.
    - Permissionless dispute hook to challenge expired unrevealed commits with automatic stake slashing.
-   - Morph stress campaigns used to search adversarial strategies before release.
+   - Adversarial campaigns are used to search strategy abuse before release.
 
 4. **Research-to-production bridge**
-   - ZAG/Lean used for theorem-backed algorithmic components.
-   - Morph used as an untrusted idea generator; only verified candidates can graduate.
+   - Theorem-backed algorithmic components are promoted only after deterministic validation.
+   - Candidate mechanisms are treated as untrusted until they pass release gates.
 
 5. **Contract modularity for correctness**
    - Separate modules for registry, stake ledger, emissions, and disputes.
@@ -37,12 +37,12 @@ This is the baseline design transfer for PulseTensor.
 
 ## Source Snapshot Used
 
-- Bittensor SDK repo (`external/bittensor`, commit `c3751f0c1`)
+- Bittensor SDK repo (`opentensor/bittensor`, commit `c3751f0c1`)
 - Bittensor docs:
   - https://docs.learnbittensor.org/subnets/understanding-subnets
   - https://docs.learnbittensor.org/validators
   - https://docs.learnbittensor.org/learn/yuma-consensus
-- Pulsechain execution client (`external/go-pulse`) for network constraints and chain config.
+- Pulsechain execution client (`pulsechain/go-pulse`, commit `a224d9196`) for network constraints and chain config.
 
 ## Bittensor-Derived Controls Implemented in PulseTensor
 
@@ -169,7 +169,6 @@ This is the baseline design transfer for PulseTensor.
 ## Deterministic Evidence Artifacts
 
 - Security manifest: `docs/security/artifact_manifest.security.txt`
-- ESSO-only manifest: `docs/security/artifact_manifest.esso.txt`
 - Release manifest: `docs/security/artifact_manifest.release.txt`
 - `runs/security/compiler_bug_report.json`
 - `runs/security/control_matrix_report.json`

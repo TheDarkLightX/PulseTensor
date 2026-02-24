@@ -1,4 +1,4 @@
-.PHONY: build test fmt deploy ui-install ui-dev ui-build ui-preview ui-hash ui-release ui-ipfs verify-private verify-compiler-bugs verify-security-controls verify-security-antipatterns verify-solhint verify-slither-exclusions verify-slither verify-mythril-allowlist verify-mythril verify-fuzz-invariant verify-echidna verify-artifacts-security verify-artifacts-release verify-security verify-esso verify-morph verify-zag verify-orch verify-all verify-dev verify-release verify-release-full
+.PHONY: build test fmt deploy preset ui-install ui-dev ui-build ui-preview ui-hash ui-release ui-ipfs verify-private verify-compiler-bugs verify-security-controls verify-security-antipatterns verify-solhint verify-slither-exclusions verify-slither verify-mythril-allowlist verify-mythril verify-fuzz-invariant verify-echidna verify-artifacts-security verify-artifacts-release verify-security verify-all verify-dev verify-release verify-release-full
 
 build:
 	forge build
@@ -11,6 +11,9 @@ fmt:
 
 deploy:
 	bash scripts/deploy_pulsetensor.sh
+
+preset:
+	bash scripts/render_launch_preset.sh --preset "$${PRESET:?set PRESET}" --netuid "$${NETUID:?set NETUID}" $${MECHID:+--mechid "$${MECHID}"} $${CORE:+--core "$${CORE}"} $${SETTLEMENT:+--settlement "$${SETTLEMENT}"} $${GOVERNANCE:+--governance "$${GOVERNANCE}"} $${OUT:+--out "$${OUT}"}
 
 ui-install:
 	npm --prefix frontend ci
@@ -75,23 +78,11 @@ verify-artifacts-release:
 verify-security:
 	bash scripts/check_security.sh
 
-verify-esso:
-	bash scripts/check_esso.sh
-
-verify-morph:
-	bash scripts/check_morph.sh
-
-verify-zag:
-	bash scripts/check_zag.sh
-
-verify-orch:
-	bash scripts/check_orch_unit.sh
-
 verify-all:
 	bash scripts/verify_all.sh
 
 verify-dev:
-	RUN_MORPH=0 RUN_ZAG=0 RUN_ORCH=1 RUN_SECURITY=0 bash scripts/verify_all.sh
+	RUN_SECURITY=0 bash scripts/verify_all.sh
 
 verify-release:
 	bash scripts/verify_release.sh

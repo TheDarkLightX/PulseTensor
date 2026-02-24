@@ -3,7 +3,7 @@
 ## Mission
 
 - Build PulseTensor for Pulsechain by reusing proven Bittensor mechanisms where low-risk.
-- Improve algorithm design and security with Morph, ESSO, and ZAG.
+- Improve algorithm design and security with deterministic, fail-closed evidence.
 - Treat correctness as fail-closed: no unverifiable claims.
 
 ## Non-Negotiable Rules
@@ -11,7 +11,7 @@
 - Never claim "verified/proved" without successful deterministic checks.
 - Prefer deterministic local commands, fixed seeds, and captured artifacts under `runs/`.
 - Counterexamples override hypotheses.
-- Keep protocol runtime independent from external research tools (Morph/ESSO/ZAG are offline tooling only).
+- Keep protocol runtime independent from optional research tooling.
 
 ## Required Check Surface Before Promotion
 
@@ -19,19 +19,10 @@
 - Equivalent explicit checks:
   - `forge test`
   - `bash scripts/check_security.sh`
-  - `bash scripts/check_esso.sh`
-  - `bash scripts/check_morph.sh`
-  - `bash scripts/check_zag.sh quick`
-  - `bash scripts/check_orch_unit.sh`
+  - `bash scripts/verify_toolchain.sh`
+  - `bash scripts/check_private_boundaries.sh`
 
 If any check fails, treat the candidate as not ready.
-
-## Skills To Prefer
-
-- `morph-orch-unit` for Morph discovery/evidence bundles.
-- `esso-best-practices` for ESSO model/verify workflows.
-- `reformulation-innovation-lab` for novelty-first hypothesis loops.
-- `rlm-subagent-collab` for multi-agent orchestration with folded context.
 
 ## Swarm Output Discipline
 

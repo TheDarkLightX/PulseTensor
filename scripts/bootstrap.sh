@@ -17,7 +17,6 @@ if [[ ! -d "${ROOT_DIR}/.venv" ]]; then
 fi
 
 "${ROOT_DIR}/.venv/bin/pip" install --upgrade pip
-"${ROOT_DIR}/.venv/bin/pip" install -e "${ROOT_DIR}/external/ESSO"
 "${ROOT_DIR}/.venv/bin/pip" install slither-analyzer==0.10.4
 
 echo "Bootstrap complete"
@@ -25,4 +24,4 @@ echo "Next:"
 echo "  source .venv/bin/activate"
 echo "  make build"
 echo "  make test"
-echo "  make verify-esso"
+echo "  make verify-release"

@@ -40,8 +40,8 @@
         "test/PulseTensorCore.t.sol",
         "test/PulseTensorCore.fuzz.t.sol",
         "test/PulseTensorCore.invariant.t.sol",
-        "specs/esso/pulsetensor_core.yaml",
-        "specs/esso/pulsetensor_inference_settlement.yaml"
+        "specs/formal/pulsetensor_core.yaml",
+        "specs/formal/pulsetensor_inference_settlement.yaml"
       ]
     },
     {
@@ -126,7 +126,10 @@
       "evidence": [
         "docs/formal_workflow.md",
         "docs/bittensor_delta.md",
-        "specs/esso/pulsetensor_core.yaml"
+        "docs/security/external_audit_plan.md",
+        "docs/security/governance_queue_runbook.md",
+        "docs/security/launch_controls.md",
+        "specs/formal/pulsetensor_core.yaml"
       ]
     },
     {
@@ -135,6 +138,7 @@
       "status": "mitigated",
       "evidence": [
         "scripts/check_solhint.sh",
+        "scripts/check_security_readiness_docs.sh",
         "scripts/check_slither_exclusions.sh",
         "scripts/check_slither.sh",
         "scripts/check_mythril_allowlist.sh",
@@ -219,11 +223,11 @@
       "status": "mitigated",
       "evidence": [
         "scripts/check_fuzz_invariant.sh",
-        "scripts/check_esso.sh",
+        "docs/formal_workflow.md",
         "scripts/check_artifact_freshness.sh",
         "docs/security/artifact_manifest.release.txt",
-        "specs/esso/pulsetensor_core.yaml",
-        "specs/esso/pulsetensor_inference_settlement.yaml"
+        "specs/formal/pulsetensor_core.yaml",
+        "specs/formal/pulsetensor_inference_settlement.yaml"
       ]
     },
     {
@@ -242,7 +246,7 @@
       "level": "Q",
       "title": "Highest assurance controls for mainnet candidate",
       "status": "mitigated",
-      "rationale": "Q-level readiness is handled through internal fail-closed verification gates and deterministic evidence artifacts.",
+      "rationale": "Q-level readiness is handled through fail-closed verification gates and deterministic evidence artifacts.",
       "evidence": [
         "docs/roadmap.md",
         "docs/formal_workflow.md",
