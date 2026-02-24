@@ -66,6 +66,13 @@ make synth-goal-frontier
 make verify-goal-frontier
 ```
 
+Run tokenomics profile frontier synthesis and check:
+
+```bash
+make synth-tokenomics-frontier
+make verify-tokenomics-frontier
+```
+
 Automated community release artifacts (deterministic hashes + tarball):
 
 ```bash

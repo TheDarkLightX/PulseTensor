@@ -96,6 +96,37 @@ Verify example deterministically:
 bash scripts/check_goal_frontier_example.sh
 ```
 
+## Tokenomics Frontier Example
+
+Model:
+
+- `configs/formal/pulsetensor_tokenomics_goal_frontier.json`
+
+Run:
+
+```bash
+python3 scripts/synthesize_goal_frontier.py \
+  --model configs/formal/pulsetensor_tokenomics_goal_frontier.json \
+  --out runs/formal/pulsetensor_tokenomics_goal_frontier.report.json
+```
+
+Deterministic check:
+
+```bash
+bash scripts/check_tokenomics_goal_frontier.sh
+```
+
+Expected maximal frontier sets:
+
+1. `{G1_SOLVENCY_SAFETY, G2_LIVENESS, G3_CHALLENGE_FAIRNESS, G4_TREASURY_SUSTAINABILITY, G5_ANTI_SYBIL}`
+2. `{G2_LIVENESS, G4_TREASURY_SUSTAINABILITY, G6_AGGRESSIVE_TREASURY_GROWTH}`
+
+Interpretation:
+
+- Keeping aggressive treasury growth as a hard objective conflicts with solvency/fairness/anti-Sybil objectives.
+- Dropping only `G6_AGGRESSIVE_TREASURY_GROWTH` yields the largest safety-oriented realizable set.
+- This supports the `balanced` profile as default and `growth` as opt-in when explicitly accepting higher risk.
+
 ## Outputs and Review
 
 Report fields include:

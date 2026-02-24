@@ -1,0 +1,158 @@
+{
+  "schema": "pulsetensor/goal-frontier-model/v1",
+  "description": "PulseTensor tokenomics profile tradeoff model across security, liveness, fairness, treasury sustainability, and aggressive treasury growth objectives.",
+  "initial_state": "select_profile_sys",
+  "states": {
+    "select_profile_sys": {
+      "controller": "system",
+      "labels": ["profile_selection"],
+      "transitions": [
+        {"action": "choose_conservative", "to": "conservative_regime_env"},
+        {"action": "choose_balanced", "to": "balanced_regime_env"},
+        {"action": "choose_growth", "to": "growth_regime_env"}
+      ]
+    },
+
+    "conservative_regime_env": {
+      "controller": "environment",
+      "labels": ["profile_conservative"],
+      "transitions": [
+        {"action": "normal_market", "to": "conservative_normal_env"},
+        {"action": "stress_market", "to": "conservative_stress_env"}
+      ]
+    },
+    "balanced_regime_env": {
+      "controller": "environment",
+      "labels": ["profile_balanced"],
+      "transitions": [
+        {"action": "normal_market", "to": "balanced_normal_env"},
+        {"action": "stress_market", "to": "balanced_stress_env"}
+      ]
+    },
+    "growth_regime_env": {
+      "controller": "environment",
+      "labels": ["profile_growth"],
+      "transitions": [
+        {"action": "normal_market", "to": "growth_normal_env"},
+        {"action": "stress_market", "to": "growth_stress_env"}
+      ]
+    },
+
+    "conservative_normal_env": {
+      "controller": "environment",
+      "labels": [
+        "solvency_safe",
+        "fairness_safe",
+        "sybil_resistance_strong",
+        "liveness_low",
+        "treasury_yield_low",
+        "treasury_not_aggressive"
+      ],
+      "transitions": [
+        {"action": "stay", "to": "conservative_normal_env"}
+      ]
+    },
+    "conservative_stress_env": {
+      "controller": "environment",
+      "labels": [
+        "solvency_safe",
+        "fairness_safe",
+        "sybil_resistance_strong",
+        "liveness_low",
+        "treasury_yield_low",
+        "treasury_not_aggressive"
+      ],
+      "transitions": [
+        {"action": "stay", "to": "conservative_stress_env"}
+      ]
+    },
+
+    "balanced_normal_env": {
+      "controller": "environment",
+      "labels": [
+        "solvency_safe",
+        "fairness_safe",
+        "sybil_resistance_strong",
+        "liveness_ok",
+        "treasury_yield_sustainable",
+        "treasury_not_aggressive"
+      ],
+      "transitions": [
+        {"action": "stay", "to": "balanced_normal_env"}
+      ]
+    },
+    "balanced_stress_env": {
+      "controller": "environment",
+      "labels": [
+        "solvency_safe",
+        "fairness_safe",
+        "sybil_resistance_strong",
+        "liveness_ok",
+        "treasury_yield_sustainable",
+        "treasury_not_aggressive"
+      ],
+      "transitions": [
+        {"action": "stay", "to": "balanced_stress_env"}
+      ]
+    },
+
+    "growth_normal_env": {
+      "controller": "environment",
+      "labels": [
+        "liveness_ok",
+        "treasury_yield_sustainable",
+        "treasury_yield_aggressive",
+        "sybil_risk_high"
+      ],
+      "transitions": [
+        {"action": "stay", "to": "growth_normal_env"}
+      ]
+    },
+    "growth_stress_env": {
+      "controller": "environment",
+      "labels": [
+        "liveness_ok",
+        "treasury_yield_sustainable",
+        "treasury_yield_aggressive",
+        "sybil_risk_high",
+        "fairness_risk_high",
+        "solvency_risk_high"
+      ],
+      "transitions": [
+        {"action": "stay", "to": "growth_stress_env"}
+      ]
+    }
+  },
+  "goals": [
+    {
+      "id": "G1_SOLVENCY_SAFETY",
+      "description": "Avoid high solvency risk under stress.",
+      "forbidden_labels": ["solvency_risk_high"]
+    },
+    {
+      "id": "G2_LIVENESS",
+      "description": "Avoid low liveness throughput modes.",
+      "forbidden_labels": ["liveness_low"]
+    },
+    {
+      "id": "G3_CHALLENGE_FAIRNESS",
+      "description": "Avoid high fairness risk in challenge ordering and dispute response.",
+      "forbidden_labels": ["fairness_risk_high"]
+    },
+    {
+      "id": "G4_TREASURY_SUSTAINABILITY",
+      "description": "Avoid treasury yield levels that are too low for sustained operations.",
+      "forbidden_labels": ["treasury_yield_low"]
+    },
+    {
+      "id": "G5_ANTI_SYBIL",
+      "description": "Avoid high Sybil risk parameter regions.",
+      "forbidden_labels": ["sybil_risk_high"]
+    },
+    {
+      "id": "G6_AGGRESSIVE_TREASURY_GROWTH",
+      "description": "Require aggressive treasury growth posture.",
+      "forbidden_labels": ["treasury_not_aggressive"]
+    }
+  ]
+}

@@ -66,6 +66,37 @@ For early mainnet safety:
 
 This keeps service providers strongly incentivized while still generating protocol-native development revenue.
 
+## Frontier-Derived Recommendation
+
+Tokenomics profile exploration is modeled in:
+
+- `configs/formal/pulsetensor_tokenomics_goal_frontier.json`
+
+and synthesized via:
+
+- `scripts/synthesize_goal_frontier.py`
+- `scripts/check_tokenomics_goal_frontier.sh`
+
+Run:
+
+```bash
+make synth-tokenomics-frontier
+make verify-tokenomics-frontier
+```
+
+Current deterministic frontier result:
+
+1. Safety-oriented maximal set:
+   - `{G1_SOLVENCY_SAFETY, G2_LIVENESS, G3_CHALLENGE_FAIRNESS, G4_TREASURY_SUSTAINABILITY, G5_ANTI_SYBIL}`
+2. Growth-oriented maximal set:
+   - `{G2_LIVENESS, G4_TREASURY_SUSTAINABILITY, G6_AGGRESSIVE_TREASURY_GROWTH}`
+
+Interpretation:
+
+- Full objective set is unrealizable.
+- Minimal relaxation from full set is dropping `G6_AGGRESSIVE_TREASURY_GROWTH`.
+- Therefore, the recommended default remains `balanced`; `growth` should be treated as an explicit risk-accepting mode.
+
 ## Relation to Bittensor-Inspired Design
 
 - Keep Bittensor-style subnet/mechanism incentives and slashing discipline.
