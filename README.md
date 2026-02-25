@@ -165,6 +165,9 @@ RUN_ECHIDNA=1 make verify-release
 - `docs/tokenomics.md`: game-theoretic tokenomics design and parameter recommendations.
 - `docs/security/security_standards.md`: OWASP/EthTrust/Solidity-bug standards baseline.
 - `docs/security/control_matrix.json`: security control-to-evidence mapping gate.
+- `docs/security/governance_committee_charter.md`: founder-balanced committee authority and independence policy.
+- `docs/security/signer_selection_checklist.md`: signer onboarding and activation checklist.
+- `docs/security/multisig_operations.md`: Safe-style multisig operations standard and queue discipline.
 - `docs/security/slither_exclusions.allowlist`: locked Slither detector exclusions.
 - `docs/security/mythril_ignored_swc.allowlist`: locked Mythril SWC ignores.
 - `docs/security/artifact_manifest.security.txt`, `docs/security/artifact_manifest.release.txt`: freshness manifests for deterministic evidence artifacts.

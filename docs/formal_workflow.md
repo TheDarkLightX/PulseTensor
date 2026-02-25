@@ -23,6 +23,7 @@ Required outcome:
 - Security control matrix coverage gate passes (`check_security_controls.sh`).
 - Security anti-pattern gate passes (`check_security_antipatterns.sh`).
 - Security readiness docs exist and pass structural gate (`scripts/check_security_readiness_docs.sh`).
+  - Includes committee charter, signer checklist, and multisig operations standard.
 - Solhint policy passes (`scripts/solhint.security.json`).
 - Slither exclusion allowlist lock passes (`check_slither_exclusions.sh`).
 - Slither pass with only locked detector exclusions.
@@ -123,4 +124,4 @@ A protocol change is complete only if:
 17. Queue-state observability exists for operator monitoring (`readyAt`, `queuedBy`, readiness/expiry status) without event replay.
 18. Inference leaf construction is domain-separated by `(netuid, mechid, epoch, requestId, resultHash)` (or an equivalent collision-resistant encoding).
 19. External audit packet and scope are current (`docs/security/external_audit_plan.md`).
-20. Governance queue incident runbook and staged launch controls are current (`docs/security/governance_queue_runbook.md`, `docs/security/launch_controls.md`).
+20. Governance queue incident runbook, staged launch controls, committee charter, signer checklist, and multisig operations standard are current (`docs/security/governance_queue_runbook.md`, `docs/security/launch_controls.md`, `docs/security/governance_committee_charter.md`, `docs/security/signer_selection_checklist.md`, `docs/security/multisig_operations.md`).

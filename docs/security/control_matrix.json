@@ -1,6 +1,6 @@
 {
   "schema": "pulsetensor/security-control-matrix/v1",
-  "as_of_utc": "2026-02-23",
+  "as_of_utc": "2026-02-25",
   "sources": {
     "owasp_scsvs": "https://scs.owasp.org/SCSVS/",
     "owasp_top10": "https://scs.owasp.org/sctop10/",
@@ -8,6 +8,8 @@
     "eea_ethtrust": "https://entethalliance.org/groups/ethtrust/",
     "openzeppelin_timelock": "https://docs.openzeppelin.com/contracts/5.x/api/governance#TimelockController",
     "compound_timelock": "https://raw.githubusercontent.com/compound-finance/compound-protocol/master/contracts/Timelock.sol",
+    "safe_smart_account": "https://docs.safe.global/home/safe-smart-account",
+    "safe_smart_account_guards": "https://docs.safe.global/advanced/smart-account-guards",
     "solidity_bugs": "https://docs.soliditylang.org/en/latest/bugs.html",
     "swc_registry": "https://github.com/SmartContractSecurity/SWC-registry"
   },
@@ -129,6 +131,9 @@
         "docs/security/external_audit_plan.md",
         "docs/security/governance_queue_runbook.md",
         "docs/security/launch_controls.md",
+        "docs/security/governance_committee_charter.md",
+        "docs/security/signer_selection_checklist.md",
+        "docs/security/multisig_operations.md",
         "specs/formal/pulsetensor_core.yaml"
       ]
     },
@@ -143,7 +148,8 @@
         "scripts/check_slither.sh",
         "scripts/check_mythril_allowlist.sh",
         "scripts/check_mythril.sh",
-        "scripts/check_security.sh"
+        "scripts/check_security.sh",
+        "docs/security/multisig_operations.md"
       ]
     },
     {

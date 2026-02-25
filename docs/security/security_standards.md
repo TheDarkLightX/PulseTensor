@@ -1,6 +1,6 @@
 # Security Standards Baseline
 
-As of February 23, 2026, PulseTensor hardening tracks the following primary standards:
+As of February 25, 2026, PulseTensor hardening tracks the following primary standards:
 
 - OWASP SCSVS (control verification standard): `https://scs.owasp.org/SCSVS/`
 - OWASP Smart Contract Top 10 (risk taxonomy, 2026): `https://scs.owasp.org/sctop10/`
@@ -9,6 +9,8 @@ As of February 23, 2026, PulseTensor hardening tracks the following primary stan
 - Solidity known compiler bugs (official bug feed): `https://docs.soliditylang.org/en/latest/bugs.html`
 - OpenZeppelin Contracts governance/time-delay patterns: `https://docs.openzeppelin.com/contracts/5.x/api/governance#TimelockController`
 - Compound Timelock grace-period pattern (reference implementation): `https://raw.githubusercontent.com/compound-finance/compound-protocol/master/contracts/Timelock.sol`
+- Safe smart account (multisig baseline): `https://docs.safe.global/home/safe-smart-account`
+- Safe advanced setup patterns (guards/modules): `https://docs.safe.global/advanced/smart-account-guards`
 - SWC registry (legacy taxonomy; not primary due maintenance status): `https://github.com/SmartContractSecurity/SWC-registry`
 
 ## Operational policy
@@ -32,10 +34,15 @@ As of February 23, 2026, PulseTensor hardening tracks the following primary stan
   - `docs/security/external_audit_plan.md`
   - `docs/security/governance_queue_runbook.md`
   - `docs/security/launch_controls.md`
+  - `docs/security/governance_committee_charter.md`
+  - `docs/security/signer_selection_checklist.md`
+  - `docs/security/multisig_operations.md`
 - Governance queue policy requires explicit queue lifecycle controls for privileged updates (queue/cancel/readiness/expiry).
 - Governance queue policy requires bounded action expiry and requeue-on-stale semantics for both core owner-action queues and settlement policy queues.
 - Governance queue policy requires queue-origin binding: execution must be authorized by the same governance identity that queued the action, and governance rotations must explicitly cancel/requeue stale entries.
 - Governance queue policy requires queue-state observability (`readyAt`, `queuedBy`, readiness/expiry flags) for deterministic operator monitoring.
+- Governance committee policy requires founder-balanced multisig controls with explicit signer independence and hardware-key custody requirements.
+- Multisig operations policy requires production-grade multisig controls, deterministic review/simulation discipline, and documented signer rotation/incident procedures.
 - Pause policy requires resolution liveness: paused mode must not block reveal/challenge settlement for already pending commitments.
 
 ## Practical interpretation

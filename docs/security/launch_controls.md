@@ -1,12 +1,16 @@
 # Launch Controls
 
-Last updated: 2026-02-23
+Last updated: 2026-02-25
 
 ## Phase 0: Pre-Launch Gate
 
 - Require clean pass of:
   - `make verify-release` (or equivalent explicit checks).
 - Freeze privileged governance parameter set and publish initial values.
+- Finalize governance committee and signer readiness:
+  - `docs/security/governance_committee_charter.md`,
+  - `docs/security/signer_selection_checklist.md`,
+  - `docs/security/multisig_operations.md`.
 - Prepare incident contacts and queue operations runbook.
 
 ## Phase 1: Guarded Launch
@@ -44,3 +48,11 @@ Last updated: 2026-02-23
   2. Freeze further parameter expansion.
   3. Publish incident status and mitigation ETA.
   4. Resume only after patch + retest + reviewer sign-off.
+
+## Governance Activation Gate
+
+- Do not activate public mainnet governance until:
+  - 7 signer committee is seated,
+  - 4-of-7 threshold is live on multisig governance account,
+  - signer key compromise drill and replacement drill have completed successfully,
+  - multisig transaction simulation flow is operational.
