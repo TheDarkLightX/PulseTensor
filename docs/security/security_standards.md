@@ -30,6 +30,10 @@ As of February 25, 2026, PulseTensor hardening tracks the following primary stan
 - Deterministic evidence artifacts are listed in:
   - `docs/security/artifact_manifest.security.txt`
   - `docs/security/artifact_manifest.release.txt`
+  - `docs/security/artifact_manifest.complete.txt`
+- Requirements traceability + explicit boundary-value coverage are mandatory and fail-closed:
+  - `specs/formal/requirements_traceability.json`
+  - `scripts/check_requirements_traceability.sh`
 - Security readiness docs are mandatory and validated by gate:
   - `docs/security/external_audit_plan.md`
   - `docs/security/governance_queue_runbook.md`

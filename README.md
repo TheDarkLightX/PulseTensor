@@ -32,6 +32,7 @@ make build
 make test
 make verify-security
 make verify-local-e2e
+make verify-requirements-traceability
 make verify-release
 ```
 
@@ -95,6 +96,13 @@ It also fail-closes on deploy code-size viability (`scripts/check_deploy_code_si
 `make verify-local-e2e` runs a deterministic live-chain local integration flow on fresh Anvil:
 deploys contracts, executes governance queue/execute paths, runs validator commit/reveal, and validates inference
 commit/finalize/settle/claim behavior. Report path: `runs/local_e2e/local_e2e_report.json`.
+
+`make verify-requirements-traceability` validates requirement-to-test/function coverage, including boundary-value
+coverage targets, from `specs/formal/requirements_traceability.json`.
+
+`make verify-complete` is the single full-assurance gate: toolchain lock, deploy size viability, release security
+verification, local live-chain E2E replay, goal-frontier checks, tokenomics frontier checks, and complete artifact
+freshness validation.
 
 ## Participation Modes
 
@@ -167,6 +175,7 @@ RUN_ECHIDNA=1 make verify-release
 
 - `docs/bittensor_delta.md`: what we keep vs improve from Bittensor.
 - `docs/formal_workflow.md`: required verification gates.
+- `specs/formal/requirements_traceability.json`: requirement-to-function/test traceability matrix with explicit BVA coverage.
 - `docs/frontend_decentralization.md`: host-anywhere frontend model and trust surface.
 - `docs/roadmap.md`: phased build plan.
 - `docs/launch_presets.md`: safe launch parameter tiers + game-theoretic rationale.

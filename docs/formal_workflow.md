@@ -22,6 +22,7 @@ Required outcome:
 
 - Solidity compiler known-bug gate passes (`check_compiler_known_bugs.sh`).
 - Security control matrix coverage gate passes (`check_security_controls.sh`).
+- Requirements traceability + BVA coverage gate passes (`check_requirements_traceability.sh`).
 - Security anti-pattern gate passes (`check_security_antipatterns.sh`).
 - Security readiness docs exist and pass structural gate (`scripts/check_security_readiness_docs.sh`).
   - Includes committee charter, signer checklist, and multisig operations standard.
@@ -43,7 +44,18 @@ Required outcome:
 
 - No spec-to-implementation drift for promoted protocol behavior.
 
-## Gate 4 (Recommended): Multi-Goal Frontier Synthesis
+## Gate 4: Requirements Traceability + BVA Coverage
+
+- Run:
+  - `make verify-requirements-traceability`
+
+Required outcome:
+
+- `specs/formal/requirements_traceability.json` passes strict schema + coverage checks.
+- Every listed critical function has at least one mapped requirement and test evidence.
+- Boundary-value-analysis (BVA) coverage targets are met per contract.
+
+## Gate 5 (Recommended): Multi-Goal Frontier Synthesis
 
 - Run:
   - `make synth-goal-frontier`
@@ -55,7 +67,7 @@ Required outcome:
 - Maximal realizable goal sets and minimal relaxations are reviewed for the change.
 - Example frontier regression check passes for the emergency-mode reference model.
 
-## Gate 5 (Recommended): Local Live-Chain E2E Replay
+## Gate 6 (Recommended): Local Live-Chain E2E Replay
 
 - Run:
   - `make verify-local-e2e`
@@ -78,9 +90,15 @@ Required outcome:
 - Required release/merge gate:
   - `make verify-release`
   - Runs toolchain lock checks, build/tests, security suite, mandatory Echidna, and release artifact freshness checks.
+- Complete assurance gate (recommended before deploy candidate promotion):
+  - `make verify-complete`
+  - Runs release gate + traceability + local live-chain E2E + goal/tokenomics frontier checks + complete artifact freshness.
 - Fast local iteration (not release/merge gate):
   - `make verify-dev`
   - Runs boundary checks + build/tests.
+- Requirements/BVA mapping gate:
+  - `make verify-requirements-traceability`
+  - Validates requirement-to-function/test mapping and per-contract BVA minimums.
 - Design-space exploration check (recommended pre-promotion for mechanism/policy changes):
   - `make verify-goal-frontier`
   - Verifies deterministic frontier synthesis behavior on the reference model.
@@ -100,11 +118,14 @@ Required outcome:
   - Exit `0`: private dependency directories remain untracked, no SSH-style repo URLs are present in tracked files, and public documentation does not depend on local private dependency paths.
   - Exit non-zero: any privacy-boundary violation.
 - `scripts/check_security.sh`
-  - Exit `0`: compiler known-bug gate + control matrix + anti-pattern + readiness docs + Solhint + Slither allowlist lock + Slither + Mythril + deterministic fuzz/invariant checks pass (and Echidna when `RUN_ECHIDNA=1`), and security artifact freshness manifest passes.
+  - Exit `0`: compiler known-bug gate + control matrix + requirements traceability/BVA + anti-pattern + readiness docs + Solhint + Slither allowlist lock + Slither + Mythril + deterministic fuzz/invariant checks pass (and Echidna when `RUN_ECHIDNA=1`), and security artifact freshness manifest passes.
   - Exit non-zero: any security gate fails.
 - `scripts/check_deploy_code_size.sh`
   - Exit `0`: deployment-optimizer build (`FOUNDRY_OPTIMIZER_RUNS` default `1`) keeps `PulseTensorCore` and `PulseTensorInferenceSettlement` within EVM runtime/initcode limits.
   - Exit non-zero: deploy profile exceeds code-size limits or size report parsing fails.
+- `scripts/check_requirements_traceability.sh`
+  - Exit `0`: requirements matrix schema, function coverage, test linkage, and BVA minimums pass; report written to `runs/security/requirements_traceability_report.json`.
+  - Exit non-zero: malformed matrix, missing paths/tests/functions, uncovered required function, or insufficient BVA coverage.
 - `scripts/check_local_e2e.sh`
   - Exit `0`: fresh local Anvil deployment + deterministic E2E flow passes, and `runs/local_e2e/local_e2e_report.json` is produced.
   - Exit non-zero: any local integration assertion or deployment/runtime step fails.
@@ -119,6 +140,9 @@ Required outcome:
   - Exit non-zero: any upstream gate failure.
 - `scripts/verify_release_full.sh`
   - Exit `0`: same release posture as `verify_release.sh` through a separate CI-friendly entrypoint.
+  - Exit non-zero: any upstream gate failure.
+- `scripts/verify_complete.sh`
+  - Exit `0`: release gate + requirements traceability + local E2E + goal/tokenomics frontier checks + complete artifact freshness pass.
   - Exit non-zero: any upstream gate failure.
 
 ## Definition of Done (Protocol Change)
@@ -145,3 +169,4 @@ A protocol change is complete only if:
 18. Inference leaf construction is domain-separated by `(netuid, mechid, epoch, requestId, resultHash)` (or an equivalent collision-resistant encoding).
 19. External audit packet and scope are current (`docs/security/external_audit_plan.md`).
 20. Governance queue incident runbook, staged launch controls, committee charter, signer checklist, and multisig operations standard are current (`docs/security/governance_queue_runbook.md`, `docs/security/launch_controls.md`, `docs/security/governance_committee_charter.md`, `docs/security/signer_selection_checklist.md`, `docs/security/multisig_operations.md`).
+21. Requirements traceability matrix is current and passes coverage checks (`specs/formal/requirements_traceability.json`, `scripts/check_requirements_traceability.sh`).

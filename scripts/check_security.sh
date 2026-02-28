@@ -7,6 +7,7 @@ RUN_START_EPOCH="${RUN_START_EPOCH:-$(date +%s)}"
 
 bash "${ROOT_DIR}/scripts/check_compiler_known_bugs.sh"
 bash "${ROOT_DIR}/scripts/check_security_controls.sh"
+bash "${ROOT_DIR}/scripts/check_requirements_traceability.sh"
 bash "${ROOT_DIR}/scripts/check_security_antipatterns.sh"
 bash "${ROOT_DIR}/scripts/check_security_readiness_docs.sh"
 bash "${ROOT_DIR}/scripts/check_solhint.sh"

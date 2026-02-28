@@ -1,0 +1,30 @@
+name: Requirements Traceability
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  traceability:
+    name: Validate requirements matrix
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run requirements traceability gate
+        run: make verify-requirements-traceability
+
+      - name: Upload traceability report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: requirements-traceability-report
+          path: runs/security/requirements_traceability_report.json

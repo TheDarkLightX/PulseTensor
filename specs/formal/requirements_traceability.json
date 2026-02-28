@@ -1,0 +1,1057 @@
+{
+  "schema": "pulsetensor/requirements-traceability/v1",
+  "as_of_utc": "2026-02-28",
+  "contracts": [
+    {
+      "id": "core",
+      "path": "src/PulseTensorCore.sol",
+      "spec": "specs/formal/pulsetensor_core.yaml",
+      "required_functions": [
+        "createSubnet",
+        "configureSubnetGovernance",
+        "queueSubnetPause",
+        "setSubnetPaused",
+        "queueSubnetConfigUpdate",
+        "updateSubnetConfig",
+        "addStake",
+        "removeStake",
+        "registerValidator",
+        "unregisterValidator",
+        "commitWeights",
+        "revealWeights",
+        "challengeExpiredCommit",
+        "claimChallengeReward",
+        "queueSubnetEmissionScheduleUpdate",
+        "configureSubnetEmissionSchedule",
+        "queueSubnetEpochEmissionPayout",
+        "payoutSubnetEpochEmission",
+        "queueMechanismEmissionScheduleUpdate",
+        "configureMechanismEmissionSchedule",
+        "queueMechanismEpochEmissionPayout",
+        "payoutMechanismEpochEmission"
+      ]
+    },
+    {
+      "id": "settlement",
+      "path": "src/PulseTensorInferenceSettlement.sol",
+      "spec": "specs/formal/pulsetensor_inference_settlement.yaml",
+      "required_functions": [
+        "queueBatchPolicyUpdate",
+        "cancelBatchPolicyUpdate",
+        "configureBatchPolicy",
+        "queueFeePolicyUpdate",
+        "cancelFeePolicyUpdate",
+        "configureFeePolicy",
+        "commitInferenceBatchRoot",
+        "fundInferenceBatchFees",
+        "withdrawInferenceBatchFees",
+        "finalizeInferenceBatch",
+        "settleFinalizedInferenceLeaf",
+        "challengeInferenceLeafReplay",
+        "challengeInferenceLeafDuplicate",
+        "claimChallengeReward",
+        "claimProposerBondRefund",
+        "claimInferenceFee",
+        "computeInferenceLeaf"
+      ]
+    },
+    {
+      "id": "domain",
+      "path": "src/core/PulseTensorDomain.sol",
+      "spec": "specs/formal/pulsetensor_core.yaml",
+      "required_functions": [
+        "validateSubnetConfig",
+        "addStake",
+        "removeStake",
+        "scheduleCommit",
+        "verifyReveal",
+        "verifyExpiredCommitment",
+        "slashStakeByBps",
+        "computeCommitment",
+        "currentEpoch",
+        "epochEndBlock"
+      ]
+    }
+  ],
+  "verification_commands": [
+    {
+      "id": "verify_release",
+      "command": "make verify-release"
+    },
+    {
+      "id": "verify_local_e2e",
+      "command": "make verify-local-e2e"
+    },
+    {
+      "id": "verify_goal_frontier",
+      "command": "make verify-goal-frontier"
+    },
+    {
+      "id": "verify_tokenomics_frontier",
+      "command": "make verify-tokenomics-frontier"
+    },
+    {
+      "id": "verify_requirements_traceability",
+      "command": "make verify-requirements-traceability"
+    },
+    {
+      "id": "verify_complete",
+      "command": "make verify-complete"
+    }
+  ],
+  "coverage_targets": {
+    "min_requirements_per_contract": {
+      "core": 8,
+      "settlement": 8,
+      "domain": 4
+    },
+    "min_bva_requirements_per_contract": {
+      "core": 4,
+      "settlement": 4,
+      "domain": 2
+    }
+  },
+  "requirements": [
+    {
+      "id": "CORE-REQ-001",
+      "contract": "core",
+      "title": "Subnet configuration enforces bounds at create and update boundaries",
+      "criticality": "critical",
+      "categories": [
+        "input-validation",
+        "boundary-values"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "min",
+        "max",
+        "off-by-one",
+        "zero"
+      ],
+      "covered_functions": [
+        "createSubnet",
+        "queueSubnetConfigUpdate",
+        "updateSubnetConfig"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_core.yaml"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorDomain.t.sol",
+          "function": "testValidateSubnetConfigRejectsInvalidValues"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testGovernanceCanUpdateSubnetConfigAfterDelay"
+        },
+        {
+          "kind": "command",
+          "id": "verify_release"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorCore.sol",
+        "src/core/PulseTensorDomain.sol",
+        "test/PulseTensorCore.t.sol",
+        "test/PulseTensorDomain.t.sol"
+      ]
+    },
+    {
+      "id": "CORE-REQ-002",
+      "contract": "core",
+      "title": "Governance configuration is owner-only and enforces contract + timelock bounds",
+      "criticality": "critical",
+      "categories": [
+        "access-control",
+        "boundary-values"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "min",
+        "max",
+        "invalid-type"
+      ],
+      "covered_functions": [
+        "configureSubnetGovernance"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_core.yaml"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testOnlyOwnerCanConfigureSubnetGovernance"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testGovernanceContractRequired"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testGovernanceDelayBoundsAreEnforced"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorCore.sol",
+        "test/PulseTensorCore.t.sol"
+      ]
+    },
+    {
+      "id": "CORE-REQ-003",
+      "contract": "core",
+      "title": "Owner-action queue enforces authorization, expiry, cancellation, and queued-by binding",
+      "criticality": "critical",
+      "categories": [
+        "governance-queue",
+        "access-control"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "delay-window",
+        "expiry-window"
+      ],
+      "covered_functions": [
+        "queueSubnetPause",
+        "setSubnetPaused",
+        "queueSubnetConfigUpdate",
+        "updateSubnetConfig"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_core.yaml"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testOnlyGovernanceCanQueuePause"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testGovernanceCanCancelQueuedOwnerAction"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testQueuedOwnerActionBindsToQueuingGovernanceAfterRotation"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testOwnerActionQueueExpiresAndCanBeRequeued"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorCore.sol",
+        "test/PulseTensorCore.t.sol"
+      ]
+    },
+    {
+      "id": "CORE-REQ-004",
+      "contract": "core",
+      "title": "Pause mode blocks stake-changing actions but preserves reveal/challenge liveness",
+      "criticality": "high",
+      "categories": [
+        "liveness",
+        "pause-safety"
+      ],
+      "boundary_value_analysis": false,
+      "covered_functions": [
+        "setSubnetPaused",
+        "revealWeights",
+        "challengeExpiredCommit"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_core.yaml"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testRevealWeightsWorksWhileSubnetPaused"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testChallengeExpiredCommitWorksWhileSubnetPaused"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorCore.sol",
+        "test/PulseTensorCore.t.sol",
+        "docs/formal_workflow.md"
+      ]
+    },
+    {
+      "id": "CORE-REQ-005",
+      "contract": "core",
+      "title": "Stake accounting and validator eligibility remain conservative under adversarial input",
+      "criticality": "critical",
+      "categories": [
+        "accounting",
+        "staking"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "zero",
+        "underflow",
+        "minimum-threshold"
+      ],
+      "covered_functions": [
+        "addStake",
+        "removeStake",
+        "registerValidator",
+        "unregisterValidator"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_core.yaml"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testValidatorCannotWithdrawBelowMinimumStake"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.fuzz.t.sol",
+          "function": "testFuzz_StakeAccountingRemainsConservative"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.fuzz.t.sol",
+          "function": "testFuzz_ValidatorWithdrawEnforcesMinimumStake"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorCore.sol",
+        "src/core/PulseTensorDomain.sol",
+        "test/PulseTensorCore.t.sol",
+        "test/PulseTensorCore.fuzz.t.sol"
+      ]
+    },
+    {
+      "id": "CORE-REQ-006",
+      "contract": "core",
+      "title": "Commit/reveal is domain-bound and rejects mismatched epochs/salts/mechanisms",
+      "criticality": "critical",
+      "categories": [
+        "commit-reveal",
+        "domain-separation"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "epoch-window",
+        "domain-tag"
+      ],
+      "covered_functions": [
+        "commitWeights",
+        "revealWeights"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_core.yaml"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testCommitRevealFlow"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testRevealWrongSaltReverts"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testMechanismCommitmentIncludesMechanismId"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.fuzz.t.sol",
+          "function": "testFuzz_CommitRevealIsBoundToEpochSaltAndValidator"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.fuzz.t.sol",
+          "function": "testFuzz_MechanismCommitRevealIsBoundToEpochSaltValidatorAndMechid"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorCore.sol",
+        "src/core/PulseTensorDomain.sol",
+        "test/PulseTensorCore.t.sol",
+        "test/PulseTensorCore.fuzz.t.sol"
+      ]
+    },
+    {
+      "id": "CORE-REQ-007",
+      "contract": "core",
+      "title": "Pending commitments lock withdrawal/unregister until reveal or challenge resolution",
+      "criticality": "critical",
+      "categories": [
+        "liveness",
+        "slash-accountability"
+      ],
+      "boundary_value_analysis": false,
+      "covered_functions": [
+        "removeStake",
+        "unregisterValidator",
+        "challengeExpiredCommit"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_core.yaml"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testValidatorCannotWithdrawWithPendingCommitment"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testValidatorCannotUnregisterWithPendingCommitment"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testCommitCanResumeAfterExpiredPendingCommitment"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorCore.sol",
+        "test/PulseTensorCore.t.sol",
+        "test/PulseTensorCore.fuzz.t.sol"
+      ]
+    },
+    {
+      "id": "CORE-REQ-008",
+      "contract": "core",
+      "title": "Expired-commit slashing is bounded and self-challenge cannot extract bounty",
+      "criticality": "critical",
+      "categories": [
+        "slashing",
+        "economic-security"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "minimum-slashed-unit",
+        "bps-cap"
+      ],
+      "covered_functions": [
+        "challengeExpiredCommit",
+        "claimChallengeReward"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_core.yaml"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testSelfChallengeRoutesFullSlashToEmissionPool"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.fuzz.t.sol",
+          "function": "testFuzz_ChallengeExpiredCommitSlashesBoundedAmount"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.fuzz.t.sol",
+          "function": "testFuzz_SelfChallengeRoutesFullSlashToPool"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorCore.sol",
+        "test/PulseTensorCore.t.sol",
+        "test/PulseTensorCore.fuzz.t.sol"
+      ]
+    },
+    {
+      "id": "CORE-REQ-009",
+      "contract": "core",
+      "title": "Subnet epoch emission schedule can only be paid for finalized epochs once",
+      "criticality": "high",
+      "categories": [
+        "emission",
+        "epoch-accounting"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "epoch-before-start",
+        "epoch-finalization",
+        "double-spend"
+      ],
+      "covered_functions": [
+        "queueSubnetEmissionScheduleUpdate",
+        "configureSubnetEmissionSchedule",
+        "queueSubnetEpochEmissionPayout",
+        "payoutSubnetEpochEmission"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_core.yaml"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testGovernanceCanConfigureEmissionScheduleAfterDelay"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testEpochEmissionPayoutRequiresFinalizedEpoch"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testSubnetEmissionSmoothingCanBeGovernedAndQuotesSmoothly"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorCore.sol",
+        "test/PulseTensorCore.t.sol",
+        "test/PulseTensorCore.inference_emission.t.sol"
+      ]
+    },
+    {
+      "id": "CORE-REQ-010",
+      "contract": "core",
+      "title": "Mechanism emission lanes enforce mechanism-id bounds and finalized-epoch payout",
+      "criticality": "high",
+      "categories": [
+        "mechanism-lanes",
+        "boundary-values"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "max-mechanism-id",
+        "epoch-finalization",
+        "double-spend"
+      ],
+      "covered_functions": [
+        "queueMechanismEmissionScheduleUpdate",
+        "configureMechanismEmissionSchedule",
+        "queueMechanismEpochEmissionPayout",
+        "payoutMechanismEpochEmission"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_core.yaml"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testInvalidMechanismIdRevertsOnFunding"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testMechanismEpochEmissionPayoutRequiresFinalizedEpoch"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testMechanismEmissionSmoothingCanBeGoverned"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.fuzz.t.sol",
+          "function": "testFuzz_MechanismEpochEmissionQuoteRespectsBounds"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorCore.sol",
+        "test/PulseTensorCore.t.sol",
+        "test/PulseTensorCore.inference_emission.t.sol",
+        "test/PulseTensorCore.fuzz.t.sol"
+      ]
+    },
+    {
+      "id": "SETTLEMENT-REQ-001",
+      "contract": "settlement",
+      "title": "Batch policy queue lifecycle enforces governance auth, delay, cancel, expiry, and queue-origin binding",
+      "criticality": "critical",
+      "categories": [
+        "governance-queue",
+        "access-control"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "delay-window",
+        "expiry-window",
+        "queued-by-binding"
+      ],
+      "covered_functions": [
+        "queueBatchPolicyUpdate",
+        "cancelBatchPolicyUpdate",
+        "configureBatchPolicy"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_inference_settlement.yaml"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceBatchPolicyRequiresQueuedGovernanceAction"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceBatchPolicyQueueCanBeCancelled"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceBatchPolicyQueueBindsToQueuingGovernanceAfterRotation"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorInferenceSettlement.sol",
+        "test/PulseTensorCore.inference_emission.t.sol"
+      ]
+    },
+    {
+      "id": "SETTLEMENT-REQ-002",
+      "contract": "settlement",
+      "title": "Fee policy queue and bounds enforce capped protocol fee and queue-origin safety",
+      "criticality": "critical",
+      "categories": [
+        "fee-policy",
+        "boundary-values"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "fee-cap",
+        "zero-fee-mode",
+        "expiry-window"
+      ],
+      "covered_functions": [
+        "queueFeePolicyUpdate",
+        "cancelFeePolicyUpdate",
+        "configureFeePolicy"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_inference_settlement.yaml"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceFeePolicyRequiresQueuedGovernanceAction"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceFeePolicyQueueExpiresAndCanBeRequeued"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceFeePolicyQueueBindsToQueuingGovernanceAfterRotation"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorInferenceSettlement.sol",
+        "test/PulseTensorCore.inference_emission.t.sol"
+      ]
+    },
+    {
+      "id": "SETTLEMENT-REQ-003",
+      "contract": "settlement",
+      "title": "Batch commit requires enabled policy, eligible proposer, and current epoch",
+      "criticality": "critical",
+      "categories": [
+        "batch-commit",
+        "eligibility"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "current-epoch-only",
+        "min-bond",
+        "max-items"
+      ],
+      "covered_functions": [
+        "commitInferenceBatchRoot"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_inference_settlement.yaml"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceBatchCommitRequiresCurrentEpoch"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceBatchCommitFinalizeAndLeafSettlement"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorInferenceSettlement.sol",
+        "test/PulseTensorCore.inference_emission.t.sol",
+        "scripts/check_local_e2e.sh"
+      ]
+    },
+    {
+      "id": "SETTLEMENT-REQ-004",
+      "contract": "settlement",
+      "title": "Fee funding cannot exceed declared total and pre-finalize withdrawal is bounded",
+      "criticality": "high",
+      "categories": [
+        "fee-accounting",
+        "boundary-values"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "funding-ceiling",
+        "withdrawal-bounds",
+        "post-finalize-freeze"
+      ],
+      "covered_functions": [
+        "fundInferenceBatchFees",
+        "withdrawInferenceBatchFees"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_inference_settlement.yaml"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceBatchFeeFundingCannotExceedDeclaredTotal"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceFeeWithdrawBlockedAfterFinalize"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorInferenceSettlement.sol",
+        "test/PulseTensorCore.inference_emission.t.sol"
+      ]
+    },
+    {
+      "id": "SETTLEMENT-REQ-005",
+      "contract": "settlement",
+      "title": "Batch finalization credits proposer bond refund and distributes fees from snapshotted policy",
+      "criticality": "critical",
+      "categories": [
+        "fee-distribution",
+        "finalization"
+      ],
+      "boundary_value_analysis": false,
+      "covered_functions": [
+        "finalizeInferenceBatch",
+        "claimProposerBondRefund",
+        "claimInferenceFee"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_inference_settlement.yaml"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceBatchFeeFundingWithdrawAndFinalizeDistribution"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceFeePolicyIsSnapshottedAtCommit"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceFinalizeCreditsRefundEvenIfProposerRejectsEth"
+        },
+        {
+          "kind": "command",
+          "id": "verify_local_e2e"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorInferenceSettlement.sol",
+        "test/PulseTensorCore.inference_emission.t.sol",
+        "scripts/check_local_e2e.sh"
+      ]
+    },
+    {
+      "id": "SETTLEMENT-REQ-006",
+      "contract": "settlement",
+      "title": "Leaf settlement enforces index bounds, valid merkle proof, and one-time settlement",
+      "criticality": "critical",
+      "categories": [
+        "merkle-validation",
+        "boundary-values"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "index-range",
+        "empty-proof",
+        "duplicate-settlement"
+      ],
+      "covered_functions": [
+        "settleFinalizedInferenceLeaf"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_inference_settlement.yaml"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceSettlementRejectsOutOfRangeLeafIndex"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceSettlementRejectsEmptyProofForgeryForNonZeroIndex"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceSettlementRejectsEmptyProofForgeryForIndexZero"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorInferenceSettlement.sol",
+        "test/PulseTensorCore.inference_emission.t.sol"
+      ]
+    },
+    {
+      "id": "SETTLEMENT-REQ-007",
+      "contract": "settlement",
+      "title": "Replay/duplicate challenges slash proposer bond and enforce prior-finalized checks",
+      "criticality": "critical",
+      "categories": [
+        "challenge-path",
+        "fraud-proof"
+      ],
+      "boundary_value_analysis": false,
+      "covered_functions": [
+        "challengeInferenceLeafReplay",
+        "challengeInferenceLeafDuplicate",
+        "claimChallengeReward"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_inference_settlement.yaml"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceBatchReplayChallengeSlashesBond"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceReplayChallengeRequiresFinalizedPriorBatch"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceBatchDuplicateLeafChallengeSlashesBond"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceSelfChallengeGetsNoBounty"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorInferenceSettlement.sol",
+        "test/PulseTensorCore.inference_emission.t.sol"
+      ]
+    },
+    {
+      "id": "SETTLEMENT-REQ-008",
+      "contract": "settlement",
+      "title": "Inference leaf helper is domain-separated by subnet/mechanism/epoch/request/result",
+      "criticality": "high",
+      "categories": [
+        "domain-separation",
+        "data-integrity"
+      ],
+      "boundary_value_analysis": false,
+      "covered_functions": [
+        "computeInferenceLeaf"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_inference_settlement.yaml"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testComputeInferenceLeafDomainSeparatesEpochAndRequest"
+        },
+        {
+          "kind": "command",
+          "id": "verify_local_e2e"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorInferenceSettlement.sol",
+        "test/PulseTensorCore.inference_emission.t.sol",
+        "README.md"
+      ]
+    },
+    {
+      "id": "DOMAIN-REQ-001",
+      "contract": "domain",
+      "title": "Domain subnet validation rejects invalid topology and fee/delay bounds",
+      "criticality": "critical",
+      "categories": [
+        "input-validation",
+        "boundary-values"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "zero",
+        "max",
+        "cross-field"
+      ],
+      "covered_functions": [
+        "validateSubnetConfig"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_core.yaml"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorDomain.t.sol",
+          "function": "testValidateSubnetConfigRejectsInvalidValues"
+        }
+      ],
+      "evidence": [
+        "src/core/PulseTensorDomain.sol",
+        "test/PulseTensorDomain.t.sol"
+      ]
+    },
+    {
+      "id": "DOMAIN-REQ-002",
+      "contract": "domain",
+      "title": "Domain stake transitions are conservative and reject overdraw",
+      "criticality": "critical",
+      "categories": [
+        "accounting",
+        "boundary-values"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "zero",
+        "underflow"
+      ],
+      "covered_functions": [
+        "addStake",
+        "removeStake"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_core.yaml"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorDomain.t.sol",
+          "function": "testAddAndRemoveStakeTransitions"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorDomain.t.sol",
+          "function": "testRemoveStakeRejectsOverdraw"
+        }
+      ],
+      "evidence": [
+        "src/core/PulseTensorDomain.sol",
+        "test/PulseTensorDomain.t.sol"
+      ]
+    },
+    {
+      "id": "DOMAIN-REQ-003",
+      "contract": "domain",
+      "title": "Domain commitment verification enforces reveal timing and binding",
+      "criticality": "high",
+      "categories": [
+        "commit-reveal",
+        "timing"
+      ],
+      "boundary_value_analysis": false,
+      "covered_functions": [
+        "scheduleCommit",
+        "verifyReveal",
+        "verifyExpiredCommitment",
+        "computeCommitment"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_core.yaml"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorDomain.t.sol",
+          "function": "testCommitRevealChecks"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorDomain.t.sol",
+          "function": "testExpiredCommitAndSlashChecks"
+        }
+      ],
+      "evidence": [
+        "src/core/PulseTensorDomain.sol",
+        "test/PulseTensorDomain.t.sol"
+      ]
+    },
+    {
+      "id": "DOMAIN-REQ-004",
+      "contract": "domain",
+      "title": "Domain epoch/slash math remains bounded across edge values",
+      "criticality": "high",
+      "categories": [
+        "arithmetic-bounds",
+        "epoch-math"
+      ],
+      "boundary_value_analysis": false,
+      "covered_functions": [
+        "slashStakeByBps",
+        "currentEpoch",
+        "epochEndBlock"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_core.yaml"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorDomain.t.sol",
+          "function": "testExpiredCommitAndSlashChecks"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.fuzz.t.sol",
+          "function": "testFuzz_ChallengeExpiredCommitSlashesBoundedAmount"
+        }
+      ],
+      "evidence": [
+        "src/core/PulseTensorDomain.sol",
+        "test/PulseTensorDomain.t.sol",
+        "test/PulseTensorCore.fuzz.t.sol"
+      ]
+    }
+  ]
+}

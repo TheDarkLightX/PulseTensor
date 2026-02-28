@@ -1,4 +1,4 @@
-.PHONY: build test fmt deploy preset synth-goal-frontier synth-tokenomics-frontier ui-install ui-dev ui-build ui-preview ui-hash ui-release ui-ipfs verify-private verify-goal-frontier verify-tokenomics-frontier verify-compiler-bugs verify-deploy-size verify-local-e2e verify-security-controls verify-security-antipatterns verify-solhint verify-slither-exclusions verify-slither verify-mythril-allowlist verify-mythril verify-fuzz-invariant verify-echidna verify-artifacts-security verify-artifacts-release verify-security verify-all verify-dev verify-release verify-release-full
+.PHONY: build test fmt deploy preset synth-goal-frontier synth-tokenomics-frontier ui-install ui-dev ui-build ui-preview ui-hash ui-release ui-ipfs verify-private verify-goal-frontier verify-tokenomics-frontier verify-compiler-bugs verify-deploy-size verify-local-e2e verify-requirements-traceability verify-security-controls verify-security-antipatterns verify-solhint verify-slither-exclusions verify-slither verify-mythril-allowlist verify-mythril verify-fuzz-invariant verify-echidna verify-artifacts-security verify-artifacts-release verify-artifacts-complete verify-security verify-all verify-dev verify-release verify-release-full verify-complete
 
 build:
 	forge build
@@ -60,6 +60,9 @@ verify-deploy-size:
 verify-local-e2e:
 	bash scripts/check_local_e2e.sh
 
+verify-requirements-traceability:
+	bash scripts/check_requirements_traceability.sh
+
 verify-security-controls:
 	bash scripts/check_security_controls.sh
 
@@ -93,6 +96,9 @@ verify-artifacts-security:
 verify-artifacts-release:
 	bash scripts/check_artifact_freshness.sh docs/security/artifact_manifest.release.txt
 
+verify-artifacts-complete:
+	bash scripts/check_artifact_freshness.sh docs/security/artifact_manifest.complete.txt
+
 verify-security:
 	bash scripts/check_security.sh
 
@@ -107,3 +113,6 @@ verify-release:
 
 verify-release-full:
 	bash scripts/verify_release_full.sh
+
+verify-complete:
+	bash scripts/verify_complete.sh
