@@ -60,6 +60,10 @@ Required outcome:
 - Run:
   - `make synth-goal-frontier`
   - `make verify-goal-frontier`
+  - `make synth-tokenomics-frontier`
+  - `make verify-tokenomics-frontier`
+  - `make synth-participant-regret-frontier`
+  - `make verify-participant-regret-frontier`
 
 Required outcome:
 
@@ -92,7 +96,7 @@ Required outcome:
   - Runs toolchain lock checks, build/tests, security suite, mandatory Echidna, and release artifact freshness checks.
 - Complete assurance gate (recommended before deploy candidate promotion):
   - `make verify-complete`
-  - Runs release gate + traceability + local live-chain E2E + goal/tokenomics frontier checks + complete artifact freshness.
+  - Runs release gate + traceability + local live-chain E2E + goal/tokenomics/participant-regret frontier checks + complete artifact freshness.
 - Fast local iteration (not release/merge gate):
   - `make verify-dev`
   - Runs boundary checks + build/tests.
@@ -135,6 +139,12 @@ Required outcome:
 - `scripts/check_goal_frontier_example.sh`
   - Exit `0`: reference emergency-mode model yields expected maximal frontier and minimal relaxations.
   - Exit non-zero: synthesized frontier deviates from expected deterministic result.
+- `scripts/check_tokenomics_goal_frontier.sh`
+  - Exit `0`: tokenomics model yields expected deterministic maximal frontier and minimal relaxations.
+  - Exit non-zero: synthesized frontier deviates from expected deterministic result.
+- `scripts/check_participant_regret_frontier.sh`
+  - Exit `0`: participant-regret model yields expected deterministic maximal frontier and minimal relaxations.
+  - Exit non-zero: synthesized frontier deviates from expected deterministic result.
 - `scripts/verify_release.sh`
   - Exit `0`: toolchain lock + release gate pass with `RUN_ECHIDNA=1`.
   - Exit non-zero: any upstream gate failure.
@@ -142,7 +152,7 @@ Required outcome:
   - Exit `0`: same release posture as `verify_release.sh` through a separate CI-friendly entrypoint.
   - Exit non-zero: any upstream gate failure.
 - `scripts/verify_complete.sh`
-  - Exit `0`: release gate + requirements traceability + local E2E + goal/tokenomics frontier checks + complete artifact freshness pass.
+  - Exit `0`: release gate + requirements traceability + local E2E + goal/tokenomics/participant-regret frontier checks + complete artifact freshness pass.
   - Exit non-zero: any upstream gate failure.
 
 ## Definition of Done (Protocol Change)

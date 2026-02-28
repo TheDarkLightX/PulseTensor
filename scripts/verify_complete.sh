@@ -18,6 +18,7 @@ bash "${ROOT_DIR}/scripts/verify_all.sh"
 bash "${ROOT_DIR}/scripts/check_local_e2e.sh"
 bash "${ROOT_DIR}/scripts/check_goal_frontier_example.sh"
 bash "${ROOT_DIR}/scripts/check_tokenomics_goal_frontier.sh"
+bash "${ROOT_DIR}/scripts/check_participant_regret_frontier.sh"
 
 bash "${ROOT_DIR}/scripts/check_artifact_freshness.sh" \
   "docs/security/artifact_manifest.complete.txt" \

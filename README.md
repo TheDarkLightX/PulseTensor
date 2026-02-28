@@ -78,6 +78,13 @@ make synth-tokenomics-frontier
 make verify-tokenomics-frontier
 ```
 
+Run participant-regret invariant frontier synthesis and check:
+
+```bash
+make synth-participant-regret-frontier
+make verify-participant-regret-frontier
+```
+
 Automated community release artifacts (deterministic hashes + tarball):
 
 ```bash
@@ -101,8 +108,8 @@ commit/finalize/settle/claim behavior. Report path: `runs/local_e2e/local_e2e_re
 coverage targets, from `specs/formal/requirements_traceability.json`.
 
 `make verify-complete` is the single full-assurance gate: toolchain lock, deploy size viability, release security
-verification, local live-chain E2E replay, goal-frontier checks, tokenomics frontier checks, and complete artifact
-freshness validation.
+verification, local live-chain E2E replay, goal-frontier checks, tokenomics frontier checks, participant-regret
+frontier checks, and complete artifact freshness validation.
 
 ## Participation Modes
 
@@ -181,6 +188,7 @@ RUN_ECHIDNA=1 make verify-release
 - `docs/launch_presets.md`: safe launch parameter tiers + game-theoretic rationale.
 - `docs/goal_frontier_synthesis.md`: deterministic multi-goal frontier synthesis for mechanism/design exploration.
 - `docs/tokenomics.md`: game-theoretic tokenomics design and parameter recommendations.
+- `docs/participant_regret_invariants.md`: safety-oriented invariant profile selected to minimize participant regret.
 - `docs/security/security_standards.md`: OWASP/EthTrust/Solidity-bug standards baseline.
 - `docs/security/control_matrix.json`: security control-to-evidence mapping gate.
 - `docs/security/governance_committee_charter.md`: founder-balanced committee authority and independence policy.

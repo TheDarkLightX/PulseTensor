@@ -1,4 +1,4 @@
-.PHONY: build test fmt deploy preset synth-goal-frontier synth-tokenomics-frontier ui-install ui-dev ui-build ui-preview ui-hash ui-release ui-ipfs verify-private verify-goal-frontier verify-tokenomics-frontier verify-compiler-bugs verify-deploy-size verify-local-e2e verify-requirements-traceability verify-security-controls verify-security-antipatterns verify-solhint verify-slither-exclusions verify-slither verify-mythril-allowlist verify-mythril verify-fuzz-invariant verify-echidna verify-artifacts-security verify-artifacts-release verify-artifacts-complete verify-security verify-all verify-dev verify-release verify-release-full verify-complete
+.PHONY: build test fmt deploy preset synth-goal-frontier synth-tokenomics-frontier synth-participant-regret-frontier ui-install ui-dev ui-build ui-preview ui-hash ui-release ui-ipfs verify-private verify-goal-frontier verify-tokenomics-frontier verify-participant-regret-frontier verify-compiler-bugs verify-deploy-size verify-local-e2e verify-requirements-traceability verify-security-controls verify-security-antipatterns verify-solhint verify-slither-exclusions verify-slither verify-mythril-allowlist verify-mythril verify-fuzz-invariant verify-echidna verify-artifacts-security verify-artifacts-release verify-artifacts-complete verify-security verify-all verify-dev verify-release verify-release-full verify-complete
 
 build:
 	forge build
@@ -20,6 +20,9 @@ synth-goal-frontier:
 
 synth-tokenomics-frontier:
 	python3 scripts/synthesize_goal_frontier.py --model configs/formal/pulsetensor_tokenomics_goal_frontier.json --out runs/formal/pulsetensor_tokenomics_goal_frontier.report.json
+
+synth-participant-regret-frontier:
+	python3 scripts/synthesize_goal_frontier.py --model configs/formal/pulsetensor_participant_regret_goal_frontier.json --out runs/formal/pulsetensor_participant_regret_goal_frontier.report.json
 
 ui-install:
 	npm --prefix frontend ci
@@ -50,6 +53,9 @@ verify-goal-frontier:
 
 verify-tokenomics-frontier:
 	bash scripts/check_tokenomics_goal_frontier.sh
+
+verify-participant-regret-frontier:
+	bash scripts/check_participant_regret_frontier.sh
 
 verify-compiler-bugs:
 	bash scripts/check_compiler_known_bugs.sh

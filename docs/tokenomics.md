@@ -97,6 +97,13 @@ Interpretation:
 - Minimal relaxation from full set is dropping `G6_AGGRESSIVE_TREASURY_GROWTH`.
 - Therefore, the recommended default remains `balanced`; `growth` should be treated as an explicit risk-accepting mode.
 
+Participant-regret invariants are also explored with:
+
+- `configs/formal/pulsetensor_participant_regret_goal_frontier.json`
+- `scripts/check_participant_regret_frontier.sh`
+
+Result: the maximal low-regret set keeps solvency/accounting safety, timelocked governance, capped fees, no retroactive fee extraction, pre-finalize escrow exits, challenge fairness, and bounded slashing. Aggressive treasury growth is a separate maximal mode and should remain opt-in only.
+
 ## Relation to Bittensor-Inspired Design
 
 - Keep Bittensor-style subnet/mechanism incentives and slashing discipline.

@@ -127,6 +127,37 @@ Interpretation:
 - Dropping only `G6_AGGRESSIVE_TREASURY_GROWTH` yields the largest safety-oriented realizable set.
 - This supports the `balanced` profile as default and `growth` as opt-in when explicitly accepting higher risk.
 
+## Participant-Regret Invariant Frontier Example
+
+Model:
+
+- `configs/formal/pulsetensor_participant_regret_goal_frontier.json`
+
+Run:
+
+```bash
+python3 scripts/synthesize_goal_frontier.py \
+  --model configs/formal/pulsetensor_participant_regret_goal_frontier.json \
+  --out runs/formal/pulsetensor_participant_regret_goal_frontier.report.json
+```
+
+Deterministic check:
+
+```bash
+bash scripts/check_participant_regret_frontier.sh
+```
+
+Expected maximal frontier sets:
+
+1. `{G1_SOLVENCY_SAFETY, G2_ACCOUNTING_CONSERVATION, G3_NO_RETROACTIVE_FEE_EXTRACTION, G4_PREFINALIZE_ESCROW_EXIT, G5_CHALLENGE_FAIRNESS, G6_BOUNDED_SLASHING, G7_FEE_CAP_CREDIBILITY, G8_TIMELOCKED_GOVERNANCE_PATH}`
+2. `{G9_AGGRESSIVE_TREASURY_GROWTH}`
+
+Interpretation:
+
+- The full set is unrealizable: maximizing aggressive treasury growth conflicts with user-protective safety invariants.
+- Minimal relaxation from the full set is dropping only `G9_AGGRESSIVE_TREASURY_GROWTH`.
+- Recommended default invariant profile is the first maximal set (safety + low participant regret).
+
 ## Outputs and Review
 
 Report fields include:

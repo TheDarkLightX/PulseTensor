@@ -1,0 +1,100 @@
+{
+  "schema": "pulsetensor/goal-frontier-model/v1",
+  "description": "PulseTensor safety + participant-regret tradeoff model. Captures the tension between aggressive treasury posture and user-protective invariants.",
+  "initial_state": "select_regime_sys",
+  "states": {
+    "select_regime_sys": {
+      "controller": "system",
+      "labels": ["profile_selection"],
+      "transitions": [
+        {"action": "choose_balanced", "to": "balanced_env"},
+        {"action": "choose_growth_aggressive", "to": "growth_env"}
+      ]
+    },
+    "balanced_env": {
+      "controller": "environment",
+      "labels": [
+        "solvency_safe",
+        "accounting_safe",
+        "fee_snapshot_safe",
+        "withdrawals_prefinalize_open",
+        "challenge_fair",
+        "slash_bounded",
+        "fee_cap_respected",
+        "governance_timelock_live",
+        "treasury_growth_sustainable",
+        "treasury_not_aggressive"
+      ],
+      "transitions": [
+        {"action": "normal_market", "to": "balanced_env"},
+        {"action": "stress_market", "to": "balanced_env"}
+      ]
+    },
+    "growth_env": {
+      "controller": "environment",
+      "labels": [
+        "treasury_growth_aggressive",
+        "treasury_growth_sustainable",
+        "solvency_risk_high",
+        "accounting_mismatch_risk_high",
+        "fee_snapshot_risk_high",
+        "withdrawals_prefinalize_locked",
+        "challenge_fairness_risk_high",
+        "slash_overreach_risk_high",
+        "fee_cap_bypass_risk_high",
+        "governance_timelock_missing"
+      ],
+      "transitions": [
+        {"action": "normal_market", "to": "growth_env"},
+        {"action": "stress_market", "to": "growth_env"}
+      ]
+    }
+  },
+  "goals": [
+    {
+      "id": "G1_SOLVENCY_SAFETY",
+      "description": "Avoid insolvency-risk states.",
+      "forbidden_labels": ["solvency_risk_high"]
+    },
+    {
+      "id": "G2_ACCOUNTING_CONSERVATION",
+      "description": "Avoid accounting mismatch risk.",
+      "forbidden_labels": ["accounting_mismatch_risk_high"]
+    },
+    {
+      "id": "G3_NO_RETROACTIVE_FEE_EXTRACTION",
+      "description": "Avoid policy regimes that can retroactively extract fees after work commit.",
+      "forbidden_labels": ["fee_snapshot_risk_high"]
+    },
+    {
+      "id": "G4_PREFINALIZE_ESCROW_EXIT",
+      "description": "Avoid regimes that lock fee escrow before batch finalization.",
+      "forbidden_labels": ["withdrawals_prefinalize_locked"]
+    },
+    {
+      "id": "G5_CHALLENGE_FAIRNESS",
+      "description": "Avoid high challenge-ordering fairness risk.",
+      "forbidden_labels": ["challenge_fairness_risk_high"]
+    },
+    {
+      "id": "G6_BOUNDED_SLASHING",
+      "description": "Avoid over-slashing and unbounded challenge penalties.",
+      "forbidden_labels": ["slash_overreach_risk_high"]
+    },
+    {
+      "id": "G7_FEE_CAP_CREDIBILITY",
+      "description": "Avoid uncapped or bypassable fee extraction paths.",
+      "forbidden_labels": ["fee_cap_bypass_risk_high"]
+    },
+    {
+      "id": "G8_TIMELOCKED_GOVERNANCE_PATH",
+      "description": "Avoid governance regimes that bypass timelock queue guarantees.",
+      "forbidden_labels": ["governance_timelock_missing"]
+    },
+    {
+      "id": "G9_AGGRESSIVE_TREASURY_GROWTH",
+      "description": "Require an aggressive treasury growth posture.",
+      "forbidden_labels": ["treasury_not_aggressive"]
+    }
+  ]
+}
