@@ -1,4 +1,4 @@
-.PHONY: build test fmt deploy preset synth-goal-frontier synth-tokenomics-frontier ui-install ui-dev ui-build ui-preview ui-hash ui-release ui-ipfs verify-private verify-goal-frontier verify-tokenomics-frontier verify-compiler-bugs verify-deploy-size verify-security-controls verify-security-antipatterns verify-solhint verify-slither-exclusions verify-slither verify-mythril-allowlist verify-mythril verify-fuzz-invariant verify-echidna verify-artifacts-security verify-artifacts-release verify-security verify-all verify-dev verify-release verify-release-full
+.PHONY: build test fmt deploy preset synth-goal-frontier synth-tokenomics-frontier ui-install ui-dev ui-build ui-preview ui-hash ui-release ui-ipfs verify-private verify-goal-frontier verify-tokenomics-frontier verify-compiler-bugs verify-deploy-size verify-local-e2e verify-security-controls verify-security-antipatterns verify-solhint verify-slither-exclusions verify-slither verify-mythril-allowlist verify-mythril verify-fuzz-invariant verify-echidna verify-artifacts-security verify-artifacts-release verify-security verify-all verify-dev verify-release verify-release-full
 
 build:
 	forge build
@@ -56,6 +56,9 @@ verify-compiler-bugs:
 
 verify-deploy-size:
 	bash scripts/check_deploy_code_size.sh
+
+verify-local-e2e:
+	bash scripts/check_local_e2e.sh
 
 verify-security-controls:
 	bash scripts/check_security_controls.sh

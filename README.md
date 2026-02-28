@@ -31,6 +31,7 @@ make verify-private
 make build
 make test
 make verify-security
+make verify-local-e2e
 make verify-release
 ```
 
@@ -90,6 +91,10 @@ make ui-ipfs
 
 `make verify-release` is the canonical merge gate and includes mandatory Echidna.
 It also fail-closes on deploy code-size viability (`scripts/check_deploy_code_size.sh`).
+
+`make verify-local-e2e` runs a deterministic live-chain local integration flow on fresh Anvil:
+deploys contracts, executes governance queue/execute paths, runs validator commit/reveal, and validates inference
+commit/finalize/settle/claim behavior. Report path: `runs/local_e2e/local_e2e_report.json`.
 
 ## Participation Modes
 

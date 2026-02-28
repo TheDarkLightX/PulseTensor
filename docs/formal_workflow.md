@@ -55,6 +55,16 @@ Required outcome:
 - Maximal realizable goal sets and minimal relaxations are reviewed for the change.
 - Example frontier regression check passes for the emergency-mode reference model.
 
+## Gate 5 (Recommended): Local Live-Chain E2E Replay
+
+- Run:
+  - `make verify-local-e2e`
+
+Required outcome:
+
+- Deterministic local Anvil replay passes for deployed contracts and writes `runs/local_e2e/local_e2e_report.json`.
+- Governance delay queue/execute, commit/reveal, inference batch commit/finalize/settle, and claim drains are all validated.
+
 ## Determinism and Privacy Controls
 
 - Keep private dependency directories untracked and out of release artifacts.
@@ -74,6 +84,9 @@ Required outcome:
 - Design-space exploration check (recommended pre-promotion for mechanism/policy changes):
   - `make verify-goal-frontier`
   - Verifies deterministic frontier synthesis behavior on the reference model.
+- Local live-chain integration replay (recommended pre-promotion for protocol/runtime changes):
+  - `make verify-local-e2e`
+  - Validates end-to-end deployed flow locally and emits a deterministic run artifact.
 - Extended release entrypoint:
   - `make verify-release-full`
   - Same security posture as `make verify-release`, with a dedicated entrypoint for CI profile separation.
@@ -92,6 +105,9 @@ Required outcome:
 - `scripts/check_deploy_code_size.sh`
   - Exit `0`: deployment-optimizer build (`FOUNDRY_OPTIMIZER_RUNS` default `1`) keeps `PulseTensorCore` and `PulseTensorInferenceSettlement` within EVM runtime/initcode limits.
   - Exit non-zero: deploy profile exceeds code-size limits or size report parsing fails.
+- `scripts/check_local_e2e.sh`
+  - Exit `0`: fresh local Anvil deployment + deterministic E2E flow passes, and `runs/local_e2e/local_e2e_report.json` is produced.
+  - Exit non-zero: any local integration assertion or deployment/runtime step fails.
 - `scripts/synthesize_goal_frontier.py`
   - Exit `0`: valid model is parsed, all goal subsets are evaluated deterministically, and frontier report is produced.
   - Exit non-zero: malformed model, inconsistent transitions, or synthesis failure.
