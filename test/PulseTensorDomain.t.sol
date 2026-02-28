@@ -133,6 +133,11 @@ contract PulseTensorDomainTest {
         assert(reverted);
     }
 
+    function testValidateSubnetConfigAcceptsBoundaryValues() public view {
+        harness.validateSubnetConfig(1024, 2000, 20_000, 120_000);
+        harness.validateSubnetConfig(1, 0, 1, 2);
+    }
+
     function testAddAndRemoveStakeTransitions() public view {
         (uint256 stakeAfterAdd, uint256 totalAfterAdd) = harness.addStake(2 ether, 10 ether, 3 ether);
         assert(stakeAfterAdd == 5 ether);
@@ -206,5 +211,27 @@ contract PulseTensorDomainTest {
         assert(slashedAmount == 0.1 ether);
         assert(newStake == 1.9 ether);
         assert(newTotalStake == 1.9 ether);
+    }
+
+    function testSlashStakeByBpsBoundaryValues() public view {
+        bool reverted = false;
+        try harness.slashStakeByBps(1 ether, 1 ether, 0) returns (uint256, uint256, uint256) {}
+        catch {
+            reverted = true;
+        }
+        assert(reverted);
+
+        reverted = false;
+        try harness.slashStakeByBps(1 ether, 1 ether, 10_001) returns (uint256, uint256, uint256) {}
+        catch {
+            reverted = true;
+        }
+        assert(reverted);
+
+        (uint256 newStake, uint256 newTotalStake, uint256 slashedAmount) =
+            harness.slashStakeByBps(1 ether, 1 ether, 10_000);
+        assert(slashedAmount == 1 ether);
+        assert(newStake == 0);
+        assert(newTotalStake == 0);
     }
 }

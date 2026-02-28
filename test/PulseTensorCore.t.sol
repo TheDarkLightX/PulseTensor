@@ -416,6 +416,57 @@ contract PulseTensorCoreTest {
         expired = block.number > uint256(readyAtBlock) + core.OWNER_ACTION_EXPIRY_BLOCKS();
     }
 
+    function testCreateSubnetBoundaryValues() public {
+        uint16 maxValidators = core.MAX_VALIDATORS_LIMIT();
+        uint16 maxOwnerFeeBps = core.MAX_OWNER_FEE_BPS();
+        uint64 maxRevealDelayBlocks = core.MAX_REVEAL_DELAY_BLOCKS();
+        uint64 maxEpochLengthBlocks = core.MAX_EPOCH_LENGTH_BLOCKS();
+
+        uint16 netuid = core.createSubnet(maxValidators, 1 wei, maxOwnerFeeBps, maxRevealDelayBlocks, maxEpochLengthBlocks);
+        (bool exists, uint16 configuredMaxValidators, uint16 configuredOwnerFeeBps, uint64 configuredRevealDelay, uint64 configuredEpochLength,,) =
+            core.subnets(netuid);
+        assert(exists);
+        assert(configuredMaxValidators == maxValidators);
+        assert(configuredOwnerFeeBps == maxOwnerFeeBps);
+        assert(configuredRevealDelay == maxRevealDelayBlocks);
+        assert(configuredEpochLength == maxEpochLengthBlocks);
+
+        bool reverted = false;
+        try core.createSubnet(maxValidators + 1, 1 wei, 500, 2, 16) {}
+        catch {
+            reverted = true;
+        }
+        assert(reverted);
+
+        reverted = false;
+        try core.createSubnet(64, 1 wei, maxOwnerFeeBps + 1, 2, 16) {}
+        catch {
+            reverted = true;
+        }
+        assert(reverted);
+
+        reverted = false;
+        try core.createSubnet(64, 1 wei, 500, maxRevealDelayBlocks + 1, maxEpochLengthBlocks) {}
+        catch {
+            reverted = true;
+        }
+        assert(reverted);
+
+        reverted = false;
+        try core.createSubnet(64, 1 wei, 500, 2, maxEpochLengthBlocks + 1) {}
+        catch {
+            reverted = true;
+        }
+        assert(reverted);
+
+        reverted = false;
+        try core.createSubnet(64, 1 wei, 500, 16, 16) {}
+        catch {
+            reverted = true;
+        }
+        assert(reverted);
+    }
+
     function testSubnetLifecycleAndStakeAccounting() public {
         uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
 
@@ -663,6 +714,17 @@ contract PulseTensorCoreTest {
             highDelayReverted = true;
         }
         assert(highDelayReverted);
+    }
+
+    function testGovernanceDelayBoundaryValuesAccepted() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
+        StakeActor governance = new StakeActor();
+
+        core.configureSubnetGovernance(netuid, address(governance), core.MIN_OWNER_ACTION_DELAY_BLOCKS());
+        assert(core.subnetOwnerActionDelayBlocks(netuid) == core.MIN_OWNER_ACTION_DELAY_BLOCKS());
+
+        core.configureSubnetGovernance(netuid, address(governance), core.MAX_OWNER_ACTION_DELAY_BLOCKS());
+        assert(core.subnetOwnerActionDelayBlocks(netuid) == core.MAX_OWNER_ACTION_DELAY_BLOCKS());
     }
 
     function testGovernanceCanPauseSubnetAfterDelay() public {
@@ -1672,6 +1734,28 @@ contract PulseTensorCoreTest {
 
         bool reverted = false;
         try core.fundMechanismEmission{value: 1 ether}(netuid, invalidMechid) {}
+        catch {
+            reverted = true;
+        }
+        assert(reverted);
+    }
+
+    function testMechanismIdBoundaryValuesOnCommit() public {
+        uint16 netuid = core.createSubnet(64, 2 ether, 500, 2, 16);
+        StakeActor actor = new StakeActor();
+        vm.deal(address(actor), 10 ether);
+        actor.addStake{value: 2 ether}(core, netuid);
+        actor.registerValidator(core, netuid);
+
+        uint16 maxMechid = core.MAX_MECHANISM_ID();
+        uint64 epoch = core.currentEpoch(netuid);
+        bytes32 commitment = keccak256("max-mechanism-commitment");
+        actor.commitMechanismWeights(core, netuid, maxMechid, commitment);
+        (bytes32 pendingCommitment,,) = core.mechanismEpochCommitments(netuid, maxMechid, epoch, address(actor));
+        assert(pendingCommitment == commitment);
+
+        bool reverted = false;
+        try actor.commitMechanismWeights(core, netuid, maxMechid + 1, keccak256("invalid-mechanism-commitment")) {}
         catch {
             reverted = true;
         }

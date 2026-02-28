@@ -1035,6 +1035,277 @@ contract PulseTensorCoreInferenceEmissionTest {
         assert(minProposerBondWei == 0.1 ether);
     }
 
+    function testInferenceBatchPolicyBoundaryValuesAndDisabledMode() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
+        (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
+
+        uint16 mechidMin = 41;
+        uint64 readyAt = governance.queueInferenceBatchPolicyUpdate(
+            settlement,
+            netuid,
+            mechidMin,
+            true,
+            settlement.MIN_CHALLENGE_WINDOW_BLOCKS(),
+            1,
+            1
+        );
+        vm.roll(readyAt);
+        governance.configureInferenceBatchPolicy(
+            settlement,
+            netuid,
+            mechidMin,
+            true,
+            settlement.MIN_CHALLENGE_WINDOW_BLOCKS(),
+            1,
+            1
+        );
+        (bool minEnabled, uint64 minWindow, uint32 minItems, uint256 minBond) = settlement.batchPolicies(netuid, mechidMin);
+        assert(minEnabled);
+        assert(minWindow == settlement.MIN_CHALLENGE_WINDOW_BLOCKS());
+        assert(minItems == 1);
+        assert(minBond == 1);
+
+        uint16 mechidMax = 42;
+        readyAt = governance.queueInferenceBatchPolicyUpdate(
+            settlement,
+            netuid,
+            mechidMax,
+            true,
+            settlement.MAX_CHALLENGE_WINDOW_BLOCKS(),
+            settlement.MAX_BATCH_ITEMS(),
+            1
+        );
+        vm.roll(readyAt);
+        governance.configureInferenceBatchPolicy(
+            settlement,
+            netuid,
+            mechidMax,
+            true,
+            settlement.MAX_CHALLENGE_WINDOW_BLOCKS(),
+            settlement.MAX_BATCH_ITEMS(),
+            1
+        );
+        (bool maxEnabled, uint64 maxWindow, uint32 maxItems, uint256 maxBond) = settlement.batchPolicies(netuid, mechidMax);
+        assert(maxEnabled);
+        assert(maxWindow == settlement.MAX_CHALLENGE_WINDOW_BLOCKS());
+        assert(maxItems == settlement.MAX_BATCH_ITEMS());
+        assert(maxBond == 1);
+
+        uint16 mechidDisabled = 43;
+        readyAt = governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechidDisabled, false, 0, 0, 0);
+        vm.roll(readyAt);
+        governance.configureInferenceBatchPolicy(settlement, netuid, mechidDisabled, false, 0, 0, 0);
+        (bool disabledEnabled, uint64 disabledWindow, uint32 disabledItems, uint256 disabledBond) =
+            settlement.batchPolicies(netuid, mechidDisabled);
+        assert(!disabledEnabled);
+        assert(disabledWindow == 0);
+        assert(disabledItems == 0);
+        assert(disabledBond == 0);
+
+        uint64 epoch = core.currentEpoch(netuid);
+        bool disabledCommitReverted = false;
+        try validator.commitInferenceBatchRoot{value: 0.2 ether}(
+            settlement, netuid, mechidDisabled, epoch, keccak256("disabled-policy"), 1, 1 ether
+        ) {} catch {
+            disabledCommitReverted = true;
+        }
+        assert(disabledCommitReverted);
+    }
+
+    function testInferenceBatchPolicyBoundaryValueRejections() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
+        FeatureActor governance = new FeatureActor();
+        core.configureSubnetGovernance(netuid, address(governance), 2);
+        uint16 mechid = 44;
+
+        bool reverted = false;
+        try governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 0, 8, 1) {}
+        catch {
+            reverted = true;
+        }
+        assert(reverted);
+
+        reverted = false;
+        try governance.queueInferenceBatchPolicyUpdate(
+            settlement, netuid, mechid, true, settlement.MAX_CHALLENGE_WINDOW_BLOCKS() + 1, 8, 1
+        ) {} catch {
+            reverted = true;
+        }
+        assert(reverted);
+
+        reverted = false;
+        try governance.queueInferenceBatchPolicyUpdate(
+            settlement, netuid, mechid, true, settlement.MIN_CHALLENGE_WINDOW_BLOCKS(), 0, 1
+        ) {} catch {
+            reverted = true;
+        }
+        assert(reverted);
+
+        reverted = false;
+        try governance.queueInferenceBatchPolicyUpdate(
+            settlement, netuid, mechid, true, settlement.MIN_CHALLENGE_WINDOW_BLOCKS(), settlement.MAX_BATCH_ITEMS() + 1, 1
+        ) {} catch {
+            reverted = true;
+        }
+        assert(reverted);
+
+        reverted = false;
+        try governance.queueInferenceBatchPolicyUpdate(
+            settlement, netuid, mechid, true, settlement.MIN_CHALLENGE_WINDOW_BLOCKS(), 8, 0
+        ) {} catch {
+            reverted = true;
+        }
+        assert(reverted);
+
+        reverted = false;
+        try governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, false, 1, 0, 0) {}
+        catch {
+            reverted = true;
+        }
+        assert(reverted);
+    }
+
+    function testInferenceFeePolicyBoundaryValuesAndRejections() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
+        FeatureActor governance = new FeatureActor();
+        FeatureActor treasurySink = new FeatureActor();
+        FeatureActor minerSink = new FeatureActor();
+        core.configureSubnetGovernance(netuid, address(governance), 2);
+
+        uint16 mechidMax = 45;
+        uint64 readyAt = governance.queueInferenceFeePolicyUpdate(
+            settlement,
+            netuid,
+            mechidMax,
+            true,
+            settlement.MAX_PROTOCOL_FEE_BPS(),
+            settlement.BPS_DENOMINATOR(),
+            address(treasurySink),
+            address(minerSink)
+        );
+        vm.roll(readyAt);
+        governance.configureInferenceFeePolicy(
+            settlement,
+            netuid,
+            mechidMax,
+            true,
+            settlement.MAX_PROTOCOL_FEE_BPS(),
+            settlement.BPS_DENOMINATOR(),
+            address(treasurySink),
+            address(minerSink)
+        );
+        (bool maxEnabled, uint16 maxProtocolFeeBps, uint16 maxTreasuryFeeBps, address treasury, address miner) =
+            settlement.feePolicies(netuid, mechidMax);
+        assert(maxEnabled);
+        assert(maxProtocolFeeBps == settlement.MAX_PROTOCOL_FEE_BPS());
+        assert(maxTreasuryFeeBps == settlement.BPS_DENOMINATOR());
+        assert(treasury == address(treasurySink));
+        assert(miner == address(minerSink));
+
+        uint16 mechidZeroProtocol = 46;
+        readyAt =
+            governance.queueInferenceFeePolicyUpdate(settlement, netuid, mechidZeroProtocol, true, 0, 0, address(0), address(0));
+        vm.roll(readyAt);
+        governance.configureInferenceFeePolicy(
+            settlement, netuid, mechidZeroProtocol, true, 0, 0, address(0), address(0)
+        );
+        (bool zeroEnabled, uint16 zeroProtocolFeeBps, uint16 zeroTreasuryFeeBps, address zeroTreasury, address zeroMiner) =
+            settlement.feePolicies(netuid, mechidZeroProtocol);
+        assert(zeroEnabled);
+        assert(zeroProtocolFeeBps == 0);
+        assert(zeroTreasuryFeeBps == 0);
+        assert(zeroTreasury == address(0));
+        assert(zeroMiner == address(0));
+
+        uint16 mechidRevert = 47;
+        bool reverted = false;
+        try governance.queueInferenceFeePolicyUpdate(
+            settlement,
+            netuid,
+            mechidRevert,
+            true,
+            settlement.MAX_PROTOCOL_FEE_BPS() + 1,
+            0,
+            address(treasurySink),
+            address(minerSink)
+        ) {} catch {
+            reverted = true;
+        }
+        assert(reverted);
+
+        reverted = false;
+        try governance.queueInferenceFeePolicyUpdate(
+            settlement,
+            netuid,
+            mechidRevert,
+            true,
+            settlement.MAX_PROTOCOL_FEE_BPS(),
+            settlement.BPS_DENOMINATOR() + 1,
+            address(treasurySink),
+            address(minerSink)
+        ) {} catch {
+            reverted = true;
+        }
+        assert(reverted);
+
+        reverted = false;
+        try governance.queueInferenceFeePolicyUpdate(
+            settlement, netuid, mechidRevert, true, 0, 1, address(0), address(0)
+        ) {} catch {
+            reverted = true;
+        }
+        assert(reverted);
+
+        reverted = false;
+        try governance.queueInferenceFeePolicyUpdate(
+            settlement, netuid, mechidRevert, true, 100, 0, address(0), address(minerSink)
+        ) {} catch {
+            reverted = true;
+        }
+        assert(reverted);
+
+        reverted = false;
+        try governance.queueInferenceFeePolicyUpdate(
+            settlement, netuid, mechidRevert, false, 1, 0, address(0), address(0)
+        ) {} catch {
+            reverted = true;
+        }
+        assert(reverted);
+    }
+
+    function testInferenceBatchItemCountBoundaryValues() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
+        (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
+        uint16 mechid = 48;
+
+        uint64 readyAt = governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 5, 2, 0.1 ether);
+        vm.roll(readyAt);
+        governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 5, 2, 0.1 ether);
+
+        uint64 epoch = core.currentEpoch(netuid);
+        bool zeroCountReverted = false;
+        try validator.commitInferenceBatchRoot{value: 0.2 ether}(
+            settlement, netuid, mechid, epoch, keccak256("item-count-zero"), 0, 1 ether
+        ) {} catch {
+            zeroCountReverted = true;
+        }
+        assert(zeroCountReverted);
+
+        bool overMaxReverted = false;
+        try validator.commitInferenceBatchRoot{value: 0.2 ether}(
+            settlement, netuid, mechid, epoch, keccak256("item-count-over-max"), 3, 1 ether
+        ) {} catch {
+            overMaxReverted = true;
+        }
+        assert(overMaxReverted);
+
+        validator.commitInferenceBatchRoot{value: 0.2 ether}(
+            settlement, netuid, mechid, epoch, keccak256("item-count-max"), 2, 1 ether
+        );
+        (, uint32 itemCount,,,,,,,) = settlement.inferenceBatches(netuid, mechid, epoch);
+        assert(itemCount == 2);
+    }
+
     function testInferenceBatchCommitRequiresCurrentEpoch() public {
         uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
         (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
