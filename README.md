@@ -51,6 +51,9 @@ make deploy
 
 Receipt path: `runs/deployments/pulsetensor_deploy_receipt.json`.
 
+Deployment uses a size-safe compiler profile by default (`FOUNDRY_OPTIMIZER_RUNS=1`) to keep `PulseTensorCore`
+within EVM code-size limits. Override only if `bash scripts/check_deploy_code_size.sh` still passes.
+
 Render launch-safe subnet/mechanism presets (with queue/execute rollout plan):
 
 ```bash
@@ -86,6 +89,7 @@ make ui-ipfs
 ```
 
 `make verify-release` is the canonical merge gate and includes mandatory Echidna.
+It also fail-closes on deploy code-size viability (`scripts/check_deploy_code_size.sh`).
 
 ## Participation Modes
 

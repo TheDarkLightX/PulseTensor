@@ -7,6 +7,7 @@ This workflow is mandatory for protocol-changing smart-contract work in PulseTen
 - Run:
   - `make build`
   - `make test`
+  - `bash scripts/check_deploy_code_size.sh` (deploy profile code-size viability)
 
 Required outcome:
 
@@ -88,6 +89,9 @@ Required outcome:
 - `scripts/check_security.sh`
   - Exit `0`: compiler known-bug gate + control matrix + anti-pattern + readiness docs + Solhint + Slither allowlist lock + Slither + Mythril + deterministic fuzz/invariant checks pass (and Echidna when `RUN_ECHIDNA=1`), and security artifact freshness manifest passes.
   - Exit non-zero: any security gate fails.
+- `scripts/check_deploy_code_size.sh`
+  - Exit `0`: deployment-optimizer build (`FOUNDRY_OPTIMIZER_RUNS` default `1`) keeps `PulseTensorCore` and `PulseTensorInferenceSettlement` within EVM runtime/initcode limits.
+  - Exit non-zero: deploy profile exceeds code-size limits or size report parsing fails.
 - `scripts/synthesize_goal_frontier.py`
   - Exit `0`: valid model is parsed, all goal subsets are evaluated deterministically, and frontier report is produced.
   - Exit non-zero: malformed model, inconsistent transitions, or synthesis failure.

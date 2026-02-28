@@ -14,6 +14,37 @@ contract PulseTensorCoreFuzzTest is Test {
         vm.deal(address(this), 1_000 ether);
     }
 
+    function _computeCommitment(bytes32 weightsHash, bytes32 salt, address validator, uint16 netuid, uint64 epoch)
+        internal
+        view
+        returns (bytes32)
+    {
+        return keccak256(abi.encode(weightsHash, salt, validator, netuid, epoch, block.chainid, address(core), 1));
+    }
+
+    function _computeMechanismCommitment(
+        bytes32 weightsHash,
+        bytes32 salt,
+        address validator,
+        uint16 netuid,
+        uint16 mechid,
+        uint64 epoch
+    ) internal view returns (bytes32) {
+        return keccak256(
+            abi.encode(weightsHash, salt, validator, netuid, mechid, epoch, block.chainid, address(core), 1)
+        );
+    }
+
+    function _quoteDefaultEmissionSplit(uint256 totalAmount)
+        internal
+        pure
+        returns (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount)
+    {
+        validatorAmount = (totalAmount * 4_100) / 10_000;
+        minerAmount = (totalAmount * 4_100) / 10_000;
+        ownerAmount = totalAmount - validatorAmount - minerAmount;
+    }
+
     function testFuzz_StakeAccountingRemainsConservative(uint96 addAmountRaw, uint96 removeAmountRaw) public {
         uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
         vm.deal(VALIDATOR, 1_000 ether);
@@ -83,7 +114,7 @@ contract PulseTensorCoreFuzzTest is Test {
         core.registerValidator(netuid);
 
         uint64 epoch = core.currentEpoch(netuid);
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, VALIDATOR, netuid, epoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, VALIDATOR, netuid, epoch);
         vm.prank(VALIDATOR);
         core.commitWeights(netuid, commitment);
 
@@ -122,7 +153,7 @@ contract PulseTensorCoreFuzzTest is Test {
         core.registerValidator(netuid);
 
         uint64 epoch = core.currentEpoch(netuid);
-        bytes32 commitment = core.computeMechanismCommitment(weightsHash, salt, VALIDATOR, netuid, mechid, epoch);
+        bytes32 commitment = _computeMechanismCommitment(weightsHash, salt, VALIDATOR, netuid, mechid, epoch);
         vm.prank(VALIDATOR);
         core.commitMechanismWeights(netuid, mechid, commitment);
 
@@ -160,7 +191,7 @@ contract PulseTensorCoreFuzzTest is Test {
         core.registerValidator(netuid);
 
         uint64 epoch = core.currentEpoch(netuid);
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, VALIDATOR, netuid, epoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, VALIDATOR, netuid, epoch);
         vm.prank(VALIDATOR);
         core.commitWeights(netuid, commitment);
 
@@ -196,7 +227,7 @@ contract PulseTensorCoreFuzzTest is Test {
         core.registerValidator(netuid);
 
         uint64 epoch = core.currentEpoch(netuid);
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, VALIDATOR, netuid, epoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, VALIDATOR, netuid, epoch);
         if (commitment == bytes32(0)) {
             return;
         }
@@ -232,7 +263,7 @@ contract PulseTensorCoreFuzzTest is Test {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("challenge-fuzz"));
         bytes32 salt = bytes32(uint256(7));
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, VALIDATOR, netuid, epoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, VALIDATOR, netuid, epoch);
         vm.prank(VALIDATOR);
         core.commitWeights(netuid, commitment);
 
@@ -258,7 +289,7 @@ contract PulseTensorCoreFuzzTest is Test {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("self-challenge-fuzz"));
         bytes32 salt = bytes32(uint256(7));
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, VALIDATOR, netuid, epoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, VALIDATOR, netuid, epoch);
         vm.prank(VALIDATOR);
         core.commitWeights(netuid, commitment);
 
@@ -271,10 +302,10 @@ contract PulseTensorCoreFuzzTest is Test {
         assertEq(core.subnetEmissionPool(netuid), slashedAmount);
     }
 
-    function testFuzz_DefaultEmissionSplitConservesTotal(uint96 totalRaw) public view {
+    function testFuzz_DefaultEmissionSplitConservesTotal(uint96 totalRaw) public pure {
         uint256 totalAmount = bound(uint256(totalRaw), 1, 1_000 ether);
         (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount) =
-            core.quoteDefaultEmissionSplit(totalAmount);
+            _quoteDefaultEmissionSplit(totalAmount);
         assertEq(validatorAmount + minerAmount + ownerAmount, totalAmount);
     }
 

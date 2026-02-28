@@ -531,22 +531,6 @@ contract PulseTensorCore {
         emit SubnetOwnerActionCancelled(netuid, actionId, msg.sender);
     }
 
-    function subnetOwnerActionState(uint16 netuid, bytes32 actionId)
-        external
-        view
-        returns (uint64 readyAtBlock, address queuedBy, bool queued, bool ready, bool expired)
-    {
-        readyAtBlock = subnetOwnerActionReadyAtBlock[netuid][actionId];
-        if (readyAtBlock == 0) {
-            return (0, address(0), false, false, false);
-        }
-
-        queuedBy = subnetOwnerActionQueuedBy[netuid][actionId];
-        queued = true;
-        ready = block.number >= readyAtBlock;
-        expired = _isOwnerActionExpired(readyAtBlock);
-    }
-
     function updateSubnetConfig(
         uint16 netuid,
         uint256 minValidatorStake,
@@ -699,7 +683,7 @@ contract PulseTensorCore {
             _emissionSplitActionId(netuid, validatorRecipient, minerRecipient, ownerRecipient, totalAmount);
         _consumeOwnerAction(netuid, actionId);
 
-        (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount) = quoteDefaultEmissionSplit(totalAmount);
+        (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount) = _quoteDefaultEmissionSplit(totalAmount);
         uint256 newPoolBalance = _reduceEmissionPool(netuid, totalAmount);
 
         _transferValue(validatorRecipient, validatorAmount);
@@ -754,7 +738,7 @@ contract PulseTensorCore {
         );
         _consumeOwnerAction(netuid, actionId);
 
-        (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount) = quoteDefaultEmissionSplit(totalAmount);
+        (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount) = _quoteDefaultEmissionSplit(totalAmount);
         uint256 newPoolBalance = _reduceMechanismEmissionPool(netuid, mechid, totalAmount);
 
         _transferValue(validatorRecipient, validatorAmount);
@@ -792,10 +776,10 @@ contract PulseTensorCore {
             _epochEmissionPayoutActionId(netuid, epoch, validatorRecipient, minerRecipient, ownerRecipient);
         _consumeOwnerAction(netuid, actionId);
 
-        uint256 totalAmount = quoteSubnetEpochEmission(netuid, epoch);
+        uint256 totalAmount = _quoteSubnetEpochEmission(netuid, epoch);
         if (totalAmount == 0) revert EpochEmissionUnavailable();
 
-        (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount) = quoteDefaultEmissionSplit(totalAmount);
+        (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount) = _quoteDefaultEmissionSplit(totalAmount);
         uint256 newPoolBalance = _reduceEmissionPool(netuid, totalAmount);
 
         subnetEpochEmissionPaid[netuid][epoch] = true;
@@ -838,10 +822,10 @@ contract PulseTensorCore {
         );
         _consumeOwnerAction(netuid, actionId);
 
-        uint256 totalAmount = quoteMechanismEpochEmission(netuid, mechid, epoch);
+        uint256 totalAmount = _quoteMechanismEpochEmission(netuid, mechid, epoch);
         if (totalAmount == 0) revert EpochEmissionUnavailable();
 
-        (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount) = quoteDefaultEmissionSplit(totalAmount);
+        (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount) = _quoteDefaultEmissionSplit(totalAmount);
         uint256 newPoolBalance = _reduceMechanismEmissionPool(netuid, mechid, totalAmount);
 
         mechanismEpochEmissionPaid[netuid][mechid][epoch] = true;
@@ -1060,7 +1044,7 @@ contract PulseTensorCore {
         if (block.number < pending.revealAtBlock) revert PulseTensorDomain.RevealTooEarly();
         if (block.number > pending.expireAtBlock) revert PulseTensorDomain.RevealExpired();
 
-        bytes32 expectedCommitment = computeMechanismCommitment(weightsHash, salt, msg.sender, netuid, mechid, epoch);
+        bytes32 expectedCommitment = _computeMechanismCommitment(weightsHash, salt, msg.sender, netuid, mechid, epoch);
         if (expectedCommitment != pending.commitment) revert PulseTensorDomain.CommitmentMismatch();
         if (mechanismEpochRevealed[netuid][mechid][epoch][msg.sender]) revert PulseTensorDomain.CommitmentExists();
 
@@ -1470,7 +1454,11 @@ contract PulseTensorCore {
         return true;
     }
 
-    function quoteSubnetEpochEmission(uint16 netuid, uint64 epoch) public view returns (uint256 emissionAmount) {
+    function quoteSubnetEpochEmission(uint16 netuid, uint64 epoch) external view returns (uint256 emissionAmount) {
+        return _quoteSubnetEpochEmission(netuid, epoch);
+    }
+
+    function _quoteSubnetEpochEmission(uint16 netuid, uint64 epoch) internal view returns (uint256 emissionAmount) {
         uint64 halvingPeriodEpochs = subnetEpochEmissionHalvingPeriod[netuid];
         if (halvingPeriodEpochs == 0) return 0;
 
@@ -1485,8 +1473,12 @@ contract PulseTensorCore {
         );
     }
 
-    function quoteMechanismEpochEmission(uint16 netuid, uint16 mechid, uint64 epoch)
-        public
+    function quoteMechanismEpochEmission(uint16 netuid, uint16 mechid, uint64 epoch) external view returns (uint256) {
+        return _quoteMechanismEpochEmission(netuid, mechid, epoch);
+    }
+
+    function _quoteMechanismEpochEmission(uint16 netuid, uint16 mechid, uint64 epoch)
+        internal
         view
         returns (uint256 emissionAmount)
     {
@@ -1548,8 +1540,8 @@ contract PulseTensorCore {
         }
     }
 
-    function quoteDefaultEmissionSplit(uint256 totalAmount)
-        public
+    function _quoteDefaultEmissionSplit(uint256 totalAmount)
+        internal
         pure
         returns (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount)
     {
@@ -1566,24 +1558,14 @@ contract PulseTensorCore {
         }
     }
 
-    function computeCommitment(bytes32 weightsHash, bytes32 salt, address validator, uint16 netuid, uint64 epoch)
-        public
-        view
-        returns (bytes32)
-    {
-        return PulseTensorDomain.computeCommitment(
-            weightsHash, salt, validator, netuid, epoch, block.chainid, address(this), COMMITMENT_DOMAIN_VERSION
-        );
-    }
-
-    function computeMechanismCommitment(
+    function _computeMechanismCommitment(
         bytes32 weightsHash,
         bytes32 salt,
         address validator,
         uint16 netuid,
         uint16 mechid,
         uint64 epoch
-    ) public view returns (bytes32) {
+    ) internal view returns (bytes32) {
         _validateMechanismId(mechid);
         return keccak256(
             abi.encode(

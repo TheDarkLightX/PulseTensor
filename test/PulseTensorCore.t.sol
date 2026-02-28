@@ -370,6 +370,52 @@ contract PulseTensorCoreTest {
         vm.deal(address(this), 1_000 ether);
     }
 
+    function _computeCommitment(bytes32 weightsHash, bytes32 salt, address validator, uint16 netuid, uint64 epoch)
+        internal
+        view
+        returns (bytes32)
+    {
+        return keccak256(abi.encode(weightsHash, salt, validator, netuid, epoch, block.chainid, address(core), 1));
+    }
+
+    function _computeMechanismCommitment(
+        bytes32 weightsHash,
+        bytes32 salt,
+        address validator,
+        uint16 netuid,
+        uint16 mechid,
+        uint64 epoch
+    ) internal view returns (bytes32) {
+        return keccak256(
+            abi.encode(weightsHash, salt, validator, netuid, mechid, epoch, block.chainid, address(core), 1)
+        );
+    }
+
+    function _quoteDefaultEmissionSplit(uint256 totalAmount)
+        internal
+        pure
+        returns (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount)
+    {
+        validatorAmount = (totalAmount * 4_100) / 10_000;
+        minerAmount = (totalAmount * 4_100) / 10_000;
+        ownerAmount = totalAmount - validatorAmount - minerAmount;
+    }
+
+    function _subnetOwnerActionState(uint16 netuid, bytes32 actionId)
+        internal
+        view
+        returns (uint64 readyAtBlock, address queuedBy, bool queued, bool ready, bool expired)
+    {
+        readyAtBlock = core.subnetOwnerActionReadyAtBlock(netuid, actionId);
+        if (readyAtBlock == 0) {
+            return (0, address(0), false, false, false);
+        }
+        queuedBy = core.subnetOwnerActionQueuedBy(netuid, actionId);
+        queued = true;
+        ready = block.number >= readyAtBlock;
+        expired = block.number > uint256(readyAtBlock) + core.OWNER_ACTION_EXPIRY_BLOCKS();
+    }
+
     function testSubnetLifecycleAndStakeAccounting() public {
         uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
 
@@ -398,7 +444,7 @@ contract PulseTensorCoreTest {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("weights-v1"));
         bytes32 salt = bytes32(uint256(1234));
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
 
         actor.commitWeights(core, netuid, commitment);
         (bytes32 pendingCommitment, uint64 revealAtBlock, uint64 expireAtBlock) =
@@ -426,7 +472,7 @@ contract PulseTensorCoreTest {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("mech-weights-v1"));
         bytes32 salt = bytes32(uint256(4321));
-        bytes32 commitment = core.computeMechanismCommitment(weightsHash, salt, address(actor), netuid, mechid, epoch);
+        bytes32 commitment = _computeMechanismCommitment(weightsHash, salt, address(actor), netuid, mechid, epoch);
 
         actor.commitMechanismWeights(core, netuid, mechid, commitment);
         (bytes32 pendingCommitment, uint64 revealAtBlock, uint64 expireAtBlock) =
@@ -457,7 +503,7 @@ contract PulseTensorCoreTest {
         bytes32 weightsHash = keccak256(abi.encodePacked("mech-mismatch"));
         bytes32 salt = bytes32(uint256(4433));
         bytes32 mechanismCommitment =
-            core.computeMechanismCommitment(weightsHash, salt, address(actor), netuid, mechid, epoch);
+            _computeMechanismCommitment(weightsHash, salt, address(actor), netuid, mechid, epoch);
         actor.commitMechanismWeights(core, netuid, mechid, mechanismCommitment);
         vm.roll(block.number + 3);
 
@@ -498,7 +544,7 @@ contract PulseTensorCoreTest {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("pending-withdraw"));
         bytes32 salt = bytes32(uint256(91));
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
         actor.commitWeights(core, netuid, commitment);
 
         bool revertedWhilePending = false;
@@ -526,7 +572,7 @@ contract PulseTensorCoreTest {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("pending-unregister"));
         bytes32 salt = bytes32(uint256(93));
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
         actor.commitWeights(core, netuid, commitment);
 
         bool revertedWhilePending = false;
@@ -555,7 +601,7 @@ contract PulseTensorCoreTest {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("pending-mech-withdraw"));
         bytes32 salt = bytes32(uint256(94));
-        bytes32 commitment = core.computeMechanismCommitment(weightsHash, salt, address(actor), netuid, mechid, epoch);
+        bytes32 commitment = _computeMechanismCommitment(weightsHash, salt, address(actor), netuid, mechid, epoch);
         actor.commitMechanismWeights(core, netuid, mechid, commitment);
 
         bool revertedWhilePending = false;
@@ -706,7 +752,7 @@ contract PulseTensorCoreTest {
 
         (bytes32 actionId, uint64 readyAtBlock) = governanceA.queueSubnetPause(core, netuid, true);
         (uint64 queuedReadyAt, address queuedBy, bool queued, bool ready, bool expired) =
-            core.subnetOwnerActionState(netuid, actionId);
+            _subnetOwnerActionState(netuid, actionId);
         assert(queuedReadyAt == readyAtBlock);
         assert(queuedBy == address(governanceA));
         assert(queued);
@@ -725,7 +771,7 @@ contract PulseTensorCoreTest {
         assert(!core.subnetPaused(netuid));
 
         governanceB.cancelSubnetOwnerAction(core, netuid, actionId);
-        (queuedReadyAt, queuedBy, queued, ready, expired) = core.subnetOwnerActionState(netuid, actionId);
+        (queuedReadyAt, queuedBy, queued, ready, expired) = _subnetOwnerActionState(netuid, actionId);
         assert(queuedReadyAt == 0);
         assert(queuedBy == address(0));
         assert(!queued);
@@ -747,7 +793,7 @@ contract PulseTensorCoreTest {
         vm.roll(uint256(readyAtBlock) + core.OWNER_ACTION_EXPIRY_BLOCKS() + 1);
 
         (uint64 queuedReadyAt, address queuedBy, bool queued, bool ready, bool expired) =
-            core.subnetOwnerActionState(netuid, actionId);
+            _subnetOwnerActionState(netuid, actionId);
         assert(queuedReadyAt == readyAtBlock);
         assert(queuedBy == address(governance));
         assert(queued);
@@ -762,7 +808,7 @@ contract PulseTensorCoreTest {
         assert(expiredExecuteReverted);
         assert(!core.subnetPaused(netuid));
 
-        (queuedReadyAt, queuedBy, queued, ready, expired) = core.subnetOwnerActionState(netuid, actionId);
+        (queuedReadyAt, queuedBy, queued, ready, expired) = _subnetOwnerActionState(netuid, actionId);
         assert(queuedReadyAt == readyAtBlock);
         assert(queuedBy == address(governance));
         assert(queued);
@@ -910,7 +956,7 @@ contract PulseTensorCoreTest {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("w"));
         bytes32 salt = bytes32(uint256(11));
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
         actor.commitWeights(core, netuid, commitment);
 
         bool reverted = false;
@@ -930,7 +976,7 @@ contract PulseTensorCoreTest {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("w"));
         bytes32 salt = bytes32(uint256(11));
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
         actor.commitWeights(core, netuid, commitment);
         vm.roll(block.number + 3);
 
@@ -953,7 +999,7 @@ contract PulseTensorCoreTest {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("w"));
         bytes32 salt = bytes32(uint256(11));
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
         actor.commitWeights(core, netuid, commitment);
 
         bool reverted = false;
@@ -973,7 +1019,7 @@ contract PulseTensorCoreTest {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("w"));
         bytes32 salt = bytes32(uint256(11));
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
         actor.commitWeights(core, netuid, commitment);
         vm.roll(block.number + 3);
         actor.revealWeights(core, netuid, epoch, weightsHash, salt);
@@ -996,13 +1042,13 @@ contract PulseTensorCoreTest {
 
         bytes32 firstWeightsHash = keccak256(abi.encodePacked("w0"));
         bytes32 salt = bytes32(uint256(11));
-        bytes32 firstCommitment = core.computeCommitment(firstWeightsHash, salt, address(actor), netuid, epoch0);
+        bytes32 firstCommitment = _computeCommitment(firstWeightsHash, salt, address(actor), netuid, epoch0);
         actor.commitWeights(core, netuid, firstCommitment);
 
         vm.roll(block.number + 4);
         uint64 epoch1 = core.currentEpoch(netuid);
         bytes32 secondWeightsHash = keccak256(abi.encodePacked("w1"));
-        bytes32 secondCommitment = core.computeCommitment(secondWeightsHash, salt, address(actor), netuid, epoch1);
+        bytes32 secondCommitment = _computeCommitment(secondWeightsHash, salt, address(actor), netuid, epoch1);
         bool blockedUntilChallenged = false;
         try actor.commitWeights(core, netuid, secondCommitment) {}
         catch {
@@ -1034,7 +1080,7 @@ contract PulseTensorCoreTest {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("self-challenge-subnet"));
         bytes32 salt = bytes32(uint256(311));
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
         actor.commitWeights(core, netuid, commitment);
 
         vm.roll(block.number + 5);
@@ -1055,7 +1101,7 @@ contract PulseTensorCoreTest {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("self-challenge-mechanism"));
         bytes32 salt = bytes32(uint256(313));
-        bytes32 commitment = core.computeMechanismCommitment(weightsHash, salt, address(actor), netuid, mechid, epoch);
+        bytes32 commitment = _computeMechanismCommitment(weightsHash, salt, address(actor), netuid, mechid, epoch);
         actor.commitMechanismWeights(core, netuid, mechid, commitment);
 
         vm.roll(block.number + 5);
@@ -1080,7 +1126,7 @@ contract PulseTensorCoreTest {
 
         bytes32 weightsHash = keccak256(abi.encodePacked("epoch-drift-reveal"));
         bytes32 salt = bytes32(uint256(991));
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, address(validator), netuid, committedEpoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, address(validator), netuid, committedEpoch);
         validator.commitWeights(core, netuid, commitment);
 
         governance.queueSubnetConfigUpdate(core, netuid, 1 ether, 500, 2, 120_000);
@@ -1110,7 +1156,7 @@ contract PulseTensorCoreTest {
         bytes32 weightsHash = keccak256(abi.encodePacked("epoch-drift-mechanism-reveal"));
         bytes32 salt = bytes32(uint256(993));
         bytes32 commitment =
-            core.computeMechanismCommitment(weightsHash, salt, address(validator), netuid, mechid, committedEpoch);
+            _computeMechanismCommitment(weightsHash, salt, address(validator), netuid, mechid, committedEpoch);
         validator.commitMechanismWeights(core, netuid, mechid, commitment);
 
         governance.queueSubnetConfigUpdate(core, netuid, 1 ether, 500, 2, 120_000);
@@ -1138,7 +1184,7 @@ contract PulseTensorCoreTest {
 
         bytes32 weightsHash = keccak256(abi.encodePacked("epoch-drift-decrease-reveal"));
         bytes32 salt = bytes32(uint256(997));
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, address(validator), netuid, committedEpoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, address(validator), netuid, committedEpoch);
         validator.commitWeights(core, netuid, commitment);
 
         governance.queueSubnetConfigUpdate(core, netuid, 1 ether, 500, 2, 4);
@@ -1168,7 +1214,7 @@ contract PulseTensorCoreTest {
         bytes32 weightsHash = keccak256(abi.encodePacked("epoch-drift-mechanism-decrease-reveal"));
         bytes32 salt = bytes32(uint256(999));
         bytes32 commitment =
-            core.computeMechanismCommitment(weightsHash, salt, address(validator), netuid, mechid, committedEpoch);
+            _computeMechanismCommitment(weightsHash, salt, address(validator), netuid, mechid, committedEpoch);
         validator.commitMechanismWeights(core, netuid, mechid, commitment);
 
         governance.queueSubnetConfigUpdate(core, netuid, 1 ether, 500, 2, 4);
@@ -1192,14 +1238,14 @@ contract PulseTensorCoreTest {
         uint64 subnetEpoch = core.currentEpoch(netuid);
         bytes32 subnetHash = keccak256(abi.encodePacked("deferred-unregister-subnet"));
         bytes32 subnetSalt = bytes32(uint256(501));
-        bytes32 subnetCommit = core.computeCommitment(subnetHash, subnetSalt, address(actor), netuid, subnetEpoch);
+        bytes32 subnetCommit = _computeCommitment(subnetHash, subnetSalt, address(actor), netuid, subnetEpoch);
         actor.commitWeights(core, netuid, subnetCommit);
 
         vm.roll(block.number + 8);
         uint64 mechanismEpoch = core.currentEpoch(netuid);
         bytes32 mechanismHash = keccak256(abi.encodePacked("deferred-unregister-mech"));
         bytes32 mechanismSalt = bytes32(uint256(502));
-        bytes32 mechanismCommit = core.computeMechanismCommitment(
+        bytes32 mechanismCommit = _computeMechanismCommitment(
             mechanismHash, mechanismSalt, address(actor), netuid, mechid, mechanismEpoch
         );
         actor.commitMechanismWeights(core, netuid, mechid, mechanismCommit);
@@ -1232,14 +1278,14 @@ contract PulseTensorCoreTest {
         uint64 subnetEpoch = core.currentEpoch(netuid);
         bytes32 subnetHash = keccak256(abi.encodePacked("final-unregister-subnet"));
         bytes32 subnetSalt = bytes32(uint256(601));
-        bytes32 subnetCommit = core.computeCommitment(subnetHash, subnetSalt, address(actor), netuid, subnetEpoch);
+        bytes32 subnetCommit = _computeCommitment(subnetHash, subnetSalt, address(actor), netuid, subnetEpoch);
         actor.commitWeights(core, netuid, subnetCommit);
 
         vm.roll(block.number + 8);
         uint64 mechanismEpoch = core.currentEpoch(netuid);
         bytes32 mechanismHash = keccak256(abi.encodePacked("final-unregister-mech"));
         bytes32 mechanismSalt = bytes32(uint256(602));
-        bytes32 mechanismCommit = core.computeMechanismCommitment(
+        bytes32 mechanismCommit = _computeMechanismCommitment(
             mechanismHash, mechanismSalt, address(actor), netuid, mechid, mechanismEpoch
         );
         actor.commitMechanismWeights(core, netuid, mechid, mechanismCommit);
@@ -1270,7 +1316,7 @@ contract PulseTensorCoreTest {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("late"));
         bytes32 salt = bytes32(uint256(99));
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
 
         bool reverted = false;
         try actor.commitWeights(core, netuid, commitment) {}
@@ -1290,7 +1336,7 @@ contract PulseTensorCoreTest {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("challenge-1"));
         bytes32 salt = bytes32(uint256(17));
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
         actor.commitWeights(core, netuid, commitment);
 
         vm.roll(block.number + 5);
@@ -1318,7 +1364,7 @@ contract PulseTensorCoreTest {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("mech-challenge-1"));
         bytes32 salt = bytes32(uint256(27));
-        bytes32 commitment = core.computeMechanismCommitment(weightsHash, salt, address(actor), netuid, mechid, epoch);
+        bytes32 commitment = _computeMechanismCommitment(weightsHash, salt, address(actor), netuid, mechid, epoch);
         actor.commitMechanismWeights(core, netuid, mechid, commitment);
 
         vm.roll(block.number + 5);
@@ -1347,7 +1393,7 @@ contract PulseTensorCoreTest {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("challenge-2"));
         bytes32 salt = bytes32(uint256(21));
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
         actor.commitWeights(core, netuid, commitment);
 
         bool reverted = false;
@@ -1368,7 +1414,7 @@ contract PulseTensorCoreTest {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("challenge-3"));
         bytes32 salt = bytes32(uint256(33));
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
         actor.commitWeights(core, netuid, commitment);
 
         vm.roll(block.number + 5);
@@ -1392,7 +1438,7 @@ contract PulseTensorCoreTest {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("challenge-4"));
         bytes32 salt = bytes32(uint256(35));
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
         actor.commitWeights(core, netuid, commitment);
 
         vm.roll(block.number + 5);
@@ -1419,7 +1465,7 @@ contract PulseTensorCoreTest {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("reveal-paused"));
         bytes32 salt = bytes32(uint256(145));
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
         actor.commitWeights(core, netuid, commitment);
 
         governance.queueSubnetPause(core, netuid, true);
@@ -1450,7 +1496,7 @@ contract PulseTensorCoreTest {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("reveal-mechanism-paused"));
         bytes32 salt = bytes32(uint256(246));
-        bytes32 commitment = core.computeMechanismCommitment(weightsHash, salt, address(actor), netuid, mechid, epoch);
+        bytes32 commitment = _computeMechanismCommitment(weightsHash, salt, address(actor), netuid, mechid, epoch);
         actor.commitMechanismWeights(core, netuid, mechid, commitment);
 
         governance.queueSubnetPause(core, netuid, true);
@@ -1480,7 +1526,7 @@ contract PulseTensorCoreTest {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("challenge-paused"));
         bytes32 salt = bytes32(uint256(44));
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, address(actor), netuid, epoch);
         actor.commitWeights(core, netuid, commitment);
 
         governance.queueSubnetPause(core, netuid, true);
@@ -1510,7 +1556,7 @@ contract PulseTensorCoreTest {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("challenge-reward"));
         bytes32 salt = bytes32(uint256(66));
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, address(validator), netuid, epoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, address(validator), netuid, epoch);
         validator.commitWeights(core, netuid, commitment);
 
         vm.roll(block.number + 5);
@@ -1533,7 +1579,7 @@ contract PulseTensorCoreTest {
         uint64 epoch = core.currentEpoch(netuid);
         bytes32 weightsHash = keccak256(abi.encodePacked("challenge-overclaim"));
         bytes32 salt = bytes32(uint256(77));
-        bytes32 commitment = core.computeCommitment(weightsHash, salt, address(validator), netuid, epoch);
+        bytes32 commitment = _computeCommitment(weightsHash, salt, address(validator), netuid, epoch);
         validator.commitWeights(core, netuid, commitment);
 
         vm.roll(block.number + 5);
@@ -1610,7 +1656,7 @@ contract PulseTensorCoreTest {
             1 ether
         );
 
-        (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount) = core.quoteDefaultEmissionSplit(1 ether);
+        (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount) = _quoteDefaultEmissionSplit(1 ether);
         assert(validatorAmount == 0.41 ether);
         assert(minerAmount == 0.41 ether);
         assert(ownerAmount == 0.18 ether);
@@ -1699,7 +1745,7 @@ contract PulseTensorCoreTest {
             1 ether
         );
 
-        (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount) = core.quoteDefaultEmissionSplit(1 ether);
+        (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount) = _quoteDefaultEmissionSplit(1 ether);
         assert(address(validatorRecipient).balance == validatorBefore + validatorAmount);
         assert(address(minerRecipient).balance == minerBefore + minerAmount);
         assert(address(ownerRecipient).balance == ownerBefore + ownerAmount);
@@ -1883,7 +1929,7 @@ contract PulseTensorCoreTest {
         );
 
         (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount) =
-            core.quoteDefaultEmissionSplit(totalAmount);
+            _quoteDefaultEmissionSplit(totalAmount);
         assert(address(validatorRecipient).balance == validatorBefore + validatorAmount);
         assert(address(minerRecipient).balance == minerBefore + minerAmount);
         assert(address(ownerRecipient).balance == ownerBefore + ownerAmount);
@@ -1998,7 +2044,7 @@ contract PulseTensorCoreTest {
         );
 
         (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount) =
-            core.quoteDefaultEmissionSplit(totalAmount);
+            _quoteDefaultEmissionSplit(totalAmount);
         assert(address(validatorRecipient).balance == validatorBefore + validatorAmount);
         assert(address(minerRecipient).balance == minerBefore + minerAmount);
         assert(address(ownerRecipient).balance == ownerBefore + ownerAmount);

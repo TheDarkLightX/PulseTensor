@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 
 bash "${ROOT_DIR}/scripts/verify_toolchain.sh"
+bash "${ROOT_DIR}/scripts/check_deploy_code_size.sh"
 RUN_START_EPOCH="$(date +%s)" \
 RUN_SECURITY=1 \
 RUN_ECHIDNA=1 \

@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 RPC_URL="${RPC_URL:-}"
 PRIVATE_KEY="${PRIVATE_KEY:-}"
+OPTIMIZER_RUNS="${FOUNDRY_OPTIMIZER_RUNS:-1}"
 OUTPUT_DIR="${ROOT_DIR}/runs/deployments"
 BROADCAST=1
 
@@ -21,6 +22,9 @@ Options:
   --out-dir <path>        Output directory for deployment receipt
   --no-broadcast          Dry-run deployment without broadcasting
   --help                  Show help
+
+Environment:
+  FOUNDRY_OPTIMIZER_RUNS  Optimizer runs used for deploy build/create (default: 1)
 
 Outputs:
   runs/deployments/pulsetensor_deploy_receipt.json
@@ -83,6 +87,7 @@ fi
 mkdir -p "${OUTPUT_DIR}"
 pushd "${ROOT_DIR}" >/dev/null
 
+export FOUNDRY_OPTIMIZER_RUNS="${OPTIMIZER_RUNS}"
 forge build
 
 forge_args=(--rpc-url "${RPC_URL}")
@@ -104,8 +109,8 @@ fi
 echo "Deploying PulseTensorInferenceSettlement..."
 settlement_output="$(
   forge create src/PulseTensorInferenceSettlement.sol:PulseTensorInferenceSettlement \
-    --constructor-args "${core_address}" \
-    "${forge_args[@]}" 2>&1
+    "${forge_args[@]}" \
+    --constructor-args "${core_address}" 2>&1
 )"
 echo "${settlement_output}"
 settlement_address="$(printf '%s\n' "${settlement_output}" | awk '/Deployed to:/ {print $3}' | tail -n 1)"
