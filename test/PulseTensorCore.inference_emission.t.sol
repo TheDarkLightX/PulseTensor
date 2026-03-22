@@ -901,6 +901,35 @@ contract PulseTensorCoreInferenceEmissionTest {
         assert(finalizeReverted);
     }
 
+
+    function testInferenceReplayChallengeRequiresPriorSettledLeaf() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
+        (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
+        uint16 mechid = 22;
+
+        uint64 readyAt = governance.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 8, 8, 0.1 ether);
+        vm.roll(readyAt);
+        governance.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 8, 8, 0.1 ether);
+
+        bytes32 leaf = keccak256("unsettled-prior-leaf");
+        uint64 firstEpoch = core.currentEpoch(netuid);
+        validator.commitInferenceBatchRoot{value: 0.2 ether}(settlement, netuid, mechid, firstEpoch, leaf, 1, 1 ether);
+
+        (,,,,,, uint64 firstDeadline,,) = settlement.inferenceBatches(netuid, mechid, firstEpoch);
+        vm.roll(firstDeadline + 1);
+        settlement.finalizeInferenceBatch(netuid, mechid, firstEpoch);
+
+        vm.roll(16);
+        uint64 secondEpoch = core.currentEpoch(netuid);
+        validator.commitInferenceBatchRoot{value: 0.2 ether}(settlement, netuid, mechid, secondEpoch, leaf, 1, 2 ether);
+
+        bytes32[] memory emptyProof = new bytes32[](0);
+        vm.expectRevert(PulseTensorInferenceSettlement.LeafNotSettled.selector);
+        settlement.challengeInferenceLeafReplay(
+            netuid, mechid, secondEpoch, leaf, 0, emptyProof, firstEpoch, 0, emptyProof
+        );
+    }
+
     function testInferenceReplayChallengeRequiresFinalizedPriorBatch() public {
         uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
         (FeatureActor governance, FeatureActor validator) = _setupGovernanceAndValidator(netuid);
