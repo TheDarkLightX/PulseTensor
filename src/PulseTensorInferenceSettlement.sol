@@ -532,6 +532,7 @@ contract PulseTensorInferenceSettlement {
         InferenceBatch storage priorBatch = inferenceBatches[netuid][mechid][priorEpoch];
         if (priorBatch.batchRoot == bytes32(0)) revert PriorBatchNotCommitted();
         if (!priorBatch.finalized) revert PriorBatchNotFinalized();
+        if (!settledLeaves[netuid][mechid][leafHash]) revert LeafNotSettled();
         _validateBatchIndex(priorIndex, priorBatch.itemCount);
         if (!_verifyMerkleProof(leafHash, priorIndex, priorMerkleProof, priorBatch.batchRoot, priorBatch.itemCount)) {
             revert InvalidMerkleProof();
