@@ -7,17 +7,29 @@ ANVIL_LOG="${OUT_DIR}/anvil.log"
 DEPLOY_LOG="${OUT_DIR}/deploy.log"
 CREATE_LOG="${OUT_DIR}/forge_create.log"
 REPORT_PATH="${OUT_DIR}/local_e2e_report.json"
+DEPLOYER_KEYSTORE_DIR="${OUT_DIR}/deployer_keystore"
+DEPLOYER_PASSWORD_FILE="${OUT_DIR}/deployer_keystore.password"
 
 LOCAL_E2E_PORT="${LOCAL_E2E_PORT:-8547}"
 RPC_URL="${LOCAL_E2E_RPC_URL:-http://127.0.0.1:${LOCAL_E2E_PORT}}"
 CHAIN_ID_EXPECTED="${LOCAL_E2E_CHAIN_ID:-31337}"
-ANVIL_MNEMONIC="${LOCAL_E2E_MNEMONIC:-test test test test test test test test test test test junk}"
+ANVIL_MNEMONIC='test test test test test test test test test test test junk'
 
-# Optional key overrides. Defaults derive from mnemonic indices 0..3.
-OWNER_PK="${LOCAL_E2E_OWNER_PK:-}"
-VALIDATOR_PK="${LOCAL_E2E_VALIDATOR_PK:-}"
-FUNDER_PK="${LOCAL_E2E_FUNDER_PK:-}"
-MINER_PK="${LOCAL_E2E_MINER_PK:-}"
+# This script intentionally uses only the published Anvil fixture. Allowing a
+# caller-supplied mnemonic or key would put real material in Anvil/Cast process
+# arguments and local logs.
+for secret_override in \
+  LOCAL_E2E_MNEMONIC LOCAL_E2E_OWNER_PK LOCAL_E2E_VALIDATOR_PK \
+  LOCAL_E2E_FUNDER_PK LOCAL_E2E_MINER_PK; do
+  if [[ -v "${secret_override}" ]]; then
+    echo "[local-e2e] ERROR: refusing secret override ${secret_override}; this test accepts only published fixture keys" >&2
+    exit 1
+  fi
+done
+OWNER_PK=""
+VALIDATOR_PK=""
+FUNDER_PK=""
+MINER_PK=""
 
 NETUID=1
 MECHID=1
@@ -97,6 +109,10 @@ trap cleanup EXIT
 mkdir -p "${OUT_DIR}"
 : > "${CREATE_LOG}"
 
+if [[ "${CHAIN_ID_EXPECTED}" == "369" || "${CHAIN_ID_EXPECTED}" == "943" ]]; then
+  fail "local E2E must not impersonate a PulseChain production/testnet chain ID"
+fi
+
 if cast block-number --rpc-url "${RPC_URL}" >/dev/null 2>&1; then
   fail "RPC endpoint ${RPC_URL} is already in use. Set LOCAL_E2E_PORT or LOCAL_E2E_RPC_URL."
 fi
@@ -141,21 +157,45 @@ FUNDER_ADDR="$(cast wallet address --private-key "${FUNDER_PK}")"
 MINER_ADDR="$(cast wallet address --private-key "${MINER_PK}")"
 
 log "deploying core and settlement"
+rm -rf -- "${DEPLOYER_KEYSTORE_DIR}"
+mkdir -p "${DEPLOYER_KEYSTORE_DIR}"
+printf '%s\n' 'pulsetensor-local-e2e-password' > "${DEPLOYER_PASSWORD_FILE}"
+chmod 600 "${DEPLOYER_PASSWORD_FILE}"
+CAST_UNSAFE_PASSWORD='pulsetensor-local-e2e-password' \
+  cast wallet import pulsetensor-local-e2e \
+    --keystore-dir "${DEPLOYER_KEYSTORE_DIR}" \
+    --private-key "${OWNER_PK}" >/dev/null
+DEPLOYER_KEYSTORE_PATH="$(find "${DEPLOYER_KEYSTORE_DIR}" -maxdepth 1 -type f -print -quit)"
+[[ -n "${DEPLOYER_KEYSTORE_PATH}" ]] || fail "encrypted deployer keystore was not created"
+chmod 600 "${DEPLOYER_KEYSTORE_PATH}"
 FOUNDRY_OPTIMIZER_RUNS="${FOUNDRY_OPTIMIZER_RUNS:-1}" \
 RPC_URL="${RPC_URL}" \
-PRIVATE_KEY="${OWNER_PK}" \
+DEPLOY_CONFIRMATIONS=1 \
 bash "${ROOT_DIR}/scripts/deploy_pulsetensor.sh" \
-  --rpc-url "${RPC_URL}" \
-  --private-key "${OWNER_PK}" \
+  --expected-chain-id "${CHAIN_ID_EXPECTED}" \
+  --sender "${OWNER_ADDR}" \
+  --keystore "${DEPLOYER_KEYSTORE_PATH}" \
+  --password-file "${DEPLOYER_PASSWORD_FILE}" \
   --out-dir "${OUT_DIR}" >"${DEPLOY_LOG}" 2>&1
 
-RECEIPT_PATH="${OUT_DIR}/pulsetensor_deploy_receipt.json"
+RECEIPT_PATH="$(awk -F': ' '/^  receipt:/ {print $2}' "${DEPLOY_LOG}" | tail -n 1)"
 if [[ ! -f "${RECEIPT_PATH}" ]]; then
   fail "missing deployment receipt at ${RECEIPT_PATH}"
 fi
 
-CORE_ADDR="$(jq -r '.core_address' "${RECEIPT_PATH}")"
-SETTLEMENT_ADDR="$(jq -r '.settlement_address' "${RECEIPT_PATH}")"
+ETH_RPC_URL="${RPC_URL}" python3 "${ROOT_DIR}/scripts/verify_deployment_receipt.py" \
+  "${RECEIPT_PATH}" --min-confirmations 1 --require-current-nonce >/dev/null
+
+# The production deployer keeps unique, non-overwriting receipts. The release
+# evidence bundle also needs one stable path for the just-verified ephemeral
+# E2E run, so publish an atomic owner-only copy.
+EVIDENCE_RECEIPT_PATH="${OUT_DIR}/pulsetensor_deploy_receipt.json"
+cp -- "${RECEIPT_PATH}" "${EVIDENCE_RECEIPT_PATH}.tmp"
+chmod 600 "${EVIDENCE_RECEIPT_PATH}.tmp"
+mv -f -- "${EVIDENCE_RECEIPT_PATH}.tmp" "${EVIDENCE_RECEIPT_PATH}"
+
+CORE_ADDR="$(jq -r '.contracts.core.address' "${RECEIPT_PATH}")"
+SETTLEMENT_ADDR="$(jq -r '.contracts.settlement.address' "${RECEIPT_PATH}")"
 
 if [[ -z "${CORE_ADDR}" || "${CORE_ADDR}" == "null" || -z "${SETTLEMENT_ADDR}" || "${SETTLEMENT_ADDR}" == "null" ]]; then
   fail "invalid deploy receipt contents in ${RECEIPT_PATH}"
@@ -320,7 +360,6 @@ cat > "${REPORT_PATH}" <<EOF
 {
   "schema": "pulsetensor/local-e2e-report/v1",
   "generated_at_utc": "${GENERATED_AT_UTC}",
-  "rpc_url": "${RPC_URL}",
   "chain_id": ${CHAIN_ID_ACTUAL},
   "final_block": ${FINAL_BLOCK},
   "core_address": "${CORE_ADDR}",

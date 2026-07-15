@@ -8,3 +8,4 @@ runs/security/mythril_core_findings.json
 runs/security/mythril_settlement_findings.json
 runs/security/mythril_summary.json
 runs/security/echidna.log
+runs/deploy_rehearsal/rehearsal_report.json
