@@ -11,6 +11,7 @@ export FOUNDRY_OPTIMIZER_RUNS="1"
 pushd "${ROOT_DIR}" >/dev/null
 bash scripts/check_private_boundaries.sh
 bash scripts/check_deploy_signer_safety.sh
+bash scripts/check_protocol_spec.sh
 if [[ "${RUN_DEPLOY_REHEARSAL}" == "1" ]]; then
   bash scripts/check_deploy_rehearsal.sh
 else

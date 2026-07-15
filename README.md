@@ -13,7 +13,7 @@ PulseTensor currently has executable Solidity tests, fuzz/invariant campaigns, a
 - Add optional smooth-decay emission quotes (timelocked governance toggle) to reduce step shocks from pure halving schedules.
 - Settle high-volume inference receipts in a separate optimistic batch-root contract with challenge windows and bonds.
 - Keep settlement governance fail-closed with queued policy updates and current-epoch-only batch commits.
-- Add a governance-capped inference fee policy (batch-snapshotted) so protocol usage can fund miners and a development treasury without retroactive fee changes.
+- Add a governance-capped inference fee policy (batch-snapshotted) so actual native-PLS deposits can create miner and maintenance claims without retroactive fee changes.
 - Preserve commit/reveal liveness under pause by allowing reveal and challenge resolution while stake-changing actions remain paused.
 
 ## Local Setup
@@ -35,6 +35,8 @@ make test
 make verify-security
 make verify-local-e2e
 make verify-requirements-traceability
+make verify-protocol-spec
+make verify-protocol-spec-checker
 make verify-release
 ```
 
@@ -123,6 +125,10 @@ commit/finalize/settle/claim behavior. Report path: `runs/local_e2e/local_e2e_re
 `make verify-requirements-traceability` validates requirement-to-test/function coverage, including boundary-value
 coverage targets, from `specs/formal/requirements_traceability.json`.
 
+`make verify-protocol-spec` validates the internally consistent, still-unimplemented target task-market design and
+writes `runs/formal/pulsetensor_target_v1.report.json`. `make verify-protocol-spec-checker` mutation-tests that gate.
+Neither command proves a future Solidity implementation or any asset's purchasing power.
+
 ## Participation Modes
 
 - **Subnet owner**
@@ -144,14 +150,18 @@ coverage targets, from `specs/formal/requirements_traceability.json`.
 
 ## Tokenomics (PLS-native)
 
-- PulseTensor currently uses **PLS-native flows** (no separate protocol token required to launch).
-- Subnet/mechanism emissions are liabilities from explicit pools and optional halving/smoothing schedules.
+- PulseTensor currently uses **native PLS flows**; no separate protocol token is required to launch.
+- Subnet/mechanism emissions are liabilities from explicitly funded pools and optional halving/smoothing schedules.
 - Inference settlement introduces a **capped protocol fee lane**:
   - `protocolFeeBps <= 3000` (max 30% of funded batch fees).
   - Protocol fee split between treasury and miner sink (`treasuryFeeBps`), with proposer receiving the remainder.
   - Fee policy is governance-timelocked, cancellable, and expires if not executed within a bounded window.
   - Fee policy is snapshotted at batch commit to prevent ex-post governance fee extraction.
-- Development funding can come from treasury sink claims from real usage, rather than foundation grants.
+- Every current fee claim comes from native PLS actually deposited by a batch funder. No deposits means no fee flow.
+- The target work market uses one immutable asset per task, same-asset bonds, no price oracle, no cross-asset netting,
+  and exact accepted/rejected/refund vectors. This target is specified but not yet implemented.
+- Builder, core-maintainer, and provider claims are disclosed bounties and fees in the deposited asset, not a salary
+  or purchasing-power guarantee.
 
 Fast local iteration without full security scans:
 
@@ -186,6 +196,7 @@ make verify-echidna
 - `frontend/`: backend-free static dApp UI with dedicated Core + Settlement consoles (wallet + RPC direct contract access).
 - `test/`: Foundry tests.
 - `specs/formal/`: formalized protocol state-model specifications.
+- `specs/protocol/`: checked target schemas, examples, lifecycle, economics, network, and proof obligations.
 - `scripts/`: build, security, release, and deployment automation.
 
 `make verify-private` fail-closes if private dependency directories become tracked, if private SSH repository URLs are added to tracked files, or if public documentation references local private dependency paths.
@@ -200,9 +211,14 @@ make verify-echidna
 - `docs/roadmap.md`: phased build plan.
 - `docs/launch_presets.md`: safe launch parameter tiers + game-theoretic rationale.
 - `docs/goal_frontier_synthesis.md`: deterministic multi-goal frontier synthesis for mechanism/design exploration.
-- `docs/tokenomics.md`: game-theoretic tokenomics design and parameter recommendations.
+- `docs/tokenomics.md`: current native-PLS flows and target asset-local bounty economics.
+- `docs/protocol/defi_native_economics_v1.md`: oracle-free bounty, fee, refund, bond, and maintainer-flow design.
+- `docs/protocol/task_market_v1.md`: typed task/receipt lifecycle and target settlement kernel.
+- `docs/protocol/quality_consensus_v1.md`: task-local evaluator commit/reveal and deterministic aggregation.
+- `docs/protocol/node_network_v1.md`: controller/operator discovery, `ptauth/1`, evidence transport, and PulseGraph.
+- `docs/protocol/proof_obligations_v1.md`: theorem inventory, TCB, evidence ladder, and construction phases.
 - `docs/participant_regret_invariants.md`: safety-oriented invariant profile selected to minimize participant regret.
-- `docs/research/pulsetensor_frontier_2026.md`: 2026 Bittensor comparison, PulseChain demand thesis, architecture, funding, token gates, and falsifiable research plan.
+- `docs/research/pulsetensor_frontier_2026.md`: 2026 Bittensor comparison, PulseChain demand thesis, architecture, asset-native funding, token-function gates, and falsifiable research plan.
 - `docs/security/private_launch.md`: wallet separation, signer policy, RPC privacy limits, and authority handoff.
 - `docs/security/security_standards.md`: OWASP/EthTrust/Solidity-bug standards baseline.
 - `docs/security/control_matrix.json`: security control-to-evidence mapping gate.

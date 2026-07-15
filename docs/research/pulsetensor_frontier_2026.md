@@ -8,11 +8,11 @@ PulseTensor should not try to beat Bittensor by cloning Dynamic TAO and launchin
 2. attach typed evidence and explicit assumptions to every payable work receipt,
 3. formally verify the escrow, conservation, authorization, nullifier, refund, and payout kernel,
 4. use cryptographic, statistical, and game-theoretic evidence appropriate to each task instead of claiming that all AI output has one kind of proof, and
-5. finance development from paid usage, design partners, and a disclosed treasury budget before considering a PulseTensor token.
+5. fund development from requester and sponsor deposits, with every maintainer flow disclosed in the deposited asset before considering a PulseTensor token.
 
 The first wedge should be **Pulse Guardian**, followed by **Pulse Data**. Guardian would simulate transactions before signature, detect malicious approvals and contracts, diagnose bridge or missing-token problems, and issue plain-language risk receipts. Data would provide redundant RPC, indexing, price, liquidity, and bridge-health feeds with provenance and staleness bounds.
 
-This direction is a testable product hypothesis, not a finding about every PulseChain user. A July 14, 2026 snapshot shows a real but narrow PulseChain economy: approximately $41.35 million in TVL, $31.72 million in stablecoins, $2.33 million in daily DEX volume, and $9,300 in daily application fees. PulseX accounts for most observed TVL and DEX volume. These values change continuously, are third-party estimates rather than audited accounts, and should be treated only as a dated market-size signal. The exact retrieval time and raw API response were not preserved, so reproduce the snapshot before relying on it for a funding or launch decision. Sources: [PulseChain on DeFiLlama](https://defillama.com/chain/pulsechain) and [PulseX on DeFiLlama](https://defillama.com/protocol/pulsex).
+This direction is a testable product hypothesis, not a finding about every PulseChain user. Third-party dashboards show nonzero PulseChain liquidity, exchange activity, and application fees, but the earlier dollar snapshot was neither a protocol funding source nor a preserved, auditable demand dataset. Do not use it as a launch threshold. PulseTensor must measure demand from actual requester and sponsor deposits, separately by asset, without converting them into one dollar total. Sources for reproducible external context, not settlement inputs: [PulseChain on DeFiLlama](https://defillama.com/chain/pulsechain) and [PulseX on DeFiLlama](https://defillama.com/protocol/pulsex).
 
 ## Honest starting point
 
@@ -33,6 +33,8 @@ It is not yet a Bittensor-class decentralized AI network. The repository does no
 
 The repository also does not currently contain a machine-checked refinement proof from its YAML state models to Solidity and deployed bytecode. “Formal-specification-driven and adversarially tested” is accurate. “Fully formally verified” is not yet supported by the public evidence.
 
+The current batch challenge path also computes a retained proposer-bond amount without crediting it to a named claim or reserve. That PLS remains economically unassigned contract balance. The target work-market specification therefore requires every bond unit to become a refund, named claim, or named reserve entry, and the current path should be repaired before its accounting is described as complete.
+
 ## What the PulseChain community may need
 
 The evidence is a small convenience sample, not a representative survey: a forum index, two forum threads, one Reddit discussion, and aggregate chain metrics. It is vulnerable to selection, moderation, survivorship, and vocal-minority bias. Those sources repeatedly mention scams, fake support, bridge failures, missing assets, confusing wallet behavior, useful applications, and builder support. See the [PulseChain forum](https://www.pulsechain.forum/), a [customer-service scam warning](https://www.pulsechain.forum/t/pulsechain-customer-service-warning/2156), a [wallet trust discussion](https://www.pulsechain.forum/t/pulsewallet-legit-or-scam/225), and a [community longevity discussion](https://www.reddit.com/r/Pulsechain/comments/1jtx7ql/pulsechains_longevity/).
@@ -52,8 +54,8 @@ Guardian development should pass a demand gate before a new protocol or token is
 
 - Interview 20 people across at least five wallets or front ends, five protocols or support teams, five active users, and five developers; record recruitment source and rejected interviews.
 - Give each interviewee a clickable or command-line prototype and a priced offer, not only a feature description.
-- **Support H0:** at least three unrelated organizations sign a paid 90-day pilot, aggregate contracted recurring revenue reaches at least $3,000 per month, at least 30 distinct users complete 100 real simulations, and at least 20% of shown high-risk warnings lead to an observable cancel-or-investigate action.
-- **Refute H0:** after 20 qualified interviews and 10 priced proposals, fewer than three pilots or less than $3,000 monthly contracted revenue is obtained, or operators will not provide labeled incident data needed to measure false positives and misses.
+- **Support H0:** at least three unrelated organizations predeposit asset-denominated 90-day pilot bounties, at least 30 distinct users complete 100 real simulations, at least 20% of shown high-risk warnings lead to an observable cancel-or-investigate action, at least two sponsors independently top up or renew from their own funds, and no protocol subsidy or known affiliate loop is counted as demand.
+- **Refute H0:** after 20 qualified interviews and 10 concrete asset-and-quantity bounty proposals, fewer than three unrelated sponsors prefund pilots, no two sponsors renew, or operators will not provide labeled incident data needed to measure false positives and misses.
 - Preregister the interview guide, pricing bands, success thresholds, and exclusion rules. Publish de-identified counts, not hand-picked testimonials.
 
 If H0 fails, test Pulse Data under a separately preregistered gate; do not reinterpret free beta usage as willingness to pay.
@@ -70,7 +72,7 @@ If H0 fails, test Pulse Data under a separately preregistered gate; do not reint
 
 ## The 2026 Bittensor bar
 
-Bittensor is a moving protocol, not one stable mechanism to copy. As documented in July 2026, miners produce subnet-specific commodities, validators score miners, subnet owners define incentive mechanisms, stakers can receive subnet alpha tokens, and Yuma Consensus converts validator rankings into participant emissions. At the network layer, the documentation says subnet allocation reverted in June 2026 from the flow-based model to a price-based model with additional protections. Any comparison must therefore name a documentation revision and distinguish subnet-level scoring from network-level allocation. See the [official subnet overview](https://docs.learnbittensor.org/subnets/understanding-subnets), [validator documentation](https://docs.learnbittensor.org/validators), [Yuma documentation](https://docs.learnbittensor.org/learn/yuma-consensus), [emission documentation](https://docs.learnbittensor.org/learn/emissions), and [protocol announcements](https://docs.learnbittensor.org/learn/announcements).
+Bittensor is a moving protocol, not one stable mechanism to copy. As documented in July 2026, miners produce subnet-specific commodities, validators score miners, subnet owners define incentive mechanisms, stakers can receive subnet alpha tokens, and Yuma Consensus converts validator rankings into participant emissions. At the network layer, its current documentation describes price-based subnet allocation. Any comparison must therefore name a documentation revision and distinguish subnet-level scoring from network-level allocation. See the official [network model](https://www.bittensor.com/docs/concepts/network), [validator guide](https://www.bittensor.com/docs/guides/validating), [Yuma internals](https://www.bittensor.com/docs/internals/consensus), [emission documentation](https://www.bittensor.com/docs/concepts/emissions), and [signed-request protocol](https://www.bittensor.com/docs/guides/signed-requests).
 
 The operational bar has also moved beyond inference. The March 2026 [Covenant-72B preprint](https://arxiv.org/abs/2603.08163) reports a 72-billion-parameter, 1.1-trillion-token permissionless training run using Gauntlet and SparseLoCo on Bittensor. Treat it as reported experimental evidence, not proof of general permissionless-training security or an independently replicated benchmark; its comparisons are not fully controlled. PulseTensor needs a real data plane, dynamic node participation, contribution evaluation, checkpoint exchange, and usable model outputs before claiming runtime parity.
 
@@ -243,105 +245,108 @@ p > \frac{G_{escape}}{G_{escape}+L_{detect}}.
 
 Repeated play must add future profit, identity-reset cost, collusion transfers, capital cost, false-positive risk, and risk preferences. Verifier participation separately requires expected checking compensation to exceed verification cost and opportunity cost even when real fraud is rare. These inequalities are design constraints only if each term has a conservative empirical interval, the bond is liquid and collectible, and sensitivity analysis shows the result survives worst-case bounds.
 
-## Launch economics without a PulseTensor token
+## DeFi-native launch economics
 
-Use PLS or WPLS for bonds and PLS or a reviewed existing stable asset for service payments. Asset-specific assumptions must cover transfer fees, rebasing, blacklisting, hooks, decimal conversion, depeg, and price-oracle failure; the first kernel should support only explicitly allowlisted semantics. Do not create a protocol stablecoin or per-subnet speculative assets during product discovery.
+There are no dollars inside PulseTensor. Every task, bond, refund, slash, reserve, and claim is an exact quantity of one immutable on-chain asset that a participant deposited. Target v1 permits one asset per task and many assets across tasks. It never adds, converts, borrows, or nets their quantities.
 
-For a customer payment `P`, the initial exact split should be simulated around:
+Native PLS should be the first task asset. WPLS is a distinct asset and needs a reviewed adapter. Any later token adapter must define transfer return handling, measured balance deltas, rebasing, blacklisting, hooks, decimals, upgrade authority, and asset-specific exposure caps. An existing stable asset is not privileged and PulseTensor does not guarantee its peg.
+
+Every contribution and bond is a multiple of 10,000 base units. This makes each basis-point outcome exact and prevents contribution splitting from changing rounding.
+
+For an accepted contribution `g[i,j,a]`, the target split is:
 
 | Recipient | Share |
 |---|---:|
-| Active service miner | 72% |
-| Active evaluators | 12% |
+| Active provider | 72% |
+| Valid evaluators | 12% |
 | Subnet builder and maintainer | 5% |
-| Core maintenance treasury | 5% |
+| Core maintainer | 5% |
 | Security operations and bug bounty | 3% |
-| Pulse ecosystem public goods or referrals | 3% |
+| Pulse ecosystem public goods or referral | 3% |
 | **Total** | **100%** |
 
-For every accepted job, the implementation must calculate shares in base units with one documented rounding rule and enforce:
+For role `r`:
 
 \[
-P_{miner}+P_{eval}+P_{builder}+P_{core}+P_{security}+P_{ecosystem}+D=P,
+P[i,j,a,r] = \frac{f[r]g[i,j,a]}{10{,}000},
+\qquad
+\sum_r P[i,j,a,r] = g[i,j,a].
 \]
 
-where the six named recipients correspond to the table and `D` is bounded rounding dust sent to a declared recipient. Refund and rejected-job equations must be specified separately. No administrator can withdraw liabilities or unassigned dust.
+A valid reviewed rejection pays only the 12% evaluator allocation and refunds 88% to each contributor. Cancellation, assignment expiry, provider default, or failed evaluation quorum refunds 100% of the bounty. Provider and evaluator bonds have separate exact vectors, and subjective disagreement alone is never a slashable fault.
 
-Recommended governance bounds are a feasible set, not independently selectable suggestions:
+Governance bounds are:
 
-- miner: 60% to 80%,
-- evaluators: 10% to 25%,
-- subnet builder: 0% to 7%,
-- core treasury: 4% to 5%,
-- security: 2% to 5%,
-- ecosystem: 1% to 5%, and
-- every proposal must sum to exactly 100% and keep subnet builder plus core treasury at or below 12%.
+- provider: 65% to 85%,
+- evaluators: 0% to 25%,
+- subnet builder: 0% to 7.5%,
+- core maintainer: 0% to 7.5%,
+- security: 1% to 5%,
+- ecosystem: 0% to 5%,
+- subnet builder plus core maintainer: at most 12%, and
+- every accepted-job vector: exactly 100%.
 
-The adjusted individual maxima eliminate the earlier 14% builder-plus-core conflict. The contract must still reject an infeasible vector rather than silently normalize it. Fee changes should be delayed and snapshotted per job. Stake should provide slashable security and selection friction, not dominate direct payout.
+The contract rejects an infeasible vector. Fee and recipient changes are delayed and apply only to new tasks. No administrator can withdraw liabilities.
 
-There should be no network subsidy at product launch. If research later introduces a finite treasury subsidy, define `F_ext,t` as externally sourced, nonrefunded fees after excluding protocol credits and known customer/provider/owner affiliates. For each epoch:
+There is no usage-based network subsidy at launch. A later finite matching reserve must already hold asset `a` and may match only external bounties in that same asset:
 
 \[
-R_t \le F_{ext,t} + S_t,
-\qquad
-0 \le S_t \le \min(S_{remaining,t},\, \sigma F_{ext,t}),
-\qquad
-S_{remaining,t+1}=S_{remaining,t}-S_t.
+Match[a,t] \le \min(
+ReserveRemaining[a,t],
+\mu[a]ExternalBounty[a,t],
+PerTaskCap[a],
+PerEpochCap[a]).
 \]
 
-`S_remaining` must start from a published finite budget, `σ` must be capped by governance, and the program must have a date and utilization sunset. Self-paid or circular volume can never mint an uncapped positive-sum reward.
+No external bounty means no match. Unused reserve remains unused, and circular volume cannot mint an uncapped positive-sum reward.
 
-A research-only subnet score can combine 50% normalized square-root trailing `F_ext`, 30% preregistered verified quality, and 20% verified reliability, with no stake term. If `q_j` is a subnet’s normalized score, set its subsidy share to `a_j = min(q_j, 0.15)` and do **not** renormalize after capping; the residual remains unissued. This resolves the mathematical conflict that fewer than seven eligible subnets cannot consume 100% of a budget under a 15% cap. Task-specific customer payments are unaffected and go to the task’s providers. The rule remains a hypothesis requiring wash-trading simulations, affiliate classification, and adversarial review.
+The normative design, outcome vectors, asset rules, and executable structural checks are in [`docs/protocol/defi_native_economics_v1.md`](../protocol/defi_native_economics_v1.md) and [`specs/protocol/pulsetensor_target_v1.json`](../../specs/protocol/pulsetensor_target_v1.json).
 
 ### Funding the creator without hidden extraction
 
-No tokenomics design guarantees a living. At the July 2026 ecosystem scale, the project should plan an 18-month non-token runway of approximately $280,000 to $330,000:
+The creator can receive four disclosed asset-native flows:
 
-- about $9,000 per month in gross founder compensation,
-- about $2,500 per month in infrastructure and security operations, and
-- $75,000 to $125,000 for legal work, audits, and bounties.
+1. the subnet-builder share for accepted work on a subnet they build and maintain,
+2. the core-maintainer share while they hold the disclosed, timelocked role,
+3. provider rewards for completing funded development, Guardian, Data, audit, research, or operations bounties, and
+4. accepted prefunded maintenance milestones.
 
-The practical financing stack is:
+These are bounties and fees, not a salary or purchasing-power guarantee. For asset `a` and interval `W`:
 
-1. ten Guardian or Data design partners at roughly $750 to $1,500 per month,
-2. milestone sponsorship for prototype, proof, audit, and public-support deliverables,
-3. paid hosted APIs, SLAs, enterprise support, and private deployments around the open protocol,
-4. refundable, nontransferable service credits usable immediately, and
-5. company equity or a properly exempt offering with counsel if pre-product capital is necessary.
+\[
+CoreFlow[a,W] = \sum_{j \in Accepted(W),\ asset(j)=a}
+\frac{coreBps_j\,bounty_j}{10{,}000}.
+\]
 
-The arithmetic exposes a financing gap. Eighteen months of $9,000 founder compensation plus $2,500 operations is $207,000; adding $75,000 to $125,000 for legal work, audits, and bounties yields $282,000 to $332,000 before taxes, payment costs, bad debt, or contingency. Even if $150,000 monthly service volume immediately produced a $7,500 core fee and ten $750 subscribers added $7,500, 18 months of gross revenue would be $270,000: a $12,000 to $62,000 shortfall, and the service-volume assumption is itself unvalidated.
+If there are no accepted externally funded tasks, `CoreFlow[a,W] = 0`. PulseTensor reports the result per asset. It does not convert it to dollars or claim that it covers anyone's external needs.
 
-Therefore use stage financing: paid discovery and pilots first, then obtain at least the uncovered audit/legal budget plus six months of fixed costs from disclosed grants, sponsorship, company equity, or a counsel-approved exempt financing before commissioning those obligations. Maintain a 13-week cash forecast and do not count token inventory, uncontracted volume, refundable customer escrow, security reserve, or customer bonds as runway. Founder compensation should fall, pause, or be separately financed if unrestricted cash drops below the published reserve policy.
+A maintenance round is the closest DeFi analogue to recurring compensation: sponsors deposit assets first, deliverables and acceptance tests are committed, and payment occurs only after acceptance. The missing task-market kernel, node runtime, evaluator runtime, Guardian integration, proof work, independent audit, and testnet operation can themselves be funded as milestone bounties.
 
-Founder compensation should be a disclosed company or treasury budget. It should not be a hidden wallet royalty.
+Minting a token cannot guarantee survival. If a protocol mints `m[t]` units and the external price is `p[t]`, then for any finite mint:
 
-## Conditional token gate
+\[
+\inf_{p[t]\ge0}m[t]p[t]=0.
+\]
 
-Do not add a PulseTensor token until all of these are true:
+Minting guarantees units, not compute or other external resources.
+
+## Conditional token function gate
+
+Do not add a PulseTensor token unless all of these non-price gates hold:
 
 - at least three independent useful subnets,
-- at least seven independent evaluators,
-- at least 100 independent paying customers,
-- at least $25,000 per month in external paid volume for three consecutive months,
-- 90 days of capped mainnet beta without a critical incident,
+- at least seven independently operated evaluators,
+- at least 100 independent funders,
+- at least 1,000 externally funded accepted tasks across three consecutive operating months,
+- at least half of pilot sponsors independently top up or renew,
+- no single funder supplies more than 25% of the accepted task count in the measurement window,
+- 90 days of capped mainnet beta without an unresolved critical incident,
 - two independent audits with published scope, and
-- a funded public bug bounty.
+- a prefunded public bug bounty in a disclosed asset.
 
-It must also pass a **token function test**: name a necessary protocol capability that cannot be delivered with PLS/WPLS, customer payment assets, contractual service credits, or nontransferable reputation; quantify the user benefit; show that protocol safety does not depend on price appreciation; and show that removing the token breaks that capability for a technical rather than fundraising reason. PulseTensor does not pass this test today, because PLS can already provide payment and slashable collateral.
+It must also pass a **token function test**: name a necessary protocol capability that cannot be delivered with PLS, task assets, prefunded reserves, or nontransferable reputation; quantify the user benefit; show that protocol safety does not depend on appreciation; and show that removing the token breaks the capability for a technical rather than fundraising reason.
 
-If those gates are met, a research starting point is a fixed one-billion-token maximum:
-
-- 55% earned work and performance rewards released over at least ten years,
-- 15% ecosystem grants and retroactive funding,
-- 10% community treasury,
-- 10% founder and core builder allocation,
-- 5% future contributors,
-- 3% protocol-owned liquidity, and
-- 2% security and bounty reserve.
-
-Founder and contributor allocations should vest for 48 months with a 12-month cliff and no administrative acceleration. There should be no public presale, sacrifice, revenue right, guaranteed yield, reflection tax, or generic delegation dividend. A token, if justified, should be a slashable bond and bounded governance tool. PLS should remain a payment and bond option.
-
-The percentages sum to exactly 100%, but that is only a supply allocation, not a complete mechanism. A proposal would also need a per-epoch issuance cap, a deterministic release curve whose cumulative issuance never exceeds one billion, rules for unused emissions, circulating-supply disclosures, delegation and slashing equations, governance quorum/anti-capture rules, and simulations showing solvency without appreciation. This allocation is a hypothesis requiring legal review, mechanism simulation, and community governance. It is not a recommendation to issue a token now.
+PulseTensor does not pass this function test today because PLS can provide payment and same-asset collateral. This document therefore specifies no PulseTensor token allocation or issuance curve. If a future capability passes the gate, its token mechanism needs a new formal model, supply and issuance bounds, demand-independent safety analysis, adversarial simulations, legal review, and a separate community decision.
 
 ## Privacy-aware launch
 
@@ -352,7 +357,7 @@ The defensible goal is key security and operational compartmentation, not guaran
 - Fund a one-time entity deployer from a documented lawful source; retain internal source-of-funds, beneficial-owner, approval, and tax records. Avoid unnecessary commingling with personal wallets, but do not structure transfers to evade reporting or screening.
 - Use a self-hosted node or contractually appropriate trusted RPC to reduce third-party metadata disclosure and improve reliability; this does not hide on-chain activity.
 - Publish role addresses, deployed bytecode hashes, proxy/implementation bindings, timelocks, and control boundaries. Disclose controllers to auditors, counsel, banks, tax authorities, and other entitled parties even when personal names are not broadcast publicly.
-- Keep payroll, company operations, and personal investing in separate books and accounts with a written expense and conflict policy.
+- Keep project operations, protocol fee claims, and personal investing in separate books and accounts with a written expense and conflict policy.
 - Do not use mixers, peel chains, nominee signers, false entities, or misleading transaction descriptions as a deployment workflow.
 
 The canonical deployment script now supports hardware, KMS, keystore, and interactive signing without putting raw private keys or passwords in command arguments, verifies the chain ID and contract bindings, and writes a receipt intended to contain no secret. This reduces common secret-handling mistakes; it does not prove the host, hardware, KMS policy, shell environment, RPC, or signer is uncompromised. Public-chain observers can still see the deployer, funding graph, contract creation, timing, and later authority changes. Privacy is limited compartmentation, not anonymity.
@@ -402,7 +407,7 @@ Passing a later gate does not broaden an earlier proof’s scope. A public evide
 | G2 — implementation | Reproducible build, all tests and static gates, mutation score target, differential traces, bounded-check bounds, dependency/SBOM review, and no unresolved critical findings | Internal testnet value only |
 | G3 — independent assurance | Two reviewers with published scope, one independent economic attack review, remediated findings, bytecode-linked proof evidence for the named value properties, and a funded bounty | Capped public beta with per-job, per-epoch, and total-at-risk limits |
 | G4 — operational beta | Reproducible deployment receipt, verified source and runtime hashes, timelocked roles, monitoring, two independent RPC paths, incident/rollback drills, 90 days without unresolved critical incident, and public SLO/error data | Incremental cap increase approved after a public review window |
-| G5 — permissionless scale | Independent operators, churn/partition/byzantine tests, H1–H5 evidence, measured bond inequalities, governance capture analysis, and reserve/runway compliance | Only the exposure justified by measured detection, liquidity, and recovery bounds |
+| G5 — permissionless scale | Independent operators, churn/partition/byzantine tests, H1–H5 evidence, measured bond inequalities, governance capture analysis, and per-asset liability/reserve compliance | Only the exposure justified by measured detection, liquidity, and recovery bounds |
 
 No “formally verified,” “correct by construction,” “trustless,” or loss-guarantee claim should appear in product material unless the evidence index names the exact property, artifact, code/bytecode revision, assumptions, TCB, and excluded behaviors.
 
@@ -433,7 +438,7 @@ No “formally verified,” “correct by construction,” “trustless,” or l
 - enforce per-job and per-epoch value caps,
 - open a public dashboard and bug bounty,
 - require two independent RPCs and reproducible deployment receipts, and
-- fund rewards primarily from customer payments.
+- fund rewards from requester and sponsor deposits in the exact task asset.
 
 ### Days 90 to 180
 
@@ -447,7 +452,7 @@ No “formally verified,” “correct by construction,” “trustless,” or l
 
 This plan is not legal advice, and product labels or decentralization rhetoric do not determine legal treatment. The March 2026 SEC interpretation describes categories including functional digital commodities and digital tools, while explaining that even an asset that is not itself a security can be offered or sold as part of an investment contract depending on promises, purchaser expectations, and the issuer’s continuing essential managerial efforts. Classification is facts-and-circumstances specific and does not resolve commodities, money-transmission, consumer-protection, tax, sanctions, privacy, employment, or state law. See the [SEC fact sheet](https://www.sec.gov/files/33-11412-fact-sheet.pdf) and [SEC release](https://www.sec.gov/newsroom/press-releases/2026-30-sec-clarifies-application-federal-securities-laws-crypto-assets).
 
-FinCEN’s 2019 guidance distinguishes merely developing a DApp from operating or using one in ways that accept and transmit value, but “noncustodial” and pull settlement are not automatic safe harbors; actual control, business model, fees, and transaction flow matter. See [FinCEN’s CVC guidance](https://www.fincen.gov/system/files/2019-05/FinCEN%20Guidance%20CVC%20FINAL%20508.pdf). Before launch, counsel should map each entity and software role, asset and payment path, hosted API, upgrade key, fee, customer jurisdiction, and state exposure. Avoid issuing a dollar-referenced stable asset without a separately approved regulatory and reserve plan. Implement a documented sanctions program appropriate to hosted services and treasury activity, preserve lawful beneficial-ownership/source-of-funds records, and keep lot-level digital-asset tax records. Current official references include [OFAC virtual-currency guidance](https://ofac.treasury.gov/media/913571/download?inline=) and [IRS digital-asset guidance](https://www.irs.gov/filing/digital-assets).
+FinCEN’s 2019 guidance distinguishes merely developing a DApp from operating or using one in ways that accept and transmit value, but “noncustodial” and pull settlement are not automatic safe harbors; actual control, business model, fees, and transaction flow matter. See [FinCEN’s CVC guidance](https://www.fincen.gov/system/files/2019-05/FinCEN%20Guidance%20CVC%20FINAL%20508.pdf). Before launch, counsel should map each entity and software role, asset and payment path, hosted API, upgrade key, fee, customer jurisdiction, and state exposure. Avoid issuing a fiat-referenced stable asset without a separately approved regulatory and reserve plan. Implement a documented sanctions program appropriate to hosted services and treasury activity, preserve lawful beneficial-ownership/source-of-funds records, and keep lot-level digital-asset tax records. Current official references include [OFAC virtual-currency guidance](https://ofac.treasury.gov/media/913571/download?inline=) and [IRS digital-asset guidance](https://www.irs.gov/filing/digital-assets).
 
 ## Decision
 

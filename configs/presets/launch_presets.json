@@ -41,7 +41,7 @@
       }
     },
     "balanced": {
-      "description": "Default profile balancing decentralization, liveness, and protocol revenue.",
+      "description": "Default profile balancing decentralization, liveness, and bounded same-asset protocol fee capture.",
       "subnet": {
         "max_validators": 64,
         "min_validator_stake_wei": "20000000000000000000000",

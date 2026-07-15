@@ -1,0 +1,31 @@
+{
+  "schema": "pulsetensor/node-descriptor/v1",
+  "descriptorVersion": "1",
+  "chainId": 943,
+  "nodeRegistry": "0x7777777777777777777777777777777777777777",
+  "netuid": 1,
+  "mechid": 0,
+  "controller": "0x8888888888888888888888888888888888888888",
+  "operator": "0x4444444444444444444444444444444444444444",
+  "roleBitmap": "2",
+  "sequence": "4",
+  "validFromBlock": "900",
+  "validUntilBlock": "1900",
+  "endpointSet": [
+    {
+      "transport": "HTTPS",
+      "uri": "https://provider.example.invalid/pulsetensor"
+    }
+  ],
+  "tlsCertificateHash": "0x2121212121212121212121212121212121212121212121212121212121212121",
+  "capabilityManifestHash": "0x2323232323232323232323232323232323232323232323232323232323232323",
+  "supportedTaskVersions": ["1"],
+  "supportedReceiptVersions": ["1"],
+  "supportedAssuranceModes": ["STATISTICAL", "REQUESTER_ACCEPTED"],
+  "acceptedAssetSetHash": "0x2424242424242424242424242424242424242424242424242424242424242424",
+  "availabilityModes": ["CONTENT_ADDRESSED_PUBLIC", "REQUESTER_REPRODUCIBLE"],
+  "maxRequestBytes": 1048576,
+  "maxConcurrentTasks": 8,
+  "softwareArtifactHash": "0x2525252525252525252525252525252525252525252525252525252525252525",
+  "operatorSignature": "0x4444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444444"
+}

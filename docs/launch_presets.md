@@ -41,7 +41,7 @@ Use when:
 
 - Throughput-biased profile.
 - Lower stake and bond barriers with shorter epochs/challenge windows.
-- Higher protocol fee lane for faster treasury accrual.
+- Higher protocol fee capture in the same deposited asset; this does not imply adequate operating income.
 
 Use when:
 

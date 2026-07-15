@@ -1,0 +1,1003 @@
+{
+  "schema": "pulsetensor/target-protocol/v1",
+  "spec_id": "PULSETENSOR-TARGET-V1",
+  "version": "1.0.0",
+  "status": "target_unimplemented",
+  "title": "PulseTensor evidence-bearing task network target",
+  "normative_language": "RFC2119",
+  "scope": {
+    "included": [
+      "asset-local bounty escrow",
+      "same-asset provider and evaluator bonds",
+      "typed task and receipt commitments",
+      "task-local quality consensus",
+      "authenticated node discovery and requests",
+      "governance snapshots, refunds, nullifiers, and pull claims"
+    ],
+    "excluded": [
+      "a guarantee of external purchasing power",
+      "a protocol salary or guaranteed income",
+      "cross-asset valuation or netting",
+      "a universal proof that AI output is true or useful",
+      "Sybil-proof identity",
+      "permissionless distributed training in version 1"
+    ]
+  },
+  "normative_documents": [
+    "docs/protocol/defi_native_economics_v1.md",
+    "docs/protocol/task_market_v1.md",
+    "docs/protocol/quality_consensus_v1.md",
+    "docs/protocol/node_network_v1.md",
+    "docs/protocol/proof_obligations_v1.md"
+  ],
+  "schemas": [
+    {
+      "id": "TaskSpecV1",
+      "path": "specs/protocol/task_spec_v1.schema.json",
+      "example": "specs/protocol/examples/task_spec_v1.example.json",
+      "canonical_sha256": "70c5f4a839b2ec6e8d73036e392325d23e4cac4a59f3dd5442f6c8cb859aa776"
+    },
+    {
+      "id": "WorkReceiptV1",
+      "path": "specs/protocol/work_receipt_v1.schema.json",
+      "example": "specs/protocol/examples/work_receipt_v1.example.json",
+      "canonical_sha256": "6b2b8511d02774f3796f4c9a7a709a6e5da8cf9a8815de11d7b5b235efdf05e7"
+    },
+    {
+      "id": "EvaluationRevealV1",
+      "path": "specs/protocol/evaluation_reveal_v1.schema.json",
+      "example": "specs/protocol/examples/evaluation_reveal_v1.example.json",
+      "canonical_sha256": "689b8c38cf7188fec74115cd8a4837bc0c6146e30c8e880c1e4f2edbfa43c7ed"
+    },
+    {
+      "id": "DecisionRecordV1",
+      "path": "specs/protocol/decision_record_v1.schema.json",
+      "example": "specs/protocol/examples/decision_record_v1.example.json",
+      "canonical_sha256": "4ce96e910c78899d8d5d9ae2523da96babd1831c28dfe71ce204d21d190a6d7c"
+    },
+    {
+      "id": "NodeDescriptorV1",
+      "path": "specs/protocol/node_descriptor_v1.schema.json",
+      "example": "specs/protocol/examples/node_descriptor_v1.example.json",
+      "canonical_sha256": "d28755aee8c1292ba24d71df935f36d7067a519b64c434d866e77d0153edab1d"
+    },
+    {
+      "id": "PTAuthEnvelopeV1",
+      "path": "specs/protocol/ptauth_envelope_v1.schema.json",
+      "example": "specs/protocol/examples/ptauth_envelope_v1.example.json",
+      "canonical_sha256": "e57c0194f9f831cdf192f40b4e2e99a024a5182eb6cb820664b0066d68d8281e"
+    }
+  ],
+  "current_implementation_boundary": {
+    "native_asset": "PLS",
+    "facts": [
+      "PulseTensorCore coordinates subnets, stake, registration, commit/reveal, slashing, and explicit native-PLS emission pools.",
+      "PulseTensorInferenceSettlement is a native-PLS optimistic batch shell with replay and duplicate-leaf challenges.",
+      "The current weightsHash reveal is not a score vector and does not determine participant payouts.",
+      "The current batch shell does not implement the target task, evaluator, evidence, or per-task decision lifecycle.",
+      "This target specification is design evidence, not evidence that the planned modules are implemented or formally proved."
+    ]
+  },
+  "implementation_map": [
+    {
+      "id": "CURRENT_COMMIT_REVEAL",
+      "status": "implemented",
+      "summary": "Validator weight commitments have bounded reveal and expired-commit challenge paths.",
+      "source": [
+        "src/PulseTensorCore.sol"
+      ],
+      "tests": [
+        "test/PulseTensorCore.t.sol",
+        "test/PulseTensorCore.fuzz.t.sol"
+      ],
+      "requirements": [
+        "CORE-REQ-004",
+        "CORE-REQ-005"
+      ]
+    },
+    {
+      "id": "CURRENT_NATIVE_BATCH_SHELL",
+      "status": "partial",
+      "summary": "Native-PLS batch escrow, bonds, fee claims, and limited fraud challenges exist but are not the target work market.",
+      "source": [
+        "src/PulseTensorInferenceSettlement.sol"
+      ],
+      "tests": [
+        "test/PulseTensorCore.inference_emission.t.sol"
+      ],
+      "requirements": [
+        "SETTLEMENT-REQ-004",
+        "SETTLEMENT-REQ-005",
+        "SETTLEMENT-REQ-007"
+      ]
+    },
+    {
+      "id": "TARGET_NODE_REGISTRY",
+      "status": "target_unimplemented",
+      "summary": "Controller/operator delegation, descriptor commitments, rotation, expiry, and revocation.",
+      "source": [],
+      "tests": [],
+      "requirements": []
+    },
+    {
+      "id": "TARGET_TASK_MARKET",
+      "status": "target_unimplemented",
+      "summary": "One-provider, one-asset funded tasks with immutable terms, decisions, refunds, claims, and nullifiers.",
+      "source": [],
+      "tests": [],
+      "requirements": []
+    },
+    {
+      "id": "TARGET_QUALITY_CONSENSUS",
+      "status": "target_unimplemented",
+      "summary": "Snapshotted evaluator committees, score commit/reveal, deterministic aggregation, and quality-derived binary payouts.",
+      "source": [],
+      "tests": [],
+      "requirements": []
+    },
+    {
+      "id": "TARGET_VERIFIER_REGISTRY",
+      "status": "target_unimplemented",
+      "summary": "Versioned exact, optimistic, statistical, attested, and requester-accepted resolver policies.",
+      "source": [],
+      "tests": [],
+      "requirements": []
+    },
+    {
+      "id": "TARGET_PULSEGRAPH",
+      "status": "target_unimplemented",
+      "summary": "Block-pinned metagraph-equivalent observation and indexing layer with no settlement authority.",
+      "source": [],
+      "tests": [],
+      "requirements": []
+    }
+  ],
+  "asset_model": {
+    "ledger_key": "assetId",
+    "asset_id_derivation": "keccak256(abi.encode(uint256(chainId), uint8(assetKindCode), address(tokenAddress)))",
+    "asset_id_abi_types": [
+      "uint256",
+      "uint8",
+      "address"
+    ],
+    "asset_kind_codes": {
+      "NATIVE_PLS": 0,
+      "EXACT_ERC20": 1
+    },
+    "asset_id_golden_vectors": [
+      {
+        "chainId": 943,
+        "assetKind": "NATIVE_PLS",
+        "assetKindCode": 0,
+        "tokenAddress": "0x0000000000000000000000000000000000000000",
+        "abiEncoded": "0x00000000000000000000000000000000000000000000000000000000000003af00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+        "assetId": "0xb4437914122850bf50ae4e03bbd0b893489fb288c743789b186ec42d283f70e7"
+      }
+    ],
+    "max_assets_per_task": 1,
+    "task_asset_chain_must_equal_task_chain": true,
+    "funding_quantum_base_units": 10000,
+    "base_kernel_price_oracle": false,
+    "cross_asset_netting": false,
+    "cross_asset_conversion": false,
+    "same_asset_bond_required": true,
+    "native_pls_and_wpls_are_distinct_assets": true,
+    "base_launch_asset_kinds": [
+      "NATIVE_PLS"
+    ],
+    "asset_semantics": [
+      {
+        "id": "NATIVE_PLS",
+        "status": "target_v1",
+        "requirements": [
+          "msg.value equals the credited amount",
+          "claims use checks-effects-interactions and revert atomically on failed transfer"
+        ]
+      },
+      {
+        "id": "EXACT_ERC20",
+        "status": "future_adapter",
+        "requirements": [
+          "the adapter and token are explicitly allowlisted",
+          "balance delta equals the requested transfer amount",
+          "false returns and reverts fail closed",
+          "per-task, per-epoch, and global liability caps are enforced"
+        ]
+      }
+    ],
+    "rejected_semantics": [
+      "fee-on-transfer",
+      "rebasing",
+      "reflection",
+      "elastic supply",
+      "receiver hooks",
+      "silent false-return handling",
+      "cross-chain IOU without a separately proved adapter"
+    ]
+  },
+  "economics": {
+    "funding_sources": [
+      "REQUESTER_DEPOSIT",
+      "SPONSOR_DEPOSIT",
+      "PREFUNDED_MATCHING_RESERVE"
+    ],
+    "unfunded_credit_allowed": false,
+    "minted_protocol_rewards": false,
+    "fee_trigger": "OUTCOME_SPECIFIC_SETTLEMENT",
+    "fee_snapshot_state": "FUNDED_OPEN",
+    "fee_mutable_after_assignment": false,
+    "bps_denominator": 10000,
+    "rounding_rule": "EACH_CONTRIBUTION_AND_BOND_IS_A_MULTIPLE_OF_10000_BASE_UNITS",
+    "allocation_unit": "EACH_ORIGINAL_CONTRIBUTION",
+    "refund_recipient_source": "CONTRIBUTION.refundRecipient",
+    "contributor_ownership_preserved": true,
+    "empty_recipient_fallback": "CONTRIBUTOR_COMPENSATION",
+    "payout_roles": [
+      {
+        "id": "PROVIDER",
+        "default_bps": 7200,
+        "min_bps": 6500,
+        "max_bps": 8500
+      },
+      {
+        "id": "EVALUATORS",
+        "default_bps": 1200,
+        "min_bps": 0,
+        "max_bps": 2500
+      },
+      {
+        "id": "SUBNET_BUILDER",
+        "default_bps": 500,
+        "min_bps": 0,
+        "max_bps": 750
+      },
+      {
+        "id": "CORE_MAINTAINER",
+        "default_bps": 500,
+        "min_bps": 0,
+        "max_bps": 750
+      },
+      {
+        "id": "SECURITY_RESERVE",
+        "default_bps": 300,
+        "min_bps": 100,
+        "max_bps": 500
+      },
+      {
+        "id": "ECOSYSTEM",
+        "default_bps": 300,
+        "min_bps": 0,
+        "max_bps": 500
+      }
+    ],
+    "coupled_bounds": [
+      {
+        "id": "BUILDER_PLUS_CORE_CAP",
+        "roles": [
+          "SUBNET_BUILDER",
+          "CORE_MAINTAINER"
+        ],
+        "max_bps": 1200
+      }
+    ],
+    "payout_vectors": [
+      {
+        "id": "ACCEPTED_BOUNTY",
+        "principal": "BOUNTY",
+        "allocations": [
+          {"role": "PROVIDER", "bps": 7200},
+          {"role": "EVALUATORS", "bps": 1200},
+          {"role": "SUBNET_BUILDER", "bps": 500},
+          {"role": "CORE_MAINTAINER", "bps": 500},
+          {"role": "SECURITY_RESERVE", "bps": 300},
+          {"role": "ECOSYSTEM", "bps": 300}
+        ]
+      },
+      {
+        "id": "REJECTED_REVIEWED_BOUNTY",
+        "principal": "BOUNTY",
+        "allocations": [
+          {"role": "CONTRIBUTOR_REFUND", "bps": 8800},
+          {"role": "EVALUATORS", "bps": 1200}
+        ]
+      },
+      {
+        "id": "FULL_REFUND_BOUNTY",
+        "principal": "BOUNTY",
+        "allocations": [
+          {"role": "CONTRIBUTOR_REFUND", "bps": 10000}
+        ]
+      },
+      {
+        "id": "VALID_PROVIDER_BOND",
+        "principal": "PROVIDER_BOND",
+        "allocations": [
+          {"role": "PROVIDER_BOND_REFUND", "bps": 10000}
+        ]
+      },
+      {
+        "id": "PROVABLE_PROVIDER_FAULT_BOND",
+        "principal": "PROVIDER_BOND",
+        "allocations": [
+          {"role": "CONTRIBUTOR_COMPENSATION", "bps": 6000},
+          {"role": "NON_SELF_RESOLVER", "bps": 2000},
+          {"role": "SECURITY_RESERVE", "bps": 2000}
+        ]
+      },
+      {
+        "id": "VALID_EVALUATOR_BOND",
+        "principal": "EVALUATOR_BOND_EACH",
+        "allocations": [
+          {"role": "EVALUATOR_BOND_REFUND", "bps": 10000}
+        ]
+      },
+      {
+        "id": "PROVABLE_EVALUATOR_DEFAULT_BOND",
+        "principal": "EVALUATOR_BOND_EACH",
+        "allocations": [
+          {"role": "CONTRIBUTOR_COMPENSATION", "bps": 6000},
+          {"role": "HONEST_EVALUATORS", "bps": 2000},
+          {"role": "SECURITY_RESERVE", "bps": 2000}
+        ]
+      }
+    ],
+    "bond_policy": {
+      "provider_min_bps": 1000,
+      "provider_max_bps": 30000,
+      "evaluator_min_bps": 100,
+      "evaluator_max_bps": 10000,
+      "subjective_disagreement_is_slashable": false,
+      "objective_faults": [
+        "equivocation",
+        "committed non-reveal",
+        "invalid reveal",
+        "provider deadline default",
+        "unavailable evidence promised by the snapshotted policy",
+        "fraud established by the snapshotted verifier"
+      ]
+    },
+    "maintenance_flow": {
+      "guaranteed": false,
+      "sources": [
+        "CORE_MAINTAINER share of accepted externally funded tasks",
+        "SUBNET_BUILDER share of accepted tasks for a maintained subnet",
+        "PROVIDER share for completed development or service bounties",
+        "prefunded milestone maintenance rounds"
+      ],
+      "zero_external_funding_implies_zero_maintenance_flow": true
+    }
+  },
+  "lifecycle": {
+    "initial_state": "FUNDED_OPEN",
+    "states": [
+      "FUNDED_OPEN",
+      "ASSIGNED",
+      "SUBMITTED",
+      "EVALUATION_COMMIT",
+      "EVALUATION_REVEAL",
+      "PROVISIONAL_ACCEPT",
+      "PROVISIONAL_REJECT",
+      "CHALLENGED",
+      "FINAL_ACCEPT",
+      "FINAL_REJECT",
+      "FINAL_PROVIDER_FAULT",
+      "CANCELLED_REFUND",
+      "ASSIGNMENT_EXPIRED_REFUND",
+      "PROVIDER_DEFAULT_REFUND",
+      "EVALUATION_FAILED_REFUND",
+      "CHALLENGE_EXPIRED_REFUND",
+      "SETTLED"
+    ],
+    "terminal_states": [
+      "SETTLED"
+    ],
+    "transitions": [
+      {"id": "ASSIGN", "from": "FUNDED_OPEN", "to": "ASSIGNED"},
+      {"id": "CANCEL_OPEN", "from": "FUNDED_OPEN", "to": "CANCELLED_REFUND"},
+      {"id": "EXPIRE_ASSIGNMENT", "from": "FUNDED_OPEN", "to": "ASSIGNMENT_EXPIRED_REFUND"},
+      {"id": "SUBMIT", "from": "ASSIGNED", "to": "SUBMITTED"},
+      {"id": "DEFAULT_PROVIDER", "from": "ASSIGNED", "to": "PROVIDER_DEFAULT_REFUND"},
+      {"id": "START_EVALUATION", "from": "SUBMITTED", "to": "EVALUATION_COMMIT"},
+      {"id": "DIRECT_PROVISIONAL_ACCEPT", "from": "SUBMITTED", "to": "PROVISIONAL_ACCEPT"},
+      {"id": "DIRECT_PROVISIONAL_REJECT", "from": "SUBMITTED", "to": "PROVISIONAL_REJECT"},
+      {"id": "VERIFY_PROVIDER_FAULT", "from": "SUBMITTED", "to": "FINAL_PROVIDER_FAULT"},
+      {"id": "TIMEOUT_SUBMITTED", "from": "SUBMITTED", "to": "EVALUATION_FAILED_REFUND"},
+      {"id": "OPEN_REVEAL", "from": "EVALUATION_COMMIT", "to": "EVALUATION_REVEAL"},
+      {"id": "FAIL_COMMIT_QUORUM", "from": "EVALUATION_COMMIT", "to": "EVALUATION_FAILED_REFUND"},
+      {"id": "AGGREGATE_ACCEPT", "from": "EVALUATION_REVEAL", "to": "PROVISIONAL_ACCEPT"},
+      {"id": "AGGREGATE_REJECT", "from": "EVALUATION_REVEAL", "to": "PROVISIONAL_REJECT"},
+      {"id": "FAIL_REVEAL_QUORUM", "from": "EVALUATION_REVEAL", "to": "EVALUATION_FAILED_REFUND"},
+      {"id": "CHALLENGE_ACCEPT", "from": "PROVISIONAL_ACCEPT", "to": "CHALLENGED"},
+      {"id": "FINALIZE_ACCEPT", "from": "PROVISIONAL_ACCEPT", "to": "FINAL_ACCEPT"},
+      {"id": "CHALLENGE_REJECT", "from": "PROVISIONAL_REJECT", "to": "CHALLENGED"},
+      {"id": "FINALIZE_REJECT", "from": "PROVISIONAL_REJECT", "to": "FINAL_REJECT"},
+      {"id": "RESOLVE_CHALLENGE_ACCEPT", "from": "CHALLENGED", "to": "FINAL_ACCEPT"},
+      {"id": "RESOLVE_CHALLENGE_REJECT", "from": "CHALLENGED", "to": "FINAL_REJECT"},
+      {"id": "RESOLVE_CHALLENGE_PROVIDER_FAULT", "from": "CHALLENGED", "to": "FINAL_PROVIDER_FAULT"},
+      {"id": "TIMEOUT_CHALLENGE_RESOLUTION", "from": "CHALLENGED", "to": "CHALLENGE_EXPIRED_REFUND"},
+      {
+        "id": "SETTLE_ACCEPT",
+        "from": "FINAL_ACCEPT",
+        "to": "SETTLED",
+        "decision_outcome": "FINAL_ACCEPT",
+        "decision_reason": "ACCEPTED_BY_SNAPSHOTTED_POLICY",
+        "principal_dispositions": [
+          {"principal": "BOUNTY", "selection": "EXACT", "allowed_vectors": ["ACCEPTED_BOUNTY"]},
+          {"principal": "PROVIDER_BOND", "selection": "EXACT", "allowed_vectors": ["VALID_PROVIDER_BOND"]},
+          {"principal": "EVALUATOR_BOND_EACH", "selection": "PER_LOCKED_BOND_OBJECTIVE_EVIDENCE", "allowed_vectors": ["VALID_EVALUATOR_BOND", "PROVABLE_EVALUATOR_DEFAULT_BOND"]}
+        ]
+      },
+      {
+        "id": "SETTLE_REJECT",
+        "from": "FINAL_REJECT",
+        "to": "SETTLED",
+        "decision_outcome": "FINAL_REJECT",
+        "decision_reason": "REJECTED_BY_SNAPSHOTTED_POLICY",
+        "principal_dispositions": [
+          {"principal": "BOUNTY", "selection": "EXACT", "allowed_vectors": ["REJECTED_REVIEWED_BOUNTY"]},
+          {"principal": "PROVIDER_BOND", "selection": "EXACT", "allowed_vectors": ["VALID_PROVIDER_BOND"]},
+          {"principal": "EVALUATOR_BOND_EACH", "selection": "PER_LOCKED_BOND_OBJECTIVE_EVIDENCE", "allowed_vectors": ["VALID_EVALUATOR_BOND", "PROVABLE_EVALUATOR_DEFAULT_BOND"]}
+        ]
+      },
+      {
+        "id": "SETTLE_PROVIDER_FAULT",
+        "from": "FINAL_PROVIDER_FAULT",
+        "to": "SETTLED",
+        "decision_outcome": "FINAL_REJECT",
+        "decision_reason": "OBJECTIVE_PROVIDER_FAULT_PROVED",
+        "principal_dispositions": [
+          {"principal": "BOUNTY", "selection": "EXACT", "allowed_vectors": ["REJECTED_REVIEWED_BOUNTY"]},
+          {"principal": "PROVIDER_BOND", "selection": "EXACT", "allowed_vectors": ["PROVABLE_PROVIDER_FAULT_BOND"]},
+          {"principal": "EVALUATOR_BOND_EACH", "selection": "PER_LOCKED_BOND_OBJECTIVE_EVIDENCE", "allowed_vectors": ["VALID_EVALUATOR_BOND", "PROVABLE_EVALUATOR_DEFAULT_BOND"]}
+        ]
+      },
+      {
+        "id": "SETTLE_CANCEL",
+        "from": "CANCELLED_REFUND",
+        "to": "SETTLED",
+        "decision_outcome": "FULL_REFUND",
+        "decision_reason": "CANCELLED_BEFORE_ASSIGNMENT",
+        "principal_dispositions": [
+          {"principal": "BOUNTY", "selection": "EXACT", "allowed_vectors": ["FULL_REFUND_BOUNTY"]},
+          {"principal": "PROVIDER_BOND", "selection": "NONE_LOCKED", "allowed_vectors": []},
+          {"principal": "EVALUATOR_BOND_EACH", "selection": "NONE_LOCKED", "allowed_vectors": []}
+        ]
+      },
+      {
+        "id": "SETTLE_ASSIGNMENT_EXPIRY",
+        "from": "ASSIGNMENT_EXPIRED_REFUND",
+        "to": "SETTLED",
+        "decision_outcome": "FULL_REFUND",
+        "decision_reason": "ASSIGNMENT_EXPIRED",
+        "principal_dispositions": [
+          {"principal": "BOUNTY", "selection": "EXACT", "allowed_vectors": ["FULL_REFUND_BOUNTY"]},
+          {"principal": "PROVIDER_BOND", "selection": "NONE_LOCKED", "allowed_vectors": []},
+          {"principal": "EVALUATOR_BOND_EACH", "selection": "NONE_LOCKED", "allowed_vectors": []}
+        ]
+      },
+      {
+        "id": "SETTLE_PROVIDER_DEFAULT",
+        "from": "PROVIDER_DEFAULT_REFUND",
+        "to": "SETTLED",
+        "decision_outcome": "FULL_REFUND",
+        "decision_reason": "PROVIDER_SUBMISSION_DEFAULT",
+        "principal_dispositions": [
+          {"principal": "BOUNTY", "selection": "EXACT", "allowed_vectors": ["FULL_REFUND_BOUNTY"]},
+          {"principal": "PROVIDER_BOND", "selection": "EXACT", "allowed_vectors": ["PROVABLE_PROVIDER_FAULT_BOND"]},
+          {"principal": "EVALUATOR_BOND_EACH", "selection": "EXACT", "allowed_vectors": ["VALID_EVALUATOR_BOND"]}
+        ]
+      },
+      {
+        "id": "SETTLE_EVALUATION_FAILURE",
+        "from": "EVALUATION_FAILED_REFUND",
+        "to": "SETTLED",
+        "decision_outcome": "FULL_REFUND",
+        "decision_reason": "EVALUATION_OR_DIRECT_RESOLUTION_TIMEOUT",
+        "principal_dispositions": [
+          {"principal": "BOUNTY", "selection": "EXACT", "allowed_vectors": ["FULL_REFUND_BOUNTY"]},
+          {"principal": "PROVIDER_BOND", "selection": "EXACT", "allowed_vectors": ["VALID_PROVIDER_BOND"]},
+          {"principal": "EVALUATOR_BOND_EACH", "selection": "PER_LOCKED_BOND_OBJECTIVE_EVIDENCE", "allowed_vectors": ["VALID_EVALUATOR_BOND", "PROVABLE_EVALUATOR_DEFAULT_BOND"]}
+        ]
+      },
+      {
+        "id": "SETTLE_CHALLENGE_EXPIRY",
+        "from": "CHALLENGE_EXPIRED_REFUND",
+        "to": "SETTLED",
+        "decision_outcome": "FULL_REFUND",
+        "decision_reason": "CHALLENGE_RESOLUTION_TIMEOUT",
+        "principal_dispositions": [
+          {"principal": "BOUNTY", "selection": "EXACT", "allowed_vectors": ["FULL_REFUND_BOUNTY"]},
+          {"principal": "PROVIDER_BOND", "selection": "EXACT", "allowed_vectors": ["VALID_PROVIDER_BOND"]},
+          {"principal": "EVALUATOR_BOND_EACH", "selection": "PER_LOCKED_BOND_OBJECTIVE_EVIDENCE", "allowed_vectors": ["VALID_EVALUATOR_BOND", "PROVABLE_EVALUATOR_DEFAULT_BOND"]}
+        ]
+      }
+    ],
+    "pause_blocks": [
+      "new task creation",
+      "new funding",
+      "new assignment"
+    ],
+    "pause_never_blocks": [
+      "already-authorized submission",
+      "evaluation reveal",
+      "challenge",
+      "timeout resolution",
+      "finalization",
+      "refund conversion",
+      "bond release or slash conversion",
+      "claim withdrawal"
+    ],
+    "claims_are_separate_liabilities": true
+  },
+  "assurance_modes": [
+    {
+      "id": "EXACT",
+      "claim": "A registered verifier accepted the committed output under the committed canonical semantics.",
+      "decision_rule": "VERIFIER_BOOLEAN",
+      "required_receipt_fields": [
+        "canonicalSemanticsId",
+        "inputCommitment",
+        "outputCommitment",
+        "proofSystemId",
+        "verifierId",
+        "evidenceRoot",
+        "tcbManifestHash"
+      ],
+      "challenge_behavior": "Verifier failure rejects; verifier success may finalize without subjective scoring.",
+      "excluded_guarantee": "Real-world truth and usefulness are not implied unless encoded in the verified predicate."
+    },
+    {
+      "id": "OPTIMISTIC",
+      "claim": "The committed trace survived the dispute window or the registered dispute verifier resolved it as valid.",
+      "decision_rule": "UNCHALLENGED_OR_DISPUTE_VERIFIED",
+      "required_receipt_fields": [
+        "canonicalSemanticsId",
+        "inputCommitment",
+        "outputCommitment",
+        "evidenceRoot",
+        "availabilityAttestationRoot",
+        "verifierId",
+        "tcbManifestHash"
+      ],
+      "challenge_behavior": "Mandatory evidence availability and a bounded fraud-proof window precede finality.",
+      "excluded_guarantee": "No security claim holds if required dispute data was unavailable or no honest challenger could act."
+    },
+    {
+      "id": "STATISTICAL",
+      "claim": "The committed output met the preregistered score rule on the committed sampling frame with the reported uncertainty.",
+      "decision_rule": "CAPPED_WEIGHTED_MEDIAN",
+      "required_receipt_fields": [
+        "inputCommitment",
+        "outputCommitment",
+        "evidenceRoot",
+        "availabilityAttestationRoot",
+        "tcbManifestHash"
+      ],
+      "challenge_behavior": "Invalid evaluation commitments, reveals, or evidence can be challenged; score disagreement alone is not fraud.",
+      "excluded_guarantee": "Benchmark quality, independence, contamination resistance, and external validity remain assumptions."
+    },
+    {
+      "id": "ATTESTED",
+      "claim": "The snapshotted committee reached the declared threshold on the declared predicate.",
+      "decision_rule": "THRESHOLD_ATTESTATION",
+      "required_receipt_fields": [
+        "inputCommitment",
+        "outputCommitment",
+        "evidenceRoot",
+        "tcbManifestHash"
+      ],
+      "challenge_behavior": "Signature, membership, equivocation, and threshold faults are objective; predicate truth may not be.",
+      "excluded_guarantee": "An attestation proves who attested, not that the attested real-world fact is true."
+    },
+    {
+      "id": "REQUESTER_ACCEPTED",
+      "claim": "The snapshotted requester explicitly accepted the exact receipt before its deadline.",
+      "decision_rule": "REQUESTER_SIGNATURE",
+      "required_receipt_fields": [
+        "inputCommitment",
+        "outputCommitment",
+        "evidenceRoot",
+        "tcbManifestHash"
+      ],
+      "challenge_behavior": "Only authorization, replay, timing, and receipt-binding faults are objective.",
+      "excluded_guarantee": "Requester acceptance is subjective and is not a correctness proof."
+    }
+  ],
+  "quality_consensus": {
+    "committee_min": 3,
+    "committee_default": 7,
+    "committee_max": 7,
+    "selection": "BOND_CAPPED_RANDOM_WITHOUT_REPLACEMENT",
+    "selection_snapshot_before_output": true,
+    "stake_only_selection": false,
+    "commit_reveal": true,
+    "score_min": 0,
+    "score_max": 10000,
+    "criterion_weight_sum": 10000,
+    "effective_weight": "min(eligible_same_asset_bond, task_weight_cap)",
+    "aggregation": "DETERMINISTIC_LOWER_WEIGHTED_MEDIAN_PER_CRITERION",
+    "sort_tie_break": "EVALUATOR_ADDRESS_ASCENDING",
+    "overall_score": "floor(sum(criterionWeight[k] * median[k]) / 10000)",
+    "payout_curve": "BINARY_ACCEPT_OR_REFUND",
+    "no_quorum_result": "EVALUATION_FAILED_REFUND",
+    "evaluator_fee_distribution": "EQUAL_ACROSS_VALID_REVEALS_WITH_ADDRESS_ORDERED_REMAINDER",
+    "conditional_theorem": "If honest revealed effective weight is strictly greater than half of total revealed effective weight, every criterion median lies within the honest revealed score interval.",
+    "non_guarantees": [
+      "Sybil resistance",
+      "honest committee selection",
+      "truth of hidden labels",
+      "independence of evaluators",
+      "usefulness outside the committed evaluation policy"
+    ]
+  },
+  "network": {
+    "planes": [
+      "CONTROL",
+      "DATA",
+      "EVIDENCE",
+      "OBSERVATION"
+    ],
+    "roles": [
+      "REQUESTER_GATEWAY",
+      "PROVIDER",
+      "EVALUATOR",
+      "CHALLENGER",
+      "BATCHER_RELAYER",
+      "EVIDENCE_REPLICA",
+      "INDEXER_OBSERVER"
+    ],
+    "controller_operator_separation": true,
+    "gateway_is_optional": true,
+    "indexer_has_settlement_authority": false,
+    "wire_protocol": "ptauth/1",
+    "signature_scheme": "EIP712_SECP256K1",
+    "request_receiver_required": true,
+    "raw_body_hash_required": true,
+    "shared_replay_store_required": true,
+    "replay_key": "(chainId,nodeRegistry,senderOperator,receiverOperator,nonce)",
+    "message_types": [
+      "QUOTE_REQUEST",
+      "QUOTE_RESPONSE",
+      "TASK_ACCEPT",
+      "TASK_EXECUTE",
+      "TASK_STATUS",
+      "OBJECT_FETCH",
+      "EVALUATION_COMMIT",
+      "EVALUATION_REVEAL",
+      "CHALLENGE_SUBMIT"
+    ],
+    "pulsegraph_checkpoint_fields": [
+      "checkpointBlock",
+      "checkpointHash",
+      "subnets",
+      "mechanismVersions",
+      "nodes",
+      "controllerOperatorBindings",
+      "roles",
+      "bondsByAsset",
+      "descriptorDigests",
+      "capabilities",
+      "activeTasks",
+      "settledOutcomes",
+      "qualityCounters",
+      "feeFlowsByAsset",
+      "challengeAndDefaultCounters"
+    ]
+  },
+  "hash_domains": [
+    {
+      "id": "TASK_SPEC_DOMAIN",
+      "object": "TaskSpecV1",
+      "required_fields": [
+        "taskVersion",
+        "chainId",
+        "settlementContract",
+        "taskId",
+        "payer",
+        "requester",
+        "requesterRefundRecipient",
+        "provider",
+        "netuid",
+        "mechid",
+        "mechanismVersion",
+        "taskType",
+        "inputCommitment",
+        "inputAvailabilityPolicyHash",
+        "canonicalSemanticsId",
+        "outputSchemaHash",
+        "assuranceMode",
+        "verifierPolicyHash",
+        "evaluationPolicyHash",
+        "evaluatorCommitteeRoot",
+        "paymentAsset",
+        "contributionRoot",
+        "fundedAmount",
+        "providerBondAmount",
+        "evaluatorBondAmount",
+        "feeScheduleHash",
+        "deadlines",
+        "payerNonce"
+      ]
+    },
+    {
+      "id": "WORK_RECEIPT_DOMAIN",
+      "object": "WorkReceiptV1",
+      "required_fields": [
+        "receiptVersion",
+        "chainId",
+        "settlementContract",
+        "taskId",
+        "attemptId",
+        "taskSpecHash",
+        "provider",
+        "inputCommitment",
+        "outputCommitment",
+        "evidenceRoot",
+        "availabilityAttestationRoot",
+        "canonicalSemanticsId",
+        "assuranceMode",
+        "proofSystemId",
+        "verifierId",
+        "modelArtifactHash",
+        "runtimeArtifactHash",
+        "tcbManifestHash",
+        "startedAtBlock",
+        "submittedAtBlock",
+        "providerNonce"
+      ]
+    },
+    {
+      "id": "EVALUATION_DOMAIN",
+      "object": "EvaluationRevealV1",
+      "required_fields": [
+        "evaluationVersion",
+        "chainId",
+        "evaluationContract",
+        "taskId",
+        "receiptHash",
+        "evaluationPolicyHash",
+        "evaluator",
+        "scoreVector",
+        "evidenceRoot",
+        "salt",
+        "evaluatorNonce"
+      ]
+    },
+    {
+      "id": "DECISION_RECORD_DOMAIN",
+      "object": "DecisionRecordV1",
+      "required_fields": [
+        "decisionVersion",
+        "chainId",
+        "taskMarket",
+        "taskId",
+        "taskSpecHash",
+        "receiptHash",
+        "assuranceMode",
+        "outcome",
+        "reasonCode",
+        "bountyVectorId",
+        "providerBondVectorId",
+        "providerBondDispositionEvidenceHash",
+        "evaluatorBondDispositionRoot",
+        "resolverAuthority",
+        "resolverPolicyHash",
+        "resolverEvidenceHash",
+        "challengeRecordHash",
+        "decidedAtBlock"
+      ]
+    },
+    {
+      "id": "NODE_DESCRIPTOR_DOMAIN",
+      "object": "NodeDescriptorV1",
+      "required_fields": [
+        "descriptorVersion",
+        "chainId",
+        "nodeRegistry",
+        "netuid",
+        "mechid",
+        "controller",
+        "operator",
+        "roleBitmap",
+        "sequence",
+        "validFromBlock",
+        "validUntilBlock",
+        "endpointSet",
+        "tlsCertificateHash",
+        "capabilityManifestHash",
+        "supportedTaskVersions",
+        "supportedReceiptVersions",
+        "supportedAssuranceModes",
+        "acceptedAssetSetHash",
+        "availabilityModes",
+        "maxRequestBytes",
+        "maxConcurrentTasks",
+        "softwareArtifactHash"
+      ]
+    },
+    {
+      "id": "PTAUTH_DOMAIN",
+      "object": "PTAuthEnvelopeV1",
+      "required_fields": [
+        "protocolVersion",
+        "chainId",
+        "nodeRegistry",
+        "netuid",
+        "mechid",
+        "senderOperator",
+        "receiverOperator",
+        "messageType",
+        "methodHash",
+        "requestTargetHash",
+        "rawBodyHash",
+        "taskId",
+        "attemptId",
+        "nonce",
+        "referenceBlockNumber",
+        "referenceBlockHash",
+        "expiresAtBlock"
+      ]
+    }
+  ],
+  "settlement_nullifiers": [
+    {
+      "id": "PULSETENSOR_TASK_SETTLEMENT_NULLIFIER_V1",
+      "derivation": "keccak256(abi.encode(keccak256(\"PULSETENSOR_TASK_SETTLEMENT_NULLIFIER_V1\"), uint256(chainId), address(settlementContract), bytes32(taskId), bytes32(taskSpecHash)))",
+      "abi_types": [
+        "bytes32",
+        "uint256",
+        "address",
+        "bytes32",
+        "bytes32"
+      ],
+      "required_fields": [
+        "chainId",
+        "settlementContract",
+        "taskId",
+        "taskSpecHash"
+      ],
+      "consumed_key": "consumedTaskNullifier",
+      "includes_signature_bytes": false
+    },
+    {
+      "id": "PULSETENSOR_RECEIPT_SETTLEMENT_NULLIFIER_V1",
+      "derivation": "keccak256(abi.encode(keccak256(\"PULSETENSOR_RECEIPT_SETTLEMENT_NULLIFIER_V1\"), uint256(chainId), address(settlementContract), bytes32(taskId), bytes32(attemptId), bytes32(receiptHash)))",
+      "abi_types": [
+        "bytes32",
+        "uint256",
+        "address",
+        "bytes32",
+        "bytes32",
+        "bytes32"
+      ],
+      "required_fields": [
+        "chainId",
+        "settlementContract",
+        "taskId",
+        "attemptId",
+        "receiptHash"
+      ],
+      "consumed_key": "consumedReceiptNullifier",
+      "includes_signature_bytes": false
+    }
+  ],
+  "settlement_requires_all_nullifiers_unconsumed": true,
+  "governance": {
+    "minimum_policy_delay_blocks": 60480,
+    "live_task_policy_is_immutable": true,
+    "live_task_asset_adapter_is_immutable": true,
+    "governance_can_seize_liabilities": false,
+    "governance_can_cross_asset_net": false,
+    "emergency_pause_refund_liveness": true,
+    "asset_removal_effect": "BLOCK_NEW_FUNDING_ONLY",
+    "upgrade_migration_requires_each_payer_opt_in": true
+  },
+  "invariants": [
+    {
+      "id": "INV-ASSET-001",
+      "statement": "For every asset independently, contract balance is at least escrow liability plus bond liability plus claim liability plus reserve liability.",
+      "proof_status": "unproved_target",
+      "assumptions": ["declared asset semantics hold"],
+      "support_recipe": "Exhaustively explore bounded deposit, assign, resolve, settle, and claim traces and find no liability deficit.",
+      "refute_recipe": "Produce one reachable trace and assetId where liabilities exceed the contract balance."
+    },
+    {
+      "id": "INV-ASSET-002",
+      "statement": "No transition reads an exchange rate or uses one asset balance to discharge another asset liability.",
+      "proof_status": "unproved_target",
+      "assumptions": [],
+      "support_recipe": "Prove all value-transition expressions are indexed by exactly one immutable task assetId.",
+      "refute_recipe": "Find a value transition whose inputs or outputs contain two distinct assetIds."
+    },
+    {
+      "id": "INV-FUND-001",
+      "statement": "Every bounty claim is sourced from an actual requester, sponsor, or prefunded matching-reserve deposit of the same asset.",
+      "proof_status": "unproved_target",
+      "assumptions": ["asset adapter credits actual received units only"],
+      "support_recipe": "Show claim creation only reclassifies tracked escrow or reserve liability.",
+      "refute_recipe": "Produce a claim increase without an equal same-asset liability decrease backed by balance."
+    },
+    {
+      "id": "INV-SETTLE-001",
+      "statement": "Each task and receipt nullifier converts escrow and bonds to claims at most once.",
+      "proof_status": "unproved_target",
+      "assumptions": ["collision resistance of the selected hash"],
+      "support_recipe": "Model all resolution races and prove a consumed nullifier cannot return to an unsettled state.",
+      "refute_recipe": "Produce two successful settlement traces for the same typed task and receipt domain."
+    },
+    {
+      "id": "INV-BOND-001",
+      "statement": "Every locked provider bond and each locked evaluator bond is converted exactly once into a vector for the same principal; a valid bond is refunded and a fault vector requires objective evidence.",
+      "proof_status": "unproved_target",
+      "assumptions": ["the snapshotted fault verifier is sound for its declared predicate"],
+      "support_recipe": "Explore every terminal reason and locked-bond subset, proving one disposition per bond, exact principal conservation, valid-bond refund, and evidence-gated fault selection.",
+      "refute_recipe": "Produce a reachable settlement with an omitted or duplicate bond disposition, a cross-principal vector, valid-bond confiscation, or a fault vector without objective evidence."
+    },
+    {
+      "id": "INV-AUTH-001",
+      "statement": "Every accepted task, receipt, evaluation, decision, descriptor, and ptauth digest binds its complete normative field inventory, and every signed digest uses a canonical authorized signer.",
+      "proof_status": "unproved_target",
+      "assumptions": ["EIP-712 encoding and secp256k1 recovery are implemented as specified"],
+      "support_recipe": "Generate cross-language golden vectors and prove every one-field mutation, omitted required field, high-s signature, wrong signer, wrong chain, and wrong verifying contract is rejected.",
+      "refute_recipe": "Produce one accepted object whose value-relevant field can change without changing the authorized digest or whose signer is not the snapshotted authority."
+    },
+    {
+      "id": "INV-LIFE-001",
+      "statement": "All task state transitions belong to the enumerated relation and SETTLED has no outgoing transition.",
+      "proof_status": "structurally_checked_target",
+      "assumptions": [],
+      "support_recipe": "Run the protocol-spec checker reachability and terminal-state checks.",
+      "refute_recipe": "Add an unlisted transition or an outgoing SETTLED edge and observe checker rejection."
+    },
+    {
+      "id": "INV-PAUSE-001",
+      "statement": "Pause cannot block a matured refund, resolution, bond conversion, or claim withdrawal.",
+      "proof_status": "unproved_target",
+      "assumptions": ["chain progresses and at least one actor can submit a transaction"],
+      "support_recipe": "Explore every paused nonterminal state after each deadline and prove a path to claims and withdrawal.",
+      "refute_recipe": "Produce a paused reachable state with matured value and no permissionless progress transition."
+    },
+    {
+      "id": "INV-GOV-001",
+      "statement": "Governance changes affect only tasks funded after activation and cannot seize participant liabilities.",
+      "proof_status": "unproved_target",
+      "assumptions": ["deployment uses the proved governance module"],
+      "support_recipe": "Snapshot policies at funding and prove later config writes are absent from live-task reads.",
+      "refute_recipe": "Change governance config after assignment and produce a different claim vector for the live task."
+    },
+    {
+      "id": "INV-EVAL-001",
+      "statement": "An accepted statistical task has valid reveal quorum, all hard floors, and an overall score at or above its snapshotted threshold.",
+      "proof_status": "unproved_target",
+      "assumptions": ["committee and evaluation policy snapshots are authentic"],
+      "support_recipe": "Exhaustively test bounded committees, scores, weights, missing reveals, and exact-half ties.",
+      "refute_recipe": "Produce an accepted trace with no quorum, a failed hard floor, or a score below threshold."
+    },
+    {
+      "id": "INV-EVAL-002",
+      "statement": "With honest revealed effective weight strictly above one half, each lower weighted median is within the honest revealed score interval.",
+      "proof_status": "unproved_target",
+      "assumptions": ["honest reports define a nonempty interval", "integer weights are positive and bounded"],
+      "support_recipe": "Machine-check the finite theorem and prove the general sorted-prefix lemma.",
+      "refute_recipe": "Find a positive-weight score vector with honest weight above one half and a median outside the honest interval."
+    },
+    {
+      "id": "INV-NET-001",
+      "statement": "An accepted ptauth/1 request binds sender, receiver, route, raw body, task, attempt, chain domain, checkpoint, nonce, and expiry, and its replay key is accepted at most once.",
+      "proof_status": "unproved_target",
+      "assumptions": ["secp256k1 signature unforgeability", "shared replay store consistency"],
+      "support_recipe": "Verify cross-language golden vectors and reject every single-field mutation and duplicate replay.",
+      "refute_recipe": "Produce two accepted requests with one signature but a changed bound field or repeated replay key."
+    }
+  ],
+  "primary_references": [
+    "https://www.bittensor.com/docs/concepts/network",
+    "https://www.bittensor.com/docs/concepts/emissions",
+    "https://www.bittensor.com/docs/guides/signed-requests",
+    "https://www.bittensor.com/docs/internals/consensus",
+    "https://arxiv.org/abs/1806.11476",
+    "https://arxiv.org/abs/1605.01021",
+    "https://arxiv.org/abs/1803.01498",
+    "https://www.microsoft.com/en-us/research/publication/the-sybil-attack/"
+  ]
+}

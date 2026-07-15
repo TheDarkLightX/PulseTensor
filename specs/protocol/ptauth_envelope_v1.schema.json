@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pulsetensor.org/schemas/ptauth-envelope-v1.json",
+  "title": "PulseTensor PTAuthEnvelopeV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "protocolVersion",
+    "chainId",
+    "nodeRegistry",
+    "netuid",
+    "mechid",
+    "senderOperator",
+    "receiverOperator",
+    "messageType",
+    "methodHash",
+    "requestTargetHash",
+    "rawBodyHash",
+    "taskId",
+    "attemptId",
+    "nonce",
+    "referenceBlockNumber",
+    "referenceBlockHash",
+    "expiresAtBlock",
+    "signature"
+  ],
+  "properties": {
+    "schema": {"const": "pulsetensor/ptauth-envelope/v1"},
+    "protocolVersion": {"const": "1"},
+    "chainId": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+    "nodeRegistry": {"$ref": "#/$defs/address"},
+    "netuid": {"type": "integer", "minimum": 0, "maximum": 65535},
+    "mechid": {"type": "integer", "minimum": 0, "maximum": 65535},
+    "senderOperator": {"$ref": "#/$defs/address"},
+    "receiverOperator": {"$ref": "#/$defs/address"},
+    "messageType": {
+      "enum": [
+        "QUOTE_REQUEST",
+        "QUOTE_RESPONSE",
+        "TASK_ACCEPT",
+        "TASK_EXECUTE",
+        "TASK_STATUS",
+        "OBJECT_FETCH",
+        "EVALUATION_COMMIT",
+        "EVALUATION_REVEAL",
+        "CHALLENGE_SUBMIT"
+      ]
+    },
+    "methodHash": {"$ref": "#/$defs/hash32"},
+    "requestTargetHash": {"$ref": "#/$defs/hash32"},
+    "rawBodyHash": {"$ref": "#/$defs/hash32"},
+    "taskId": {"$ref": "#/$defs/hash32"},
+    "attemptId": {"$ref": "#/$defs/hash32"},
+    "nonce": {"$ref": "#/$defs/uintString"},
+    "referenceBlockNumber": {"$ref": "#/$defs/uintString"},
+    "referenceBlockHash": {"$ref": "#/$defs/hash32"},
+    "expiresAtBlock": {"$ref": "#/$defs/uintString"},
+    "signature": {"$ref": "#/$defs/signature"}
+  },
+  "$defs": {
+    "address": {"type": "string", "pattern": "^0x[0-9a-fA-F]{40}$"},
+    "hash32": {"type": "string", "pattern": "^0x[0-9a-fA-F]{64}$"},
+    "signature": {"type": "string", "pattern": "^0x[0-9a-fA-F]{130}$"},
+    "uintString": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,77})$",
+      "x-pulsetensor-uintBits": 256
+    }
+  }
+}

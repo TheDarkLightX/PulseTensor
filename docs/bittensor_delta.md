@@ -166,10 +166,40 @@ This is the baseline design transfer for PulseTensor.
    - Covered by:
      - `test/PulseTensorCore.inference_emission.t.sol` (`testInferenceFeePolicyRequiresQueuedGovernanceAction`, `testInferenceBatchFeeFundingWithdrawAndFinalizeDistribution`, `testInferenceBatchFeeFundingCannotExceedDeclaredTotal`, `testInferenceFeeWithdrawBlockedAfterFinalize`, `testInferenceSelfChallengeGetsNoBounty`)
 
+## Checked Target Beyond the Current Implementation
+
+The following items are specified and structurally checked, but remain `target_unimplemented`:
+
+12. **Evidence-bearing, requester-funded task market**
+   - One immutable asset per task, with requester and sponsor deposits as the bounty source.
+   - Same-asset provider and evaluator bonds, no price oracle, and no cross-asset netting.
+   - Exact accepted, rejected, default, cancellation, bond, and refund vectors.
+   - Typed EIP-712 task and work receipts plus single-settlement nullifiers.
+
+13. **Task-local quality-to-payout consensus**
+   - Snapshotted evaluator committees and score/evidence commit-reveal.
+   - Deterministic bounded-integer weighted medians, hard floors, quorum, and binary accept/refund payout.
+   - No fallback provider payout when evidence or quorum is missing.
+   - Subjective disagreement is not treated as objective fraud.
+
+14. **Node, discovery, and evidence network**
+   - Offline controller versus constrained hot-operator authority.
+   - Signed node descriptors, direct requester/provider traffic, and a normative `ptauth/1` envelope.
+   - Content-addressed evidence availability and a block-pinned PulseGraph observation layer with no settlement authority.
+   - Cross-language golden-vector and two-implementation interoperability gates.
+
+15. **Property-scoped assurance**
+   - Theorem inventory for per-asset solvency, funding provenance, single settlement, lifecycle, refund liveness, governance snapshots, quality decisions, and authenticated-request replay.
+   - Explicit TCB and evidence ladder from structural checking through bounded models, differential conformance, source proof, and bytecode refinement.
+   - No claim that typed evidence proves an asset's purchasing power or universal AI truth.
+
+Run `make verify-protocol-spec` and `make verify-protocol-spec-checker` for the current design checks. See `docs/protocol/` and `specs/protocol/`. These gates do not claim the planned modules are implemented.
+
 ## Deterministic Evidence Artifacts
 
 - Security manifest: `docs/security/artifact_manifest.security.txt`
 - Release manifest: `docs/security/artifact_manifest.release.txt`
+- `runs/formal/pulsetensor_target_v1.report.json`
 - `runs/security/compiler_bug_report.json`
 - `runs/security/control_matrix_report.json`
 - `runs/slither/slither_report.json`

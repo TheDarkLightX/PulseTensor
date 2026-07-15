@@ -118,13 +118,14 @@ bash scripts/check_tokenomics_goal_frontier.sh
 
 Expected maximal frontier sets:
 
-1. `{G1_SOLVENCY_SAFETY, G2_LIVENESS, G3_CHALLENGE_FAIRNESS, G4_TREASURY_SUSTAINABILITY, G5_ANTI_SYBIL}`
-2. `{G2_LIVENESS, G4_TREASURY_SUSTAINABILITY, G6_AGGRESSIVE_TREASURY_GROWTH}`
+1. `{G1_SOLVENCY_SAFETY, G2_LIVENESS, G3_CHALLENGE_FAIRNESS, G4_MAINTENANCE_FEE_TARGET, G5_ANTI_SYBIL}`
+2. `{G2_LIVENESS, G4_MAINTENANCE_FEE_TARGET, G6_AGGRESSIVE_FEE_CAPTURE}`
 
 Interpretation:
 
-- Keeping aggressive treasury growth as a hard objective conflicts with solvency/fairness/anti-Sybil objectives.
-- Dropping only `G6_AGGRESSIVE_TREASURY_GROWTH` yields the largest safety-oriented realizable set.
+- Keeping aggressive fee capture as a hard objective conflicts with solvency/fairness/anti-Sybil objectives.
+- Dropping only `G6_AGGRESSIVE_FEE_CAPTURE` yields the largest safety-oriented realizable set.
+- `G4_MAINTENANCE_FEE_TARGET` means only that a profile reaches the model's disclosed fee band; it does not prove adequate income or purchasing power.
 - This supports the `balanced` profile as default and `growth` as opt-in when explicitly accepting higher risk.
 
 ## Participant-Regret Invariant Frontier Example
@@ -150,12 +151,12 @@ bash scripts/check_participant_regret_frontier.sh
 Expected maximal frontier sets:
 
 1. `{G1_SOLVENCY_SAFETY, G2_ACCOUNTING_CONSERVATION, G3_NO_RETROACTIVE_FEE_EXTRACTION, G4_PREFINALIZE_ESCROW_EXIT, G5_CHALLENGE_FAIRNESS, G6_BOUNDED_SLASHING, G7_FEE_CAP_CREDIBILITY, G8_TIMELOCKED_GOVERNANCE_PATH}`
-2. `{G9_AGGRESSIVE_TREASURY_GROWTH}`
+2. `{G9_AGGRESSIVE_FEE_CAPTURE}`
 
 Interpretation:
 
-- The full set is unrealizable: maximizing aggressive treasury growth conflicts with user-protective safety invariants.
-- Minimal relaxation from the full set is dropping only `G9_AGGRESSIVE_TREASURY_GROWTH`.
+- The full set is unrealizable: maximizing aggressive fee capture conflicts with user-protective safety invariants.
+- Minimal relaxation from the full set is dropping only `G9_AGGRESSIVE_FEE_CAPTURE`.
 - Recommended default invariant profile is the first maximal set (safety + low participant regret).
 
 ## Outputs and Review

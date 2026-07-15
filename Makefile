@@ -1,4 +1,4 @@
-.PHONY: build test fmt deploy preset synth-goal-frontier synth-tokenomics-frontier synth-participant-regret-frontier ui-install ui-dev ui-build ui-preview ui-hash ui-release ui-ipfs verify-private verify-deploy-signer-safety verify-deploy-rehearsal verify-goal-frontier verify-tokenomics-frontier verify-participant-regret-frontier verify-compiler-bugs verify-deploy-size verify-local-e2e verify-requirements-traceability verify-security-controls verify-security-antipatterns verify-solhint verify-slither-exclusions verify-slither verify-mythril-allowlist verify-mythril verify-fuzz-invariant verify-echidna-harness verify-echidna write-assurance-evidence verify-artifacts-security verify-artifacts-release verify-artifacts-complete verify-security verify-all verify-dev verify-release verify-release-full verify-complete
+.PHONY: build test fmt deploy preset synth-goal-frontier synth-tokenomics-frontier synth-participant-regret-frontier ui-install ui-dev ui-build ui-preview ui-hash ui-release ui-ipfs verify-private verify-deploy-signer-safety verify-deploy-rehearsal verify-goal-frontier verify-tokenomics-frontier verify-participant-regret-frontier verify-protocol-spec verify-protocol-spec-checker verify-compiler-bugs verify-deploy-size verify-local-e2e verify-requirements-traceability verify-security-controls verify-security-antipatterns verify-solhint verify-slither-exclusions verify-slither verify-mythril-allowlist verify-mythril verify-fuzz-invariant verify-echidna-harness verify-echidna write-assurance-evidence verify-artifacts-security verify-artifacts-release verify-artifacts-complete verify-security verify-all verify-dev verify-release verify-release-full verify-complete
 
 build:
 	forge build
@@ -63,6 +63,12 @@ verify-tokenomics-frontier:
 
 verify-participant-regret-frontier:
 	bash scripts/check_participant_regret_frontier.sh
+
+verify-protocol-spec:
+	bash scripts/check_protocol_spec.sh
+
+verify-protocol-spec-checker:
+	bash scripts/test_protocol_spec_checker.sh
 
 verify-compiler-bugs:
 	bash scripts/check_compiler_known_bugs.sh

@@ -1,6 +1,6 @@
 {
   "schema": "pulsetensor/goal-frontier-model/v1",
-  "description": "PulseTensor tokenomics profile tradeoff model across security, liveness, fairness, treasury sustainability, and aggressive treasury growth objectives.",
+  "description": "PulseTensor fee-policy tradeoff model across security, liveness, fairness, a disclosed maintenance-fee target, and aggressive fee capture. It does not model income adequacy or asset purchasing power.",
   "initial_state": "select_profile_sys",
   "states": {
     "select_profile_sys": {
@@ -45,8 +45,8 @@
         "fairness_safe",
         "sybil_resistance_strong",
         "liveness_low",
-        "treasury_yield_low",
-        "treasury_not_aggressive"
+        "maintenance_fee_below_target",
+        "fee_capture_not_aggressive"
       ],
       "transitions": [
         {"action": "stay", "to": "conservative_normal_env"}
@@ -59,8 +59,8 @@
         "fairness_safe",
         "sybil_resistance_strong",
         "liveness_low",
-        "treasury_yield_low",
-        "treasury_not_aggressive"
+        "maintenance_fee_below_target",
+        "fee_capture_not_aggressive"
       ],
       "transitions": [
         {"action": "stay", "to": "conservative_stress_env"}
@@ -74,8 +74,8 @@
         "fairness_safe",
         "sybil_resistance_strong",
         "liveness_ok",
-        "treasury_yield_sustainable",
-        "treasury_not_aggressive"
+        "maintenance_fee_within_target",
+        "fee_capture_not_aggressive"
       ],
       "transitions": [
         {"action": "stay", "to": "balanced_normal_env"}
@@ -88,8 +88,8 @@
         "fairness_safe",
         "sybil_resistance_strong",
         "liveness_ok",
-        "treasury_yield_sustainable",
-        "treasury_not_aggressive"
+        "maintenance_fee_within_target",
+        "fee_capture_not_aggressive"
       ],
       "transitions": [
         {"action": "stay", "to": "balanced_stress_env"}
@@ -100,8 +100,8 @@
       "controller": "environment",
       "labels": [
         "liveness_ok",
-        "treasury_yield_sustainable",
-        "treasury_yield_aggressive",
+        "maintenance_fee_within_target",
+        "fee_capture_aggressive",
         "sybil_risk_high"
       ],
       "transitions": [
@@ -112,8 +112,8 @@
       "controller": "environment",
       "labels": [
         "liveness_ok",
-        "treasury_yield_sustainable",
-        "treasury_yield_aggressive",
+        "maintenance_fee_within_target",
+        "fee_capture_aggressive",
         "sybil_risk_high",
         "fairness_risk_high",
         "solvency_risk_high"
@@ -140,9 +140,9 @@
       "forbidden_labels": ["fairness_risk_high"]
     },
     {
-      "id": "G4_TREASURY_SUSTAINABILITY",
-      "description": "Avoid treasury yield levels that are too low for sustained operations.",
-      "forbidden_labels": ["treasury_yield_low"]
+      "id": "G4_MAINTENANCE_FEE_TARGET",
+      "description": "Avoid profiles below the model's disclosed maintenance-fee target. This is a fee-band label, not an income-adequacy claim.",
+      "forbidden_labels": ["maintenance_fee_below_target"]
     },
     {
       "id": "G5_ANTI_SYBIL",
@@ -150,9 +150,9 @@
       "forbidden_labels": ["sybil_risk_high"]
     },
     {
-      "id": "G6_AGGRESSIVE_TREASURY_GROWTH",
-      "description": "Require aggressive treasury growth posture.",
-      "forbidden_labels": ["treasury_not_aggressive"]
+      "id": "G6_AGGRESSIVE_FEE_CAPTURE",
+      "description": "Require an aggressive protocol fee-capture posture.",
+      "forbidden_labels": ["fee_capture_not_aggressive"]
     }
   ]
 }

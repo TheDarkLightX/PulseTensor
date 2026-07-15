@@ -1,111 +1,149 @@
-# PulseTensor Tokenomics (Game-Theoretic Draft v1)
+# PulseTensor Asset-Flow Economics
 
 ## Scope
 
-PulseTensor is currently PLS-native: incentives are denominated in PLS and paid from explicit pools or escrowed usage fees.
-This avoids bootstrapping risk from launching an unaudited new token too early.
+PulseTensor cannot create dollars, a salary, or guaranteed purchasing power. It can route exact on-chain asset units that participants deposit.
 
-## Roles and Economic Flows
+The current contracts are native-PLS-only. Their emission pools and inference-fee escrow are funded liabilities, not promises of external value. Gas paid to execute PulseChain transactions is not PulseTensor application revenue.
 
-- **Validators / proposers**
-  - Post proposer bonds to commit inference batch roots.
-  - Receive proposer-bond refunds only after unchallenged finalization.
-  - Receive proposer share of finalized batch fees.
-- **Challengers**
-  - Earn challenge bounties from slashed proposer bonds for valid fraud proofs.
-  - Self-challenges receive no bounty.
-- **Miners**
-  - Receive miner-sink fee flow from finalized batch fees.
-- **Treasury**
-  - Receives treasury-sink fee flow from finalized batch fees.
-  - Intended use: protocol R&D, audits, grants, and operations.
+The target work market is specified in:
 
-## Fee Policy Mechanism
+- [`docs/protocol/defi_native_economics_v1.md`](protocol/defi_native_economics_v1.md)
+- [`specs/protocol/pulsetensor_target_v1.json`](../specs/protocol/pulsetensor_target_v1.json)
 
-Inference settlement supports per-`(netuid, mechid)` fee policies:
+Those target mechanisms are not implemented by the current contracts.
 
-- `protocolFeeBps`: protocol cut from funded batch fees.
-- `treasuryFeeBps`: share of protocol cut routed to treasury sink.
-- `minerSink`: recipient of miner portion of protocol cut.
-- `treasurySink`: recipient of treasury portion of protocol cut.
+## Current native-PLS flows
 
-Security/economic constraints:
+### Validators and batch proposers
 
-- Policy changes are governance-queued (timelocked).
-- Queued policy updates are cancellable and expire if not executed within `POLICY_UPDATE_EXPIRY_BLOCKS`.
-- Queued policy updates are bound to the governance identity that queued them (`queuedBy`), so governance rotations must cancel/requeue stale entries before execution.
-- `protocolFeeBps <= 3000` (30% hard cap).
-- Fee policy is snapshotted at batch commit, so governance cannot raise fees after work is posted.
-- Settlement leaves should use domain separation (for example via `computeInferenceLeaf(netuid, mechid, epoch, requestId, resultHash)`) to prevent accidental cross-epoch or cross-request hash reuse.
+- Post native PLS bonds to commit inference batch roots.
+- Receive bond refunds only after unchallenged finalization.
+- Receive the proposer share of actual native PLS funded into a finalized batch.
 
-Distribution on finalization for funded amount `F`:
+### Challengers
 
-- `protocol = F * protocolFeeBps / 10000`
-- `treasury = protocol * treasuryFeeBps / 10000`
-- `miner = protocol - treasury`
-- `proposer = F - protocol`
+- Receive native PLS challenge claims sourced from a slashed proposer bond for a valid supported challenge.
+- Receive no bounty for self-challenge.
 
-## Why This Is Incentive-Aligned
+### Miner and treasury sinks
 
-- **Fraud deterrence**: proposer bond + permissionless challenges penalize invalid commitments.
-- **No retroactive rent extraction**: fee snapshot prevents governance from changing economics after batch commit.
-- **Liveness under dispute**: fee payers can withdraw escrow before finalization; challenged batches do not trap user funds.
-- **Protocol sustainability**: treasury funding grows with real usage, not with inflation assumptions.
-- **Miner retention**: miner sink creates direct demand-side revenue, complementing emission schedules.
+- Receive native PLS claims only from actually funded and finalized batch fees.
+- Receive zero if no one funds batch fees.
 
-## Suggested Initial Parameters
+The current settlement fee policy has:
 
-For early mainnet safety:
+- `protocolFeeBps`, capped at 30%,
+- `treasuryFeeBps`, which divides the protocol cut between treasury and miner sinks,
+- queued and expiring policy updates, and
+- a batch-commit snapshot that prevents a later fee increase from changing that batch.
 
-- `protocolFeeBps = 1200` (12%)
-- `treasuryFeeBps = 3500` (35% of protocol fee, 4.2% of gross)
-- effective split of gross funded fees:
-  - proposer: 88.0%
-  - miner sink: 7.8%
-  - treasury sink: 4.2%
+Current residual gap: a successful batch challenge credits the challenger portion of the slashed bond but only emits the retained portion; it does not credit that retained PLS to a named reserve or claim. The target conservation rule forbids economically unassigned bond value, so the current path needs a separate repair and regression tests.
 
-This keeps service providers strongly incentivized while still generating protocol-native development revenue.
+For actual funded amount `F`:
 
-## Frontier-Derived Recommendation
+```text
+protocol = floor(F * protocolFeeBps / 10000)
+treasury = floor(F * protocolFeeBps * treasuryFeeBps / 10000^2)
+miner = protocol - treasury
+proposer = F - protocol
+```
 
-Tokenomics profile exploration is modeled in:
+These are quantities of native PLS. The equations do not say what those quantities can purchase.
 
-- `configs/formal/pulsetensor_tokenomics_goal_frontier.json`
+## Target requester-and-sponsor bounty market
 
-and synthesized via:
+Target v1 uses exactly one immutable payment asset per task. Multiple sponsors may top up that same asset. Different assets remain different ledgers across tasks.
 
-- `scripts/synthesize_goal_frontier.py`
-- `scripts/check_tokenomics_goal_frontier.sh`
+There is:
+
+- no cross-asset addition,
+- no cross-asset liability netting,
+- no protocol exchange rate,
+- no PLS/USD oracle in settlement,
+- no unfunded credit, and
+- no usage-based mint.
+
+Provider and evaluator bonds use the same `assetId` as the task bounty. Providers choose which assets and quantities to accept. Volatility changes future acceptance and quoting; it does not change base-unit solvency.
+
+### Accepted work
+
+The initial hypothesis is:
+
+| Recipient | Share |
+|---|---:|
+| Provider | 72% |
+| Evaluators | 12% |
+| Subnet builder | 5% |
+| Core maintainer | 5% |
+| Security reserve | 3% |
+| Ecosystem or referral | 3% |
+
+The vector totals exactly 100%. Each contribution is a multiple of 10,000 base units, so its basis-point allocations are exact.
+
+### Valid reviewed rejection
+
+Evaluators receive only the 12% review allocation. Each contributor receives 88% back. Provider, builder, core, security, and ecosystem accepted-work fees are not charged. A low score is not automatically a slashable protocol fault.
+
+### Cancellation, expiry, default, or no quorum
+
+The bounty returns fully to contributors. Objectively defaulted bonds follow a separately snapshotted, same-asset slash vector. Pause cannot block matured refunds, bond resolution, or claims.
+
+## Creator and maintainer flow
+
+The creator may openly receive:
+
+1. a subnet-builder share for accepted work on a subnet they maintain,
+2. a core-maintainer share for accepted work while they hold the disclosed role,
+3. provider rewards for completing funded service or development bounties, and
+4. accepted prefunded maintenance milestones.
+
+These are in-kind bounty and fee claims, not a salary. If accepted externally funded work is zero, every one of these protocol flows is zero.
+
+For asset `a` and interval `W`:
+
+\[
+CoreFlow[a,W] = \sum_{j \in Accepted(W),\ asset(j)=a}
+\frac{coreBps_j \cdot bounty_j}{10{,}000}.
+\]
+
+The protocol reports the result separately for each asset. It does not convert the vector to dollars or assert that it covers off-chain needs.
+
+## Why a new token is not a funding source
+
+A new token can guarantee token units, not demand for them. For a finite mint `m` and externally determined price `p`:
+
+\[
+\inf_{p \ge 0} mp = 0.
+\]
+
+PulseTensor therefore does not need a separate token to launch. PLS already supplies native payment and collateral units. A future token proposal must identify a necessary technical function that PLS, task assets, prefunded reserves, and nontransferable reputation cannot provide. Fundraising by itself is not such a function.
+
+Any finite matching program must be prefunded and asset-local:
+
+\[
+Match[a,t] \le \min(
+ReserveRemaining[a,t],
+\mu[a] ExternalBounty[a,t],
+PerTaskCap[a],
+PerEpochCap[a]).
+\]
+
+No external bounty means no match, and unused reserve remains unissued or unspent.
+
+## Frontier models
+
+The current goal-frontier files explore qualitative tradeoffs among solvency, liveness, bounded maintenance fees, anti-Sybil friction, and aggressive fee capture. Labels in those models are scenario classifications, not a proof that a treasury is economically adequate or that any recipient can survive on its claims.
 
 Run:
 
 ```bash
 make synth-tokenomics-frontier
 make verify-tokenomics-frontier
+make synth-participant-regret-frontier
+make verify-participant-regret-frontier
+make verify-protocol-spec
+make verify-protocol-spec-checker
 ```
 
-Current deterministic frontier result:
-
-1. Safety-oriented maximal set:
-   - `{G1_SOLVENCY_SAFETY, G2_LIVENESS, G3_CHALLENGE_FAIRNESS, G4_TREASURY_SUSTAINABILITY, G5_ANTI_SYBIL}`
-2. Growth-oriented maximal set:
-   - `{G2_LIVENESS, G4_TREASURY_SUSTAINABILITY, G6_AGGRESSIVE_TREASURY_GROWTH}`
-
-Interpretation:
-
-- Full objective set is unrealizable.
-- Minimal relaxation from full set is dropping `G6_AGGRESSIVE_TREASURY_GROWTH`.
-- Therefore, the recommended default remains `balanced`; `growth` should be treated as an explicit risk-accepting mode.
-
-Participant-regret invariants are also explored with:
-
-- `configs/formal/pulsetensor_participant_regret_goal_frontier.json`
-- `scripts/check_participant_regret_frontier.sh`
-
-Result: the maximal low-regret set keeps solvency/accounting safety, timelocked governance, capped fees, no retroactive fee extraction, pre-finalize escrow exits, challenge fairness, and bounded slashing. Aggressive treasury growth is a separate maximal mode and should remain opt-in only.
-
-## Relation to Bittensor-Inspired Design
-
-- Keep Bittensor-style subnet/mechanism incentives and slashing discipline.
-- Add EVM-native settlement fee routing with timelocked governance and explicit caps.
-- Preserve conservative launch posture: use PLS flows first, only add a separate token after sustained product-market usage and additional formal/audit evidence.
+The target protocol checker enforces asset-local accounting, no oracle-dependent settlement, same-asset bonds, exact basis-point vectors, refund paths, policy snapshots, and an explicit unimplemented status. It does not prove the future contracts or an asset's purchasing power.

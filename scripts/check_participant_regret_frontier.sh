@@ -33,7 +33,7 @@ expected_maximal = [
         "G8_TIMELOCKED_GOVERNANCE_PATH",
     ],
     [
-        "G9_AGGRESSIVE_TREASURY_GROWTH",
+        "G9_AGGRESSIVE_FEE_CAPTURE",
     ],
 ]
 
@@ -45,7 +45,7 @@ if actual_maximal != expected_maximal:
         f"actual={actual_maximal}"
     )
 
-expected_relaxations = [["G9_AGGRESSIVE_TREASURY_GROWTH"]]
+expected_relaxations = [["G9_AGGRESSIVE_FEE_CAPTURE"]]
 if summary["minimal_relaxations_from_full"] != expected_relaxations:
     raise SystemExit(
         "unexpected participant-regret minimal relaxations:\n"
