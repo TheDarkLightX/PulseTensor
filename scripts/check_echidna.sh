@@ -42,7 +42,7 @@ run_docker() {
         echidna --version
         forge config --json | python3 -c '\''import json,sys; c=json.load(sys.stdin); print("echidna_compile_profile=" + json.dumps({k:c[k] for k in ("src","solc","optimizer","optimizer_runs","via_ir","evm_version")}, sort_keys=True))'\''
         sha256sum "/root/.svm/'"${SOLC_VERSION}"'/solc-'"${SOLC_VERSION}"'"
-        forge build --force >/dev/null
+        forge build --build-info --skip ./test/** ./script/** --force >/dev/null
         echidna "." \
           --contract "PulseTensorCoreEchidna" \
           --config "test/echidna/echidna.yaml" \
