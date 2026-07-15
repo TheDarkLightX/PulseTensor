@@ -99,8 +99,9 @@ Publish release artifacts to IPFS (dist CID + tarball CID + receipt):
 make ui-ipfs
 ```
 
-`make verify-release` is the canonical merge gate and includes mandatory Echidna.
-It also fail-closes on deploy code-size viability (`scripts/check_deploy_code_size.sh`).
+`make verify-release` is the single canonical merge and pre-deploy assurance gate. It includes mandatory
+Echidna, deploy code-size viability, local live-chain replay, all frontier checks, and a commit-bound evidence
+manifest. `make verify-complete` and `make verify-release-full` are compatibility aliases to the same pipeline.
 
 `make verify-local-e2e` runs a deterministic live-chain local integration flow on fresh Anvil:
 deploys contracts, executes governance queue/execute paths, runs validator commit/reveal, and validates inference
@@ -108,10 +109,6 @@ commit/finalize/settle/claim behavior. Report path: `runs/local_e2e/local_e2e_re
 
 `make verify-requirements-traceability` validates requirement-to-test/function coverage, including boundary-value
 coverage targets, from `specs/formal/requirements_traceability.json`.
-
-`make verify-complete` is the single full-assurance gate: toolchain lock, deploy size viability, release security
-verification, local live-chain E2E replay, goal-frontier checks, tokenomics frontier checks, participant-regret
-frontier checks, and complete artifact freshness validation.
 
 ## Participation Modes
 
@@ -149,7 +146,7 @@ Fast local iteration without full security scans:
 make verify-dev
 ```
 
-Extended release gate (same checks, separate entrypoint for CI profiles):
+Compatibility alias for the canonical release gate:
 
 ```bash
 make verify-release-full
@@ -162,10 +159,10 @@ make ui-build
 make ui-hash
 ```
 
-Optional deep fuzzing (Echidna) inside security gate:
+Run only the digest-pinned Echidna campaign during local investigation:
 
 ```bash
-RUN_ECHIDNA=1 make verify-release
+make verify-echidna
 ```
 
 ## Repo Layout

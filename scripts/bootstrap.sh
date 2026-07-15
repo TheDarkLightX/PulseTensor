@@ -60,7 +60,7 @@ if [[ ! -d "${ROOT_DIR}/.venv" ]]; then
 fi
 
 "${ROOT_DIR}/.venv/bin/pip" install --upgrade pip
-"${ROOT_DIR}/.venv/bin/pip" install slither-analyzer==0.10.4
+"${ROOT_DIR}/.venv/bin/pip" install "slither-analyzer==${SLITHER_VERSION}"
 
 echo "Bootstrap complete"
 echo "Next:"

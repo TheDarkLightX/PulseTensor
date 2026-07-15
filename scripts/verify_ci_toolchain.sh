@@ -37,6 +37,37 @@ require_equal "forge binary digest" "$(sha256sum "$(command -v forge)" | awk '{p
 require_equal "cast binary digest" "$(sha256sum "$(command -v cast)" | awk '{print $1}')" "${CAST_RELEASE_SHA256}"
 require_equal "anvil binary digest" "$(sha256sum "$(command -v anvil)" | awk '{print $1}')" "${ANVIL_RELEASE_SHA256}"
 
+[[ -f "${ROOT_DIR}/lib/forge-std/package.json" ]] || {
+  echo "pinned forge-std dependency not found"
+  exit 1
+}
+require_equal \
+  "forge-std version" \
+  "$(python3 - "${ROOT_DIR}/lib/forge-std/package.json" <<'PY'
+import json
+import sys
+print(json.load(open(sys.argv[1], encoding="utf-8")).get("version", ""))
+PY
+)" \
+  "${FORGE_STD_VERSION#v}"
+forge_std_content_sha256="$(
+  cd "${ROOT_DIR}/lib/forge-std"
+  find . -type f -not -path './.git/*' -print0 \
+    | LC_ALL=C sort -z \
+    | xargs -0 sha256sum \
+    | sha256sum \
+    | awk '{print $1}'
+)"
+require_equal "forge-std content digest" "${forge_std_content_sha256}" "${FORGE_STD_CONTENT_SHA256}"
+[[ -x "${ROOT_DIR}/.venv/bin/python" && -x "${ROOT_DIR}/.venv/bin/slither" ]] || {
+  echo "pinned Slither environment not found; run scripts/bootstrap.sh"
+  exit 1
+}
+require_equal \
+  "Slither top-level version" \
+  "$("${ROOT_DIR}/.venv/bin/python" -c 'import importlib.metadata; print(importlib.metadata.version("slither-analyzer"))')" \
+  "${SLITHER_VERSION}"
+
 forge build >/dev/null
 solc_path="${HOME}/.svm/${SOLC_VERSION}/solc-${SOLC_VERSION}"
 [[ -x "${solc_path}" ]] || {
@@ -48,4 +79,4 @@ require_equal "solc binary digest" "$(sha256sum "${solc_path}" | awk '{print $1}
 # The hosted runner owns the Docker daemon, so its version is evidence rather
 # than a reproducibility claim. Security workloads themselves use image digests.
 echo "docker_host=$(docker --version | head -n 1)"
-echo "CI toolchain verified"
+echo "Exact pinned release components verified"

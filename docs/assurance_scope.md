@@ -10,6 +10,7 @@ This document defines what PulseTensor's current evidence does and does not esta
 | Foundry fuzz tests and invariants | No counterexample was found within the declared run counts, sequence depths, actors, and input generators. | A proof that counterexamples do not exist outside that bounded campaign. |
 | Echidna Boolean properties | When the Echidna gate completes in `property` mode, no counterexample was found within its configured campaign. | Properties outside the harness or an unbounded proof. |
 | Requirements traceability | Required functions, referenced tests, evidence paths, and coverage metadata exist and satisfy the structural policy. | Execution of those tests, validity of the YAML semantics, or refinement to Solidity. |
+| Security control matrix | Required OWASP and EthTrust control IDs, allowed status labels, and referenced repository paths are structurally present. | That a referenced path mitigates the control or that a `mitigated` label is independently established. |
 | Slither, Mythril, Solhint, compiler-bug, and anti-pattern gates | The configured tools found no non-allowlisted issue in their supported rule sets when the recorded run completed. | Absence of all vulnerabilities, economic attacks, or specification defects. |
 | Local Anvil end-to-end replay | The scripted deployment and lifecycle path completes on a fresh local chain. | PulseChain mainnet behavior, network reliability, or operator correctness. |
 
@@ -17,8 +18,17 @@ The required `Contract Assurance` workflow runs the deploy-profile tests, the
 security analyzers, an actual digest-pinned Echidna campaign, the local
 lifecycle, and the formal-frontier regression checks. It retains a
 commit-bound evidence manifest. The local `make verify-release` command remains
-the canonical release gate because it additionally enforces the operator's
-exact host-toolchain lock.
+the canonical release gate because it runs the same release profile plus the
+local lifecycle and frontier checks. Both paths enforce exact hashes for
+Foundry, solc, and forge-std. The host Docker daemon is recorded rather than
+claimed reproducible; Mythril and Echidna workloads use digest-pinned images.
+
+Slither's top-level version is pinned, but its Python transitive environment is
+not yet hash-locked. Slither detector and Mythril SWC exclusions are currently
+class-wide rather than finding-scoped; a new occurrence under an excluded class
+could be missed. These are explicit residual gaps, not evidence that the
+excluded vulnerability classes are absent. Replace them with fingerprinted,
+path-specific findings and expiring rationales before a mainnet assurance claim.
 
 ## Formal status
 
