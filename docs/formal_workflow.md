@@ -39,10 +39,25 @@ Required outcome:
 - Maintain bounded protocol-state specifications in `specs/formal/`.
 - Keep implementation and tests aligned with these specifications.
 - Any specification change must be accompanied by matching contract/test updates.
+- Keep still-unimplemented target designs under `specs/protocol/`, with explicit implementation status, rather than presenting them as current contract specifications.
 
 Required outcome:
 
 - No spec-to-implementation drift for promoted protocol behavior.
+
+## Gate 3A: Target Protocol Design Consistency
+
+- Run:
+  - `make verify-protocol-spec`
+  - `make verify-protocol-spec-checker`
+
+Required outcome:
+
+- The target manifest, canonical schema digests, fixtures, versioned economics, lifecycle, assurance modes, ordered typed domains, and theorem inventory pass structural checks.
+- The invalid-mutation suite proves the checker rejects broken allocation sums, cross-asset netting, oracle-dependent settlement, mixed-asset bonds, missing refund paths, sponsor-refund redirection, governance seizure, relaxed required fields, weakened signed domains, forged asset IDs, uint256 overflow, incorrect bond principals or confiscation, missing submission/challenge timeouts, inconsistent decision records, signature-derived nullifiers, unsupported implementation claims, duplicate IDs, and invalid funding quantum.
+- Planned modules remain `target_unimplemented` until source, test, and requirement evidence is added.
+
+This gate is checked target-design consistency. It is not a state-space model check, Solidity implementation test, economic-demand proof, or refinement theorem.
 
 ## Gate 4: Requirements Traceability + BVA Coverage
 
@@ -103,6 +118,12 @@ Required outcome:
 - Requirements/BVA mapping gate:
   - `make verify-requirements-traceability`
   - Validates requirement-to-function/test mapping and per-contract BVA minimums.
+- Target protocol design gate:
+  - `make verify-protocol-spec`
+  - Validates the target manifest and writes `runs/formal/pulsetensor_target_v1.report.json`.
+- Target checker mutation gate:
+  - `make verify-protocol-spec-checker`
+  - Rejects named invalid target mutations and writes no promoted implementation claim.
 - Design-space exploration check (recommended pre-promotion for mechanism/policy changes):
   - `make verify-goal-frontier`
   - Verifies deterministic frontier synthesis behavior on the reference model.
@@ -130,6 +151,12 @@ Required outcome:
 - `scripts/check_requirements_traceability.sh`
   - Exit `0`: requirements matrix schema, function coverage, test linkage, and BVA minimums pass; report written to `runs/security/requirements_traceability_report.json`.
   - Exit non-zero: malformed matrix, missing paths/tests/functions, uncovered required function, or insufficient BVA coverage.
+- `scripts/check_protocol_spec.py`
+  - Exit `0`: target manifest, schemas/examples, asset isolation, payout sums, lifecycle/refunds, typed domains, governance bounds, and proof-obligation recipes pass; deterministic report written unless disabled.
+  - Exit non-zero: malformed target, missing references, inconsistent schema/example, unsafe asset/economic policy, lifecycle defect, weakened domain, unsupported implementation claim, or invalid proof inventory.
+- `scripts/test_protocol_spec_checker.sh`
+  - Exit `0`: every named invalid mutation is rejected and two baseline reports are byte-identical.
+  - Exit non-zero: baseline invalid, nondeterministic report, or any invalid mutation accepted.
 - `scripts/check_local_e2e.sh`
   - Exit `0`: fresh local Anvil deployment + deterministic E2E flow passes, and `runs/local_e2e/local_e2e_report.json` is produced.
   - Exit non-zero: any local integration assertion or deployment/runtime step fails.
@@ -180,3 +207,4 @@ A protocol change is complete only if:
 19. External audit packet and scope are current (`docs/security/external_audit_plan.md`).
 20. Governance queue incident runbook, staged launch controls, committee charter, signer checklist, and multisig operations standard are current (`docs/security/governance_queue_runbook.md`, `docs/security/launch_controls.md`, `docs/security/governance_committee_charter.md`, `docs/security/signer_selection_checklist.md`, `docs/security/multisig_operations.md`).
 21. Requirements traceability matrix is current and passes coverage checks (`specs/formal/requirements_traceability.json`, `scripts/check_requirements_traceability.sh`).
+22. Any affected unimplemented target design is updated under `specs/protocol/`, remains accurately status-labeled, and passes both target-spec gates.

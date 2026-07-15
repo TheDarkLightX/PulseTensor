@@ -1,6 +1,6 @@
 {
   "schema": "pulsetensor/goal-frontier-model/v1",
-  "description": "PulseTensor safety + participant-regret tradeoff model. Captures the tension between aggressive treasury posture and user-protective invariants.",
+  "description": "PulseTensor safety and participant-regret tradeoff model. Captures the tension between aggressive fee capture and user-protective invariants; it makes no income-adequacy claim.",
   "initial_state": "select_regime_sys",
   "states": {
     "select_regime_sys": {
@@ -22,8 +22,8 @@
         "slash_bounded",
         "fee_cap_respected",
         "governance_timelock_live",
-        "treasury_growth_sustainable",
-        "treasury_not_aggressive"
+        "maintenance_fee_within_target",
+        "fee_capture_not_aggressive"
       ],
       "transitions": [
         {"action": "normal_market", "to": "balanced_env"},
@@ -33,8 +33,8 @@
     "growth_env": {
       "controller": "environment",
       "labels": [
-        "treasury_growth_aggressive",
-        "treasury_growth_sustainable",
+        "fee_capture_aggressive",
+        "maintenance_fee_within_target",
         "solvency_risk_high",
         "accounting_mismatch_risk_high",
         "fee_snapshot_risk_high",
@@ -92,9 +92,9 @@
       "forbidden_labels": ["governance_timelock_missing"]
     },
     {
-      "id": "G9_AGGRESSIVE_TREASURY_GROWTH",
-      "description": "Require an aggressive treasury growth posture.",
-      "forbidden_labels": ["treasury_not_aggressive"]
+      "id": "G9_AGGRESSIVE_FEE_CAPTURE",
+      "description": "Require an aggressive protocol fee-capture posture.",
+      "forbidden_labels": ["fee_capture_not_aggressive"]
     }
   ]
 }

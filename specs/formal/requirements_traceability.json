@@ -1,6 +1,6 @@
 {
   "schema": "pulsetensor/requirements-traceability/v1",
-  "as_of_utc": "2026-02-28",
+  "as_of_utc": "2026-07-15",
   "contracts": [
     {
       "id": "core",

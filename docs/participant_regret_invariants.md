@@ -22,7 +22,7 @@ Selected frontier goals:
 - `G7_FEE_CAP_CREDIBILITY`
 - `G8_TIMELOCKED_GOVERNANCE_PATH`
 
-`G9_AGGRESSIVE_TREASURY_GROWTH` is intentionally excluded by default because it conflicts with the above set in the current model.
+`G9_AGGRESSIVE_FEE_CAPTURE` is intentionally excluded by default because it conflicts with the above set in the current model.
 
 ## Goal-to-Requirement Mapping
 
@@ -78,5 +78,5 @@ Expected deterministic result:
 
 - Maximal sets:
   - `G1..G8` (safety + low-regret profile)
-  - `G9` (aggressive treasury-only profile)
+  - `G9` (aggressive fee-capture-only profile)
 - Minimal relaxation from full set: drop only `G9`.

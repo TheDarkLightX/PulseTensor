@@ -1,0 +1,125 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pulsetensor.org/schemas/task-spec-v1.json",
+  "title": "PulseTensor TaskSpecV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "taskVersion",
+    "chainId",
+    "settlementContract",
+    "taskId",
+    "payer",
+    "requester",
+    "requesterRefundRecipient",
+    "provider",
+    "netuid",
+    "mechid",
+    "mechanismVersion",
+    "taskType",
+    "inputCommitment",
+    "inputAvailabilityPolicyHash",
+    "canonicalSemanticsId",
+    "outputSchemaHash",
+    "assuranceMode",
+    "verifierPolicyHash",
+    "evaluationPolicyHash",
+    "evaluatorCommitteeRoot",
+    "paymentAsset",
+    "contributionRoot",
+    "fundedAmount",
+    "providerBondAmount",
+    "evaluatorBondAmount",
+    "feeScheduleHash",
+    "deadlines",
+    "payerNonce",
+    "payerAuthorization"
+  ],
+  "properties": {
+    "schema": {"const": "pulsetensor/task-spec/v1"},
+    "taskVersion": {"const": "1"},
+    "chainId": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+    "settlementContract": {"$ref": "#/$defs/address"},
+    "taskId": {"$ref": "#/$defs/hash32"},
+    "payer": {"$ref": "#/$defs/address"},
+    "requester": {"$ref": "#/$defs/address"},
+    "requesterRefundRecipient": {"$ref": "#/$defs/address"},
+    "provider": {"$ref": "#/$defs/address"},
+    "netuid": {"type": "integer", "minimum": 0, "maximum": 65535},
+    "mechid": {"type": "integer", "minimum": 0, "maximum": 65535},
+    "mechanismVersion": {"type": "integer", "minimum": 1, "maximum": 4294967295},
+    "taskType": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{0,63}$"},
+    "inputCommitment": {"$ref": "#/$defs/hash32"},
+    "inputAvailabilityPolicyHash": {"$ref": "#/$defs/hash32"},
+    "canonicalSemanticsId": {"$ref": "#/$defs/hash32"},
+    "outputSchemaHash": {"$ref": "#/$defs/hash32"},
+    "assuranceMode": {"$ref": "#/$defs/assuranceMode"},
+    "verifierPolicyHash": {"$ref": "#/$defs/hash32"},
+    "evaluationPolicyHash": {"$ref": "#/$defs/hash32"},
+    "evaluatorCommitteeRoot": {"$ref": "#/$defs/hash32"},
+    "paymentAsset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assetId", "kind", "chainId", "token"],
+      "properties": {
+        "assetId": {
+          "$ref": "#/$defs/hash32",
+          "description": "keccak256(abi.encode(uint256(chainId), uint8(assetKindCode), address(token))), with the asset-kind codes fixed below"
+        },
+        "kind": {
+          "enum": ["NATIVE_PLS", "EXACT_ERC20"],
+          "x-pulsetensor-enumCodes": {"NATIVE_PLS": 0, "EXACT_ERC20": 1}
+        },
+        "chainId": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+        "token": {"$ref": "#/$defs/address"}
+      }
+    },
+    "contributionRoot": {"$ref": "#/$defs/hash32"},
+    "fundedAmount": {"$ref": "#/$defs/quantizedAmount"},
+    "providerBondAmount": {"$ref": "#/$defs/quantizedAmount"},
+    "evaluatorBondAmount": {"$ref": "#/$defs/quantizedAmount"},
+    "feeScheduleHash": {"$ref": "#/$defs/hash32"},
+    "deadlines": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assignment",
+        "submission",
+        "evaluationCommit",
+        "evaluationReveal",
+        "challenge",
+        "claim"
+      ],
+      "properties": {
+        "assignment": {"$ref": "#/$defs/uintString"},
+        "submission": {"$ref": "#/$defs/uintString"},
+        "evaluationCommit": {"$ref": "#/$defs/uintString"},
+        "evaluationReveal": {"$ref": "#/$defs/uintString"},
+        "challenge": {"$ref": "#/$defs/uintString"},
+        "claim": {"$ref": "#/$defs/uintString"}
+      }
+    },
+    "payerNonce": {"$ref": "#/$defs/uintString"},
+    "payerAuthorization": {"$ref": "#/$defs/signature"}
+  },
+  "$defs": {
+    "address": {"type": "string", "pattern": "^0x[0-9a-fA-F]{40}$"},
+    "hash32": {"type": "string", "pattern": "^0x[0-9a-fA-F]{64}$"},
+    "signature": {"type": "string", "pattern": "^0x[0-9a-fA-F]{130}$"},
+    "uintString": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,77})$",
+      "x-pulsetensor-uintBits": 256
+    },
+    "quantizedAmount": {
+      "type": "string",
+      "pattern": "^[1-9][0-9]{4,77}$",
+      "x-pulsetensor-multipleOfBaseUnits": 10000,
+      "x-pulsetensor-uintBits": 256
+    },
+    "assuranceMode": {
+      "enum": ["EXACT", "OPTIMISTIC", "STATISTICAL", "ATTESTED", "REQUESTER_ACCEPTED"]
+    }
+  }
+}

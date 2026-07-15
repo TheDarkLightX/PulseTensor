@@ -26,13 +26,13 @@ expected_maximal = [
         "G1_SOLVENCY_SAFETY",
         "G2_LIVENESS",
         "G3_CHALLENGE_FAIRNESS",
-        "G4_TREASURY_SUSTAINABILITY",
+        "G4_MAINTENANCE_FEE_TARGET",
         "G5_ANTI_SYBIL",
     ],
     [
         "G2_LIVENESS",
-        "G4_TREASURY_SUSTAINABILITY",
-        "G6_AGGRESSIVE_TREASURY_GROWTH",
+        "G4_MAINTENANCE_FEE_TARGET",
+        "G6_AGGRESSIVE_FEE_CAPTURE",
     ],
 ]
 
@@ -44,7 +44,7 @@ if actual_maximal != expected_maximal:
         f"actual={actual_maximal}"
     )
 
-expected_relaxations = [["G6_AGGRESSIVE_TREASURY_GROWTH"]]
+expected_relaxations = [["G6_AGGRESSIVE_FEE_CAPTURE"]]
 if summary["minimal_relaxations_from_full"] != expected_relaxations:
     raise SystemExit(
         "unexpected tokenomics minimal relaxations:\n"

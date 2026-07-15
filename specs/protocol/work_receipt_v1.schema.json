@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pulsetensor.org/schemas/work-receipt-v1.json",
+  "title": "PulseTensor WorkReceiptV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "receiptVersion",
+    "chainId",
+    "settlementContract",
+    "taskId",
+    "attemptId",
+    "taskSpecHash",
+    "provider",
+    "inputCommitment",
+    "outputCommitment",
+    "evidenceRoot",
+    "availabilityAttestationRoot",
+    "canonicalSemanticsId",
+    "assuranceMode",
+    "proofSystemId",
+    "verifierId",
+    "modelArtifactHash",
+    "runtimeArtifactHash",
+    "tcbManifestHash",
+    "startedAtBlock",
+    "submittedAtBlock",
+    "providerNonce",
+    "providerSignature"
+  ],
+  "properties": {
+    "schema": {"const": "pulsetensor/work-receipt/v1"},
+    "receiptVersion": {"const": "1"},
+    "chainId": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+    "settlementContract": {"$ref": "#/$defs/address"},
+    "taskId": {"$ref": "#/$defs/hash32"},
+    "attemptId": {"$ref": "#/$defs/hash32"},
+    "taskSpecHash": {"$ref": "#/$defs/hash32"},
+    "provider": {"$ref": "#/$defs/address"},
+    "inputCommitment": {"$ref": "#/$defs/hash32"},
+    "outputCommitment": {"$ref": "#/$defs/hash32"},
+    "evidenceRoot": {"$ref": "#/$defs/hash32"},
+    "availabilityAttestationRoot": {"$ref": "#/$defs/hash32"},
+    "canonicalSemanticsId": {"$ref": "#/$defs/hash32"},
+    "assuranceMode": {"$ref": "#/$defs/assuranceMode"},
+    "proofSystemId": {"$ref": "#/$defs/hash32"},
+    "verifierId": {"$ref": "#/$defs/hash32"},
+    "modelArtifactHash": {"$ref": "#/$defs/hash32"},
+    "runtimeArtifactHash": {"$ref": "#/$defs/hash32"},
+    "tcbManifestHash": {"$ref": "#/$defs/hash32"},
+    "startedAtBlock": {"$ref": "#/$defs/uintString"},
+    "submittedAtBlock": {"$ref": "#/$defs/uintString"},
+    "providerNonce": {"$ref": "#/$defs/uintString"},
+    "providerSignature": {"$ref": "#/$defs/signature"}
+  },
+  "$defs": {
+    "address": {"type": "string", "pattern": "^0x[0-9a-fA-F]{40}$"},
+    "hash32": {"type": "string", "pattern": "^0x[0-9a-fA-F]{64}$"},
+    "signature": {"type": "string", "pattern": "^0x[0-9a-fA-F]{130}$"},
+    "uintString": {
+      "type": "string",
+      "pattern": "^(0|[1-9][0-9]{0,77})$",
+      "x-pulsetensor-uintBits": 256
+    },
+    "assuranceMode": {
+      "enum": ["EXACT", "OPTIMISTIC", "STATISTICAL", "ATTESTED", "REQUESTER_ACCEPTED"]
+    }
+  }
+}

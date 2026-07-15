@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://pulsetensor.org/schemas/decision-record-v1.json",
+  "title": "PulseTensor DecisionRecordV1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "decisionVersion",
+    "chainId",
+    "taskMarket",
+    "taskId",
+    "taskSpecHash",
+    "receiptHash",
+    "assuranceMode",
+    "outcome",
+    "reasonCode",
+    "bountyVectorId",
+    "providerBondVectorId",
+    "providerBondDispositionEvidenceHash",
+    "evaluatorBondDispositionRoot",
+    "resolverAuthority",
+    "resolverPolicyHash",
+    "resolverEvidenceHash",
+    "challengeRecordHash",
+    "decidedAtBlock"
+  ],
+  "properties": {
+    "schema": {"const": "pulsetensor/decision-record/v1"},
+    "decisionVersion": {"const": "1"},
+    "chainId": {"type": "integer", "minimum": 1, "maximum": 9007199254740991},
+    "taskMarket": {"$ref": "#/$defs/address"},
+    "taskId": {"$ref": "#/$defs/hash32"},
+    "taskSpecHash": {"$ref": "#/$defs/hash32"},
+    "receiptHash": {"$ref": "#/$defs/hash32"},
+    "assuranceMode": {"enum": ["EXACT", "OPTIMISTIC", "STATISTICAL", "ATTESTED", "REQUESTER_ACCEPTED"]},
+    "outcome": {"enum": ["FINAL_ACCEPT", "FINAL_REJECT", "FULL_REFUND"]},
+    "reasonCode": {
+      "enum": [
+        "ACCEPTED_BY_SNAPSHOTTED_POLICY",
+        "REJECTED_BY_SNAPSHOTTED_POLICY",
+        "OBJECTIVE_PROVIDER_FAULT_PROVED",
+        "CANCELLED_BEFORE_ASSIGNMENT",
+        "ASSIGNMENT_EXPIRED",
+        "PROVIDER_SUBMISSION_DEFAULT",
+        "EVALUATION_OR_DIRECT_RESOLUTION_TIMEOUT",
+        "CHALLENGE_RESOLUTION_TIMEOUT"
+      ]
+    },
+    "bountyVectorId": {"enum": ["ACCEPTED_BOUNTY", "REJECTED_REVIEWED_BOUNTY", "FULL_REFUND_BOUNTY"]},
+    "providerBondVectorId": {"enum": ["NONE", "VALID_PROVIDER_BOND", "PROVABLE_PROVIDER_FAULT_BOND"]},
+    "providerBondDispositionEvidenceHash": {"$ref": "#/$defs/hash32"},
+    "evaluatorBondDispositionRoot": {"$ref": "#/$defs/hash32"},
+    "resolverAuthority": {"$ref": "#/$defs/address"},
+    "resolverPolicyHash": {"$ref": "#/$defs/hash32"},
+    "resolverEvidenceHash": {"$ref": "#/$defs/hash32"},
+    "challengeRecordHash": {"$ref": "#/$defs/hash32"},
+    "decidedAtBlock": {"$ref": "#/$defs/uintString"}
+  },
+  "$defs": {
+    "address": {"type": "string", "pattern": "^0x[0-9a-fA-F]{40}$"},
+    "hash32": {"type": "string", "pattern": "^0x[0-9a-fA-F]{64}$"},
+    "uintString": {"type": "string", "pattern": "^(0|[1-9][0-9]{0,77})$", "x-pulsetensor-uintBits": 256}
+  }
+}

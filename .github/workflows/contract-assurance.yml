@@ -50,6 +50,9 @@ jobs:
       - name: Validate Echidna gate against mutations
         run: make verify-echidna-harness
 
+      - name: Validate target protocol checker against mutations
+        run: make verify-protocol-spec-checker
+
       - name: Test deployment-profile bytecode
         run: FOUNDRY_OPTIMIZER_RUNS=1 forge test
 

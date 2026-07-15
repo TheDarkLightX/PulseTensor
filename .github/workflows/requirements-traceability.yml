@@ -22,9 +22,17 @@ jobs:
       - name: Run requirements traceability gate
         run: make verify-requirements-traceability
 
+      - name: Validate target protocol specification
+        run: make verify-protocol-spec
+
+      - name: Mutation-test target protocol checker
+        run: make verify-protocol-spec-checker
+
       - name: Upload traceability report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: requirements-traceability-report
-          path: runs/security/requirements_traceability_report.json
+          path: |
+            runs/security/requirements_traceability_report.json
+            runs/formal/pulsetensor_target_v1.report.json
