@@ -18,6 +18,7 @@ OUT_DIR="${OUT_DIR}" \
 ALLOW_STALE_BUG_DB="${ALLOW_STALE_BUG_DB}" \
 python3 - <<'PY'
 import json
+import datetime
 import os
 import pathlib
 import re
@@ -235,7 +236,7 @@ violations = [item for item in applicable if str(item.get("severity", "unknown")
 
 report = {
     "schema": "pulsetensor/compiler-bug-report/v1",
-    "as_of_utc": "2026-02-22",
+    "as_of_utc": datetime.datetime.now(datetime.timezone.utc).date().isoformat(),
     "solc_version": solc_version,
     "min_solc_version": min_solc_version,
     "via_ir": via_ir,

@@ -49,7 +49,7 @@ jq -n \
     schema: $schema,
     commit: $commit,
     tree_state: $tree_state,
-    profile: {solc: "0.8.34", optimizer: true, optimizer_runs: 1, via_ir: true, evm: "paris"},
+    profile: {solc: "0.8.36", optimizer: true, optimizer_runs: 1, via_ir: true, evm: "paris"},
     tools: {forge: $forge, solc: $solc, solc_sha256: $solc_sha256, python: $python, docker: $docker, solhint: $solhint},
     inputs: {
       tracked_files_sha256: $tracked_digest,

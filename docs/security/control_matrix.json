@@ -262,7 +262,7 @@
     }
   ],
   "solidity_compiler_policy": {
-    "min_solc_version": "0.8.34",
+    "min_solc_version": "0.8.36",
     "disallow_known_bugs": true,
     "fail_on_low_severity": true,
     "bugs_source": "https://raw.githubusercontent.com/ethereum/solidity/develop/docs/"
