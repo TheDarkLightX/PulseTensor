@@ -2,6 +2,7 @@
 set -euo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+source "${ROOT_DIR}/scripts/toolchain.lock"
 CONTRACT_PATH="test/echidna/PulseTensorCoreEchidna.sol"
 CONTRACT_NAME="PulseTensorCoreEchidna"
 CONFIG_PATH="test/echidna/echidna.yaml"
@@ -9,7 +10,7 @@ OUT_DIR="${ROOT_DIR}/runs/security"
 ECHIDNA_LOG_PATH="${OUT_DIR}/echidna.log"
 ECHIDNA_SEED="${ECHIDNA_SEED:-1}"
 ECHIDNA_WORKERS="${ECHIDNA_WORKERS:-1}"
-ECHIDNA_IMAGE="${ECHIDNA_IMAGE:-ghcr.io/crytic/echidna/echidna:latest}"
+ECHIDNA_IMAGE="${ECHIDNA_IMAGE_OVERRIDE:-${ECHIDNA_IMAGE}}"
 ECHIDNA_DOCKER_NETWORK="${ECHIDNA_DOCKER_NETWORK:-bridge}"
 
 run_local() {
@@ -39,6 +40,7 @@ run_docker() {
 
 pushd "${ROOT_DIR}" >/dev/null
 mkdir -p "${OUT_DIR}"
+bash "${ROOT_DIR}/scripts/check_echidna_harness.sh"
 if command -v echidna >/dev/null 2>&1; then
   run_local
 elif command -v docker >/dev/null 2>&1; then

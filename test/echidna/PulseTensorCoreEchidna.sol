@@ -24,13 +24,17 @@ contract EchidnaStakeActor {
         core.commitWeights(netuid, commitment);
     }
 
-    function revealWeights(PulseTensorCore core, uint16 netuid, uint64 epoch, bytes32 weightsHash, bytes32 salt) external {
+    function revealWeights(PulseTensorCore core, uint16 netuid, uint64 epoch, bytes32 weightsHash, bytes32 salt)
+        external
+    {
         core.revealWeights(netuid, epoch, weightsHash, salt);
     }
 
     function challengeExpiredCommit(PulseTensorCore core, uint16 netuid, uint64 epoch, address validator) external {
         core.challengeExpiredCommit(netuid, epoch, validator);
     }
+
+    receive() external payable {}
 }
 
 contract PulseTensorCoreEchidna {
@@ -38,6 +42,16 @@ contract PulseTensorCoreEchidna {
     EchidnaStakeActor internal actorA;
     EchidnaStakeActor internal actorB;
     uint16 internal netuid;
+
+    struct RevealPlan {
+        uint64 epoch;
+        bytes32 weightsHash;
+        bytes32 salt;
+        bool exists;
+    }
+
+    RevealPlan internal revealPlanA;
+    RevealPlan internal revealPlanB;
 
     constructor() payable {
         core = new PulseTensorCore();
@@ -73,11 +87,15 @@ contract PulseTensorCoreEchidna {
 
     function _actRemoveStake(EchidnaStakeActor actor, uint96 amountRaw) internal {
         uint256 currentStake = core.stakeOf(netuid, address(actor));
-        if (currentStake == 0) {
+        uint256 lockedStake;
+        if (core.isValidator(netuid, address(actor))) {
+            (,,,,, lockedStake,) = core.subnets(netuid);
+        }
+        if (currentStake <= lockedStake) {
             return;
         }
 
-        uint256 amount = uint256(amountRaw) % currentStake + 1;
+        uint256 amount = uint256(amountRaw) % (currentStake - lockedStake) + 1;
         try actor.removeStake(core, netuid, amount) {} catch {}
     }
 
@@ -97,41 +115,111 @@ contract PulseTensorCoreEchidna {
         try actorB.unregisterValidator(core, netuid) {} catch {}
     }
 
-    function act_commitA(bytes32 commitment) external {
-        _actCommit(actorA, commitment);
+    function act_commitA(bytes32 seed) external {
+        _actCommit(actorA, seed, true);
     }
 
-    function act_commitB(bytes32 commitment) external {
-        _actCommit(actorB, commitment);
+    function act_commitB(bytes32 seed) external {
+        _actCommit(actorB, seed, false);
     }
 
-    function _actCommit(EchidnaStakeActor actor, bytes32 commitment) internal {
-        if (!core.canValidate(netuid, address(actor))) {
+    function _actCommit(EchidnaStakeActor actor, bytes32 seed, bool isActorA) internal {
+        if (!core.canValidate(netuid, address(actor)) || core.activeCommitEpoch(netuid, address(actor)) != 0) {
             return;
         }
+
+        uint64 epoch = core.currentEpoch(netuid);
+        bytes32 weightsHash = keccak256(abi.encode("echidna-weights", seed, address(actor), epoch));
+        bytes32 salt = keccak256(abi.encode("echidna-salt", seed, address(actor), epoch));
+        bytes32 commitment = keccak256(
+            abi.encode(weightsHash, salt, address(actor), netuid, epoch, block.chainid, address(core), uint32(1))
+        );
+
         try actor.commitWeights(core, netuid, commitment) {} catch {}
+
+        if (core.activeCommitEpoch(netuid, address(actor)) == epoch + 1) {
+            RevealPlan memory nextPlan = RevealPlan({epoch: epoch, weightsHash: weightsHash, salt: salt, exists: true});
+            if (isActorA) {
+                revealPlanA = nextPlan;
+            } else {
+                revealPlanB = nextPlan;
+            }
+        }
     }
 
-    function act_revealA(uint64 epoch, bytes32 weightsHash, bytes32 salt) external {
-        _actReveal(actorA, epoch, weightsHash, salt);
+    function act_revealA() external {
+        _actReveal(actorA, true);
     }
 
-    function act_revealB(uint64 epoch, bytes32 weightsHash, bytes32 salt) external {
-        _actReveal(actorB, epoch, weightsHash, salt);
+    function act_revealB() external {
+        _actReveal(actorB, false);
     }
 
-    function _actReveal(EchidnaStakeActor actor, uint64 epoch, bytes32 weightsHash, bytes32 salt) internal {
-        try actor.revealWeights(core, netuid, epoch, weightsHash, salt) {} catch {}
+    function _actReveal(EchidnaStakeActor actor, bool isActorA) internal {
+        RevealPlan memory plan = isActorA ? revealPlanA : revealPlanB;
+        if (!plan.exists) {
+            return;
+        }
+
+        try actor.revealWeights(core, netuid, plan.epoch, plan.weightsHash, plan.salt) {
+            if (isActorA) {
+                delete revealPlanA;
+            } else {
+                delete revealPlanB;
+            }
+        } catch {}
     }
 
-    function act_challengeA(uint64 epoch, bool targetActorA) external {
-        address target = targetActorA ? address(actorA) : address(actorB);
-        try actorA.challengeExpiredCommit(core, netuid, epoch, target) {} catch {}
+    function act_challengeA(bool targetActorA) external {
+        _actChallenge(actorA, targetActorA);
     }
 
-    function act_challengeB(uint64 epoch, bool targetActorA) external {
-        address target = targetActorA ? address(actorA) : address(actorB);
-        try actorB.challengeExpiredCommit(core, netuid, epoch, target) {} catch {}
+    function act_challengeB(bool targetActorA) external {
+        _actChallenge(actorB, targetActorA);
+    }
+
+    function _actChallenge(EchidnaStakeActor challenger, bool targetActorA) internal {
+        EchidnaStakeActor targetActor = targetActorA ? actorA : actorB;
+        address target = address(targetActor);
+        uint64 activeEpochPlusOne = core.activeCommitEpoch(netuid, target);
+        if (activeEpochPlusOne == 0) {
+            return;
+        }
+
+        uint64 epoch = activeEpochPlusOne - 1;
+        try challenger.challengeExpiredCommit(core, netuid, epoch, target) {
+            if (targetActorA) {
+                delete revealPlanA;
+            } else {
+                delete revealPlanB;
+            }
+        } catch {}
+    }
+
+    function coreContract() external view returns (PulseTensorCore) {
+        return core;
+    }
+
+    function actorAAddress() external view returns (address) {
+        return address(actorA);
+    }
+
+    function actorBAddress() external view returns (address) {
+        return address(actorB);
+    }
+
+    function subnetId() external view returns (uint16) {
+        return netuid;
+    }
+
+    function plannedRevealA() external view returns (uint64 epoch, bytes32 weightsHash, bytes32 salt, bool exists) {
+        RevealPlan memory plan = revealPlanA;
+        return (plan.epoch, plan.weightsHash, plan.salt, plan.exists);
+    }
+
+    function plannedRevealB() external view returns (uint64 epoch, bytes32 weightsHash, bytes32 salt, bool exists) {
+        RevealPlan memory plan = revealPlanB;
+        return (plan.epoch, plan.weightsHash, plan.salt, plan.exists);
     }
 
     function echidna_total_stake_conserved() external view returns (bool) {

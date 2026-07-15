@@ -1,4 +1,4 @@
-testMode: assertion
+testMode: property
 testLimit: 8000
 seqLen: 30
 workers: 1

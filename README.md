@@ -2,6 +2,8 @@
 
 PulseTensor is a Pulsechain-native decentralized AI protocol inspired by Bittensor, with fail-closed contract verification gates as the default workflow.
 
+PulseTensor currently has executable Solidity tests, fuzz/invariant campaigns, and security gates plus formalized state-model specifications. It does **not** yet have a machine-checked refinement proof from those specifications to Solidity or deployed bytecode. See [`docs/assurance_scope.md`](docs/assurance_scope.md) for the exact assurance boundary.
+
 ## Goals
 
 - Bring agent networks and decentralized AI coordination to Pulsechain.
@@ -182,6 +184,7 @@ RUN_ECHIDNA=1 make verify-release
 
 - `docs/bittensor_delta.md`: what we keep vs improve from Bittensor.
 - `docs/formal_workflow.md`: required verification gates.
+- `docs/assurance_scope.md`: exact verified, tested, specified, and still-unproved claims.
 - `specs/formal/requirements_traceability.json`: requirement-to-function/test traceability matrix with explicit BVA coverage.
 - `docs/frontend_decentralization.md`: host-anywhere frontend model and trust surface.
 - `docs/roadmap.md`: phased build plan.
