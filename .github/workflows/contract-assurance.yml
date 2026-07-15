@@ -1,0 +1,92 @@
+name: Contract Assurance
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: contract-assurance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-evidence:
+    name: Required assurance evidence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout reviewed commit
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Setup exact Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12.3"
+
+      - name: Setup exact Foundry release
+        uses: foundry-rs/foundry-toolchain@b00af27efadbc7b4ca8b82abbd903b17cc874d2a
+        with:
+          version: v1.1.0
+
+      - name: Install pinned dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes ripgrep=14.1.0-1
+          source scripts/toolchain.lock
+          forge install "foundry-rs/forge-std@${FORGE_STD_REVISION}" --no-git
+          bash scripts/bootstrap.sh
+          npm install --global solhint@5.1.0
+
+      - name: Verify CI toolchain and dependency content
+        run: bash scripts/verify_ci_toolchain.sh
+
+      - name: Validate Echidna gate against mutations
+        run: make verify-echidna-harness
+
+      - name: Test deployment-profile bytecode
+        run: FOUNDRY_OPTIMIZER_RUNS=1 forge test
+
+      - name: Run security analyzers and actual Echidna campaign
+        run: |
+          RUN_START_EPOCH="$(date +%s)" \
+          FOUNDRY_OPTIMIZER_RUNS=1 \
+          RUN_SECURITY=1 \
+          RUN_ECHIDNA=1 \
+          ALLOW_STALE_BUG_DB=0 \
+          SECURITY_CONTROL_STRICT_STATUSES=1 \
+          bash scripts/verify_all.sh
+
+      - name: Check deploy size and local lifecycle
+        run: |
+          make verify-deploy-size
+          FOUNDRY_OPTIMIZER_RUNS=1 make verify-local-e2e
+
+      - name: Check formal-frontier regressions
+        run: |
+          make verify-goal-frontier
+          make verify-tokenomics-frontier
+          make verify-participant-regret-frontier
+
+      - name: Write commit-bound evidence manifest
+        run: make write-assurance-evidence
+
+      - name: Retain review evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: contract-assurance-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            runs/assurance/**
+            runs/security/**
+            runs/slither/**
+            runs/local_e2e/**
+            runs/formal/**
+          if-no-files-found: error
+          retention-days: 30

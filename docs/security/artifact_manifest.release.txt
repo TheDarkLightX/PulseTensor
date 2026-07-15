@@ -7,3 +7,4 @@ runs/slither/slither_inference_settlement_report.json
 runs/security/mythril_core_findings.json
 runs/security/mythril_settlement_findings.json
 runs/security/mythril_summary.json
+runs/security/echidna.log

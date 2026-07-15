@@ -2,6 +2,8 @@
 
 PulseTensor is a Pulsechain-native decentralized AI protocol inspired by Bittensor, with fail-closed contract verification gates as the default workflow.
 
+PulseTensor currently has executable Solidity tests, fuzz/invariant campaigns, and security gates plus formalized state-model specifications. It does **not** yet have a machine-checked refinement proof from those specifications to Solidity or deployed bytecode. See [`docs/assurance_scope.md`](docs/assurance_scope.md) for the exact assurance boundary.
+
 ## Goals
 
 - Bring agent networks and decentralized AI coordination to Pulsechain.
@@ -20,7 +22,8 @@ Prerequisites already supported in this environment:
 
 - `forge` / `anvil`
 - `python3`
-- `docker` (required for Mythril gate and Echidna fallback)
+- `docker` (required for the digest-pinned Mythril and Echidna gates)
+- exact `jq`, `solhint`, and `rg` versions from `scripts/toolchain.lock`
 
 Run:
 
@@ -97,8 +100,9 @@ Publish release artifacts to IPFS (dist CID + tarball CID + receipt):
 make ui-ipfs
 ```
 
-`make verify-release` is the canonical merge gate and includes mandatory Echidna.
-It also fail-closes on deploy code-size viability (`scripts/check_deploy_code_size.sh`).
+`make verify-release` is the single canonical merge and pre-deploy assurance gate. It includes mandatory
+Echidna, deploy code-size viability, local live-chain replay, all frontier checks, and a commit-bound evidence
+manifest. `make verify-complete` and `make verify-release-full` are compatibility aliases to the same pipeline.
 
 `make verify-local-e2e` runs a deterministic live-chain local integration flow on fresh Anvil:
 deploys contracts, executes governance queue/execute paths, runs validator commit/reveal, and validates inference
@@ -106,10 +110,6 @@ commit/finalize/settle/claim behavior. Report path: `runs/local_e2e/local_e2e_re
 
 `make verify-requirements-traceability` validates requirement-to-test/function coverage, including boundary-value
 coverage targets, from `specs/formal/requirements_traceability.json`.
-
-`make verify-complete` is the single full-assurance gate: toolchain lock, deploy size viability, release security
-verification, local live-chain E2E replay, goal-frontier checks, tokenomics frontier checks, participant-regret
-frontier checks, and complete artifact freshness validation.
 
 ## Participation Modes
 
@@ -147,7 +147,7 @@ Fast local iteration without full security scans:
 make verify-dev
 ```
 
-Extended release gate (same checks, separate entrypoint for CI profiles):
+Compatibility alias for the canonical release gate:
 
 ```bash
 make verify-release-full
@@ -160,10 +160,10 @@ make ui-build
 make ui-hash
 ```
 
-Optional deep fuzzing (Echidna) inside security gate:
+Run only the digest-pinned Echidna campaign during local investigation:
 
 ```bash
-RUN_ECHIDNA=1 make verify-release
+make verify-echidna
 ```
 
 ## Repo Layout
@@ -182,6 +182,7 @@ RUN_ECHIDNA=1 make verify-release
 
 - `docs/bittensor_delta.md`: what we keep vs improve from Bittensor.
 - `docs/formal_workflow.md`: required verification gates.
+- `docs/assurance_scope.md`: exact verified, tested, specified, and still-unproved claims.
 - `specs/formal/requirements_traceability.json`: requirement-to-function/test traceability matrix with explicit BVA coverage.
 - `docs/frontend_decentralization.md`: host-anywhere frontend model and trust surface.
 - `docs/roadmap.md`: phased build plan.

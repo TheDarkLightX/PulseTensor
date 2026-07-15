@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 RUN_ECHIDNA="${RUN_ECHIDNA:-0}"
 RUN_START_EPOCH="${RUN_START_EPOCH:-$(date +%s)}"
+export FOUNDRY_OPTIMIZER_RUNS="1"
 
 bash "${ROOT_DIR}/scripts/check_compiler_known_bugs.sh"
 bash "${ROOT_DIR}/scripts/check_security_controls.sh"

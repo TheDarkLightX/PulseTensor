@@ -1,6 +1,7 @@
-testMode: assertion
+testMode: property
 testLimit: 8000
 seqLen: 30
 workers: 1
 seed: 1
 balanceContract: 100000000000000000000
+cryticArgs: ["--compile-force-framework", "foundry"]

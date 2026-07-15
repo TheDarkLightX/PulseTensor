@@ -18,6 +18,8 @@ OUT_DIR="${OUT_DIR}" \
 ALLOW_STALE_BUG_DB="${ALLOW_STALE_BUG_DB}" \
 python3 - <<'PY'
 import json
+import datetime
+import hashlib
 import os
 import pathlib
 import re
@@ -157,9 +159,25 @@ if not matrix_path.exists():
     fail(f"security control matrix not found: {matrix_path}")
 matrix = json.loads(matrix_path.read_text(encoding="utf-8"))
 compiler_policy = matrix.get("solidity_compiler_policy") or {}
-min_solc_version = str(compiler_policy.get("min_solc_version", "0.8.34"))
+min_solc_version = str(compiler_policy.get("min_solc_version", "0.8.36"))
 fail_on_low = bool(compiler_policy.get("fail_on_low_severity", True))
-bugs_source = str(compiler_policy.get("bugs_source", "https://raw.githubusercontent.com/ethereum/solidity/develop/docs/")).rstrip("/") + "/"
+official_branch_source = "https://raw.githubusercontent.com/ethereum/solidity/develop/docs/"
+configured_bugs_source = str(compiler_policy.get("bugs_source", official_branch_source)).rstrip("/") + "/"
+if configured_bugs_source != official_branch_source:
+    fail(f"compiler bug source must be the official Solidity develop feed: {official_branch_source}")
+
+revision_metadata = fetch_json(
+    "https://api.github.com/repos/ethereum/solidity/commits/develop",
+    cache_dir / "solidity_develop_commit.json",
+    allow_stale,
+)
+if not isinstance(revision_metadata, dict):
+    fail("unexpected Solidity develop commit response")
+bugs_source_revision = revision_metadata.get("sha")
+if not isinstance(bugs_source_revision, str) or not re.fullmatch(r"[0-9a-f]{40}", bugs_source_revision):
+    fail("Solidity develop commit response has no valid commit SHA")
+
+bugs_source = f"https://raw.githubusercontent.com/ethereum/solidity/{bugs_source_revision}/docs/"
 bugs_url = bugs_source + "bugs.json"
 bugs_by_version_url = bugs_source + "bugs_by_version.json"
 
@@ -172,8 +190,10 @@ evm_version = foundry["evm_version"]
 if parse_semver(solc_version) < parse_semver(min_solc_version):
     fail(f"solc_version {solc_version} is below policy minimum {min_solc_version}")
 
-bugs_by_version = fetch_json(bugs_by_version_url, cache_dir / "bugs_by_version.json", allow_stale)
-bugs = fetch_json(bugs_url, cache_dir / "bugs.json", allow_stale)
+bugs_by_version_path = cache_dir / f"bugs_by_version.{bugs_source_revision}.json"
+bugs_path = cache_dir / f"bugs.{bugs_source_revision}.json"
+bugs_by_version = fetch_json(bugs_by_version_url, bugs_by_version_path, allow_stale)
+bugs = fetch_json(bugs_url, bugs_path, allow_stale)
 
 if not isinstance(bugs_by_version, dict):
     fail("unexpected bugs_by_version feed format")
@@ -235,13 +255,17 @@ violations = [item for item in applicable if str(item.get("severity", "unknown")
 
 report = {
     "schema": "pulsetensor/compiler-bug-report/v1",
-    "as_of_utc": "2026-02-22",
+    "as_of_utc": datetime.datetime.now(datetime.timezone.utc).date().isoformat(),
     "solc_version": solc_version,
     "min_solc_version": min_solc_version,
     "via_ir": via_ir,
     "optimizer": optimizer,
     "evm_version": evm_version,
     "bugs_source": bugs_source,
+    "bugs_source_branch": official_branch_source,
+    "bugs_source_revision": bugs_source_revision,
+    "bugs_json_sha256": hashlib.sha256(bugs_path.read_bytes()).hexdigest(),
+    "bugs_by_version_json_sha256": hashlib.sha256(bugs_by_version_path.read_bytes()).hexdigest(),
     "active_known_bugs": applicable,
     "violations": violations,
     "fail_on_low_severity": fail_on_low,
