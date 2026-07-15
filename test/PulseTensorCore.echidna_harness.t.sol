@@ -3,7 +3,7 @@ pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
 import {PulseTensorCore} from "../src/PulseTensorCore.sol";
-import {PulseTensorCoreEchidna} from "./echidna/PulseTensorCoreEchidna.sol";
+import {PulseTensorCoreEchidna} from "../echidna/PulseTensorCoreEchidna.sol";
 
 contract PulseTensorCoreEchidnaHarnessTest is Test {
     PulseTensorCoreEchidna internal harness;

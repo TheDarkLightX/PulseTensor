@@ -27,7 +27,7 @@ run_docker() {
     --network "${ECHIDNA_DOCKER_NETWORK}" \
     --env HOME=/root \
     --env FOUNDRY_OPTIMIZER_RUNS=1 \
-    --env FOUNDRY_SRC=test/echidna \
+    --env FOUNDRY_SRC=echidna \
     --env ECHIDNA_SEED="${ECHIDNA_SEED}" \
     --env ECHIDNA_WORKERS="${ECHIDNA_WORKERS}" \
     --mount "type=bind,src=${ROOT_DIR},dst=/src,readonly" \
@@ -36,7 +36,7 @@ run_docker() {
       bash -lc '
         set -euo pipefail
         mkdir -p /tmp/work
-        cp -a /src/src /src/test /src/lib /tmp/work/
+        cp -a /src/src /src/test /src/echidna /src/lib /tmp/work/
         cp -a /src/foundry.toml /tmp/work/
         cd /tmp/work
         echidna --version

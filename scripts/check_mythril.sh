@@ -79,7 +79,8 @@ run_mythril() {
 
   set +e
   timeout "${WALL_TIMEOUT_SECONDS}s" docker run --rm \
-    -v "${ROOT_DIR}:/src" \
+    --network none \
+    -v "${ROOT_DIR}:/src:ro" \
     -w /src \
     "${IMAGE}" \
       myth analyze \

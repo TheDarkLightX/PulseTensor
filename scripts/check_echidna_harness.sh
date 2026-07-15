@@ -3,7 +3,7 @@ set -euo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIG_PATH="${1:-${ROOT_DIR}/test/echidna/echidna.yaml}"
-CONTRACT_ID="${2:-test/echidna/PulseTensorCoreEchidna.sol:PulseTensorCoreEchidna}"
+CONTRACT_ID="${2:-echidna/PulseTensorCoreEchidna.sol:PulseTensorCoreEchidna}"
 
 pushd "${ROOT_DIR}" >/dev/null
 python3 - "${CONFIG_PATH}" "${CONTRACT_ID}" <<'PY'

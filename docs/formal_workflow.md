@@ -146,13 +146,13 @@ Required outcome:
   - Exit `0`: participant-regret model yields expected deterministic maximal frontier and minimal relaxations.
   - Exit non-zero: synthesized frontier deviates from expected deterministic result.
 - `scripts/verify_release.sh`
-  - Exit `0`: toolchain lock + release gate pass with `RUN_ECHIDNA=1`.
+  - Exit `0`: the canonical release pipeline passes: exact toolchain, non-vacuous Echidna harness checks and campaign, deployment-profile size/tests, analyzers, local lifecycle, formal-frontier regressions, and commit-bound evidence.
   - Exit non-zero: any upstream gate failure.
 - `scripts/verify_release_full.sh`
-  - Exit `0`: same release posture as `verify_release.sh` through a separate CI-friendly entrypoint.
+  - Exit `0`: the canonical `verify_release.sh` pipeline passes through this compatibility alias.
   - Exit non-zero: any upstream gate failure.
 - `scripts/verify_complete.sh`
-  - Exit `0`: release gate + requirements traceability + local E2E + goal/tokenomics/participant-regret frontier checks + complete artifact freshness pass.
+  - Exit `0`: the canonical `verify_release.sh` pipeline passes through this compatibility alias.
   - Exit non-zero: any upstream gate failure.
 
 ## Definition of Done (Protocol Change)

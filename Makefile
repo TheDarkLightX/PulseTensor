@@ -109,7 +109,8 @@ verify-artifacts-release:
 	bash scripts/check_artifact_freshness.sh docs/security/artifact_manifest.release.txt
 
 verify-artifacts-complete:
-	bash scripts/check_artifact_freshness.sh docs/security/artifact_manifest.complete.txt
+	@echo "verify-artifacts-complete is a compatibility alias for verify-artifacts-release"
+	bash scripts/check_artifact_freshness.sh docs/security/artifact_manifest.release.txt
 
 verify-security:
 	bash scripts/check_security.sh

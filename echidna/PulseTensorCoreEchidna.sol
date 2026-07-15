@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {PulseTensorCore} from "../../src/PulseTensorCore.sol";
+import {PulseTensorCore} from "../src/PulseTensorCore.sol";
 
 contract EchidnaStakeActor {
     function addStake(PulseTensorCore core, uint16 netuid) external payable {
