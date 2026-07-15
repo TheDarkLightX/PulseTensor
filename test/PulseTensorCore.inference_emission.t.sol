@@ -7,6 +7,7 @@ import {PulseTensorInferenceSettlement} from "../src/PulseTensorInferenceSettlem
 interface Vm {
     function roll(uint256 newHeight) external;
     function deal(address who, uint256 newBalance) external;
+    function expectRevert(bytes4 revertData) external;
 }
 
 contract FeatureActor {
@@ -923,11 +924,27 @@ contract PulseTensorCoreInferenceEmissionTest {
         uint64 secondEpoch = core.currentEpoch(netuid);
         validator.commitInferenceBatchRoot{value: 0.2 ether}(settlement, netuid, mechid, secondEpoch, leaf, 1, 2 ether);
 
+        (,,, uint256 bondBefore,,,, bool challengedBefore,) =
+            settlement.inferenceBatches(netuid, mechid, secondEpoch);
+        uint256 rewardBefore = settlement.challengeRewardOf(netuid, address(this));
+        uint256 feesBefore = settlement.batchFeeFunded(netuid, mechid, secondEpoch);
+        uint256 balanceBefore = address(settlement).balance;
+
         bytes32[] memory emptyProof = new bytes32[](0);
         vm.expectRevert(PulseTensorInferenceSettlement.LeafNotSettled.selector);
         settlement.challengeInferenceLeafReplay(
             netuid, mechid, secondEpoch, leaf, 0, emptyProof, firstEpoch, 0, emptyProof
         );
+
+        (,,, uint256 bondAfter,,,, bool challengedAfter,) =
+            settlement.inferenceBatches(netuid, mechid, secondEpoch);
+        assert(bondBefore == 0.2 ether);
+        assert(bondAfter == bondBefore);
+        assert(!challengedBefore);
+        assert(!challengedAfter);
+        assert(settlement.challengeRewardOf(netuid, address(this)) == rewardBefore);
+        assert(settlement.batchFeeFunded(netuid, mechid, secondEpoch) == feesBefore);
+        assert(address(settlement).balance == balanceBefore);
     }
 
     function testInferenceReplayChallengeRequiresFinalizedPriorBatch() public {

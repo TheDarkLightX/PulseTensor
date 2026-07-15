@@ -835,7 +835,7 @@
     {
       "id": "SETTLEMENT-REQ-007",
       "contract": "settlement",
-      "title": "Replay/duplicate challenges slash proposer bond and enforce prior-finalized checks",
+      "title": "Replay/duplicate challenges slash proposer bond only after prior-finalized and prior-settled checks",
       "criticality": "critical",
       "categories": [
         "challenge-path",
@@ -860,6 +860,11 @@
           "kind": "test",
           "file": "test/PulseTensorCore.inference_emission.t.sol",
           "function": "testInferenceReplayChallengeRequiresFinalizedPriorBatch"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceReplayChallengeRequiresPriorSettledLeaf"
         },
         {
           "kind": "test",
