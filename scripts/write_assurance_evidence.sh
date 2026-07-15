@@ -13,8 +13,8 @@ for command_name in forge cast jq git sha256sum python3; do
 done
 
 pushd "${ROOT_DIR}" >/dev/null
-if ! git diff --quiet -- || ! git diff --cached --quiet --; then
-  echo "refusing to attest a dirty tracked worktree"
+if [[ -n "$(git status --porcelain --untracked-files=all)" ]]; then
+  echo "refusing to attest a dirty worktree, including nonignored untracked files"
   exit 1
 fi
 

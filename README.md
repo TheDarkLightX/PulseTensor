@@ -22,7 +22,8 @@ Prerequisites already supported in this environment:
 
 - `forge` / `anvil`
 - `python3`
-- `docker` (required for Mythril gate and Echidna fallback)
+- `docker` (required for the digest-pinned Mythril and Echidna gates)
+- exact `jq`, `solhint`, and `rg` versions from `scripts/toolchain.lock`
 
 Run:
 

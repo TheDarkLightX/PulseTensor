@@ -5,6 +5,7 @@ ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 export FOUNDRY_OPTIMIZER_RUNS="1"
 
 bash "${ROOT_DIR}/scripts/verify_toolchain.sh"
+bash "${ROOT_DIR}/scripts/test_echidna_harness_checker.sh"
 bash "${ROOT_DIR}/scripts/check_deploy_code_size.sh"
 RUN_START_EPOCH="$(date +%s)" \
 RUN_SECURITY=1 \
