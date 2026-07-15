@@ -4,11 +4,18 @@ set -euo pipefail
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 RUN_SECURITY="${RUN_SECURITY:-1}"
 RUN_ECHIDNA="${RUN_ECHIDNA:-0}"
+RUN_DEPLOY_REHEARSAL="${RUN_DEPLOY_REHEARSAL:-1}"
 RUN_START_EPOCH="${RUN_START_EPOCH:-$(date +%s)}"
 export FOUNDRY_OPTIMIZER_RUNS="1"
 
 pushd "${ROOT_DIR}" >/dev/null
 bash scripts/check_private_boundaries.sh
+bash scripts/check_deploy_signer_safety.sh
+if [[ "${RUN_DEPLOY_REHEARSAL}" == "1" ]]; then
+  bash scripts/check_deploy_rehearsal.sh
+else
+  echo "Encrypted-keystore deployment rehearsal skipped (RUN_DEPLOY_REHEARSAL=${RUN_DEPLOY_REHEARSAL})"
+fi
 forge build
 forge test
 if [[ "${RUN_SECURITY}" == "1" ]]; then

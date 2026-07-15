@@ -86,6 +86,7 @@ jobs:
             runs/assurance/**
             runs/security/**
             runs/slither/**
+            runs/deploy_rehearsal/**
             runs/local_e2e/**
             runs/formal/**
           if-no-files-found: error

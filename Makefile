@@ -1,4 +1,4 @@
-.PHONY: build test fmt deploy preset synth-goal-frontier synth-tokenomics-frontier synth-participant-regret-frontier ui-install ui-dev ui-build ui-preview ui-hash ui-release ui-ipfs verify-private verify-goal-frontier verify-tokenomics-frontier verify-participant-regret-frontier verify-compiler-bugs verify-deploy-size verify-local-e2e verify-requirements-traceability verify-security-controls verify-security-antipatterns verify-solhint verify-slither-exclusions verify-slither verify-mythril-allowlist verify-mythril verify-fuzz-invariant verify-echidna-harness verify-echidna write-assurance-evidence verify-artifacts-security verify-artifacts-release verify-artifacts-complete verify-security verify-all verify-dev verify-release verify-release-full verify-complete
+.PHONY: build test fmt deploy preset synth-goal-frontier synth-tokenomics-frontier synth-participant-regret-frontier ui-install ui-dev ui-build ui-preview ui-hash ui-release ui-ipfs verify-private verify-deploy-signer-safety verify-deploy-rehearsal verify-goal-frontier verify-tokenomics-frontier verify-participant-regret-frontier verify-compiler-bugs verify-deploy-size verify-local-e2e verify-requirements-traceability verify-security-controls verify-security-antipatterns verify-solhint verify-slither-exclusions verify-slither verify-mythril-allowlist verify-mythril verify-fuzz-invariant verify-echidna-harness verify-echidna write-assurance-evidence verify-artifacts-security verify-artifacts-release verify-artifacts-complete verify-security verify-all verify-dev verify-release verify-release-full verify-complete
 
 build:
 	forge build
@@ -10,7 +10,8 @@ fmt:
 	forge fmt
 
 deploy:
-	bash scripts/deploy_pulsetensor.sh
+	@test -n "$${DEPLOY_ARGS:-}" || { echo "set nonsecret DEPLOY_ARGS (signer mode, sender, chain, and policy flags)" >&2; exit 2; }
+	bash scripts/deploy_pulsetensor.sh $${DEPLOY_ARGS}
 
 preset:
 	bash scripts/render_launch_preset.sh --preset "$${PRESET:?set PRESET}" --netuid "$${NETUID:?set NETUID}" $${MECHID:+--mechid "$${MECHID}"} $${CORE:+--core "$${CORE}"} $${SETTLEMENT:+--settlement "$${SETTLEMENT}"} $${GOVERNANCE:+--governance "$${GOVERNANCE}"} $${OUT:+--out "$${OUT}"}
@@ -47,6 +48,12 @@ ui-ipfs:
 
 verify-private:
 	bash scripts/check_private_boundaries.sh
+
+verify-deploy-signer-safety:
+	bash scripts/check_deploy_signer_safety.sh
+
+verify-deploy-rehearsal:
+	bash scripts/check_deploy_rehearsal.sh
 
 verify-goal-frontier:
 	bash scripts/check_goal_frontier_example.sh

@@ -23,7 +23,6 @@ Prerequisites already supported in this environment:
 - `forge` / `anvil`
 - `python3`
 - `docker` (required for the digest-pinned Mythril and Echidna gates)
-- exact `jq`, `solhint`, and `rg` versions from `scripts/toolchain.lock`
 
 Run:
 
@@ -46,18 +45,30 @@ make ui-install
 make ui-dev
 ```
 
-Deploy contracts (core + settlement) and write deployment receipt:
+Deploy contracts (core + settlement) with a keystore or hardware signer and write a verified deployment receipt:
 
 ```bash
 RPC_URL=https://rpc.v4.testnet.pulsechain.com \
-PRIVATE_KEY=0x... \
-make deploy
+  bash scripts/deploy_pulsetensor.sh \
+    --expected-chain-id 943 \
+    --sender 0xYourDedicatedDeployer \
+    --account pulsetensor-deployer
 ```
 
-Receipt path: `runs/deployments/pulsetensor_deploy_receipt.json`.
+Each run atomically publishes a unique v4 receipt such as
+`runs/deployments/pulsetensor_deploy_943-YYYYMMDDTHHMMSSZ-<run>_<tx>.receipt.json`
+and retains an owner-only partial JSONL journal for safe recovery if the second transaction or a later check fails.
 
-Deployment uses a size-safe compiler profile by default (`FOUNDRY_OPTIMIZER_RUNS=1`) to keep `PulseTensorCore`
-within EVM code-size limits. Override only if `bash scripts/check_deploy_code_size.sh` still passes.
+The wrapper validates successful receipts, sender-derived addresses, chain ID, explicit consecutive latest/pending nonces, gas budgets, and exact transaction inputs; links the Core address into every compiler-declared Settlement immutable offset; submits only those already-inspected creation bytes through `cast send --create`; and requires the deployed runtimes to equal both the preflight artifacts and a post-confirmation isolated rebuild made with the locked Forge/Cast/Solc binaries.
+
+For chain 369, it also extracts the authorized commit with `git archive` and performs an isolated production rebuild before gas estimation, journal creation, or signing. Creation/runtime bytes, compiler settings, and immutable-reference locations must match the already-hashed live artifacts exactly.
+
+Raw keys and mnemonics are intentionally unsupported. Ledger, Trezor, AWS KMS, Foundry keystore, and interactive signing are supported. The public receipt omits signer class and local signer paths, but the deployer address remains public on-chain; use a dedicated entity-controlled deployment wallet and never reuse a personal holdings wallet. See `bash scripts/deploy_pulsetensor.sh --help`.
+
+For the testnet-to-mainnet checkpoint, fee-cap, recovery-journal, and independent receipt-verification procedure, see [`docs/security/private_launch.md`](docs/security/private_launch.md). The privacy goal is lawful key compartmentation and reduced metadata exposure, not anonymity or concealment of ownership.
+
+Deployment requires the pinned Solidity 0.8.36 size-safe profile (`FOUNDRY_OPTIMIZER_RUNS=1`) to keep `PulseTensorCore`
+within EVM code-size limits. Do not override the deployment profile; run `bash scripts/check_deploy_code_size.sh` as part of release verification.
 
 Render launch-safe subnet/mechanism presets (with queue/execute rollout plan):
 
@@ -101,8 +112,9 @@ make ui-ipfs
 ```
 
 `make verify-release` is the single canonical merge and pre-deploy assurance gate. It includes mandatory
-Echidna, deploy code-size viability, local live-chain replay, all frontier checks, and a commit-bound evidence
-manifest. `make verify-complete` and `make verify-release-full` are compatibility aliases to the same pipeline.
+Echidna, deploy code-size viability, encrypted-keystore deployment rehearsal, local live-chain replay, all
+frontier checks, and a commit-bound evidence manifest. `make verify-complete` and
+`make verify-release-full` are compatibility aliases to the same pipeline.
 
 `make verify-local-e2e` runs a deterministic live-chain local integration flow on fresh Anvil:
 deploys contracts, executes governance queue/execute paths, runs validator commit/reveal, and validates inference
@@ -190,6 +202,8 @@ make verify-echidna
 - `docs/goal_frontier_synthesis.md`: deterministic multi-goal frontier synthesis for mechanism/design exploration.
 - `docs/tokenomics.md`: game-theoretic tokenomics design and parameter recommendations.
 - `docs/participant_regret_invariants.md`: safety-oriented invariant profile selected to minimize participant regret.
+- `docs/research/pulsetensor_frontier_2026.md`: 2026 Bittensor comparison, PulseChain demand thesis, architecture, funding, token gates, and falsifiable research plan.
+- `docs/security/private_launch.md`: wallet separation, signer policy, RPC privacy limits, and authority handoff.
 - `docs/security/security_standards.md`: OWASP/EthTrust/Solidity-bug standards baseline.
 - `docs/security/control_matrix.json`: security control-to-evidence mapping gate.
 - `docs/security/governance_committee_charter.md`: founder-balanced committee authority and independence policy.
