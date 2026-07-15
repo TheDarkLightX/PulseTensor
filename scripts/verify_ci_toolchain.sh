@@ -37,6 +37,14 @@ require_equal "forge binary digest" "$(sha256sum "$(command -v forge)" | awk '{p
 require_equal "cast binary digest" "$(sha256sum "$(command -v cast)" | awk '{print $1}')" "${CAST_RELEASE_SHA256}"
 require_equal "anvil binary digest" "$(sha256sum "$(command -v anvil)" | awk '{print $1}')" "${ANVIL_RELEASE_SHA256}"
 
+forge build >/dev/null
+solc_path="${HOME}/.svm/${SOLC_VERSION}/solc-${SOLC_VERSION}"
+[[ -x "${solc_path}" ]] || {
+  echo "pinned solc binary not found: ${solc_path}"
+  exit 1
+}
+require_equal "solc binary digest" "$(sha256sum "${solc_path}" | awk '{print $1}')" "${SOLC_RELEASE_SHA256}"
+
 # The hosted runner owns the Docker daemon, so its version is evidence rather
 # than a reproducibility claim. Security workloads themselves use image digests.
 echo "docker_host=$(docker --version | head -n 1)"

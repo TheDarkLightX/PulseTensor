@@ -17,10 +17,16 @@ FOUNDRY_OPTIMIZER_RUNS=1 forge build >/dev/null
 mkdir -p "${OUT_DIR}"
 
 tracked_digest="$({
-  git ls-files src test foundry.toml scripts/toolchain.lock \
-    | LC_ALL=C sort \
-    | xargs sha256sum
+  git ls-files -z \
+    | LC_ALL=C sort -z \
+    | xargs -0 sha256sum
 } | sha256sum | awk '{print $1}')"
+source scripts/toolchain.lock
+solc_path="${HOME}/.svm/${SOLC_VERSION}/solc-${SOLC_VERSION}"
+[[ -x "${solc_path}" ]] || {
+  echo "pinned solc binary not found: ${solc_path}"
+  exit 1
+}
 core_runtime="$(jq -r '.deployedBytecode.object' out/PulseTensorCore.sol/PulseTensorCore.json)"
 settlement_runtime="$(jq -r '.deployedBytecode.object' out/PulseTensorInferenceSettlement.sol/PulseTensorInferenceSettlement.json)"
 
@@ -29,6 +35,8 @@ jq -n \
   --arg commit "$(git rev-parse HEAD)" \
   --arg tree_state "$(test -z "$(git status --porcelain --untracked-files=no)" && echo clean || echo dirty)" \
   --arg forge "$(forge --version | head -n 1)" \
+  --arg solc "$("${solc_path}" --version | tail -n 1)" \
+  --arg solc_sha256 "$(sha256sum "${solc_path}" | awk '{print $1}')" \
   --arg python "$(python3 --version | head -n 1)" \
   --arg docker "$(docker --version 2>/dev/null | head -n 1 || echo unavailable)" \
   --arg solhint "$(solhint --version 2>/dev/null | head -n 1 || echo unavailable)" \
@@ -42,7 +50,7 @@ jq -n \
     commit: $commit,
     tree_state: $tree_state,
     profile: {solc: "0.8.34", optimizer: true, optimizer_runs: 1, via_ir: true, evm: "paris"},
-    tools: {forge: $forge, python: $python, docker: $docker, solhint: $solhint},
+    tools: {forge: $forge, solc: $solc, solc_sha256: $solc_sha256, python: $python, docker: $docker, solhint: $solhint},
     inputs: {
       tracked_files_sha256: $tracked_digest,
       foundry_config_sha256: $foundry_config_sha256,
