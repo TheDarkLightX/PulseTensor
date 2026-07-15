@@ -23,7 +23,7 @@ require_equal() {
   fi
 }
 
-for command_name in forge cast anvil python3 docker jq solhint sha256sum; do
+for command_name in forge cast anvil python3 docker jq solhint rg sha256sum; do
   require_command "${command_name}"
 done
 
@@ -32,6 +32,7 @@ require_equal "forge version" "$(forge --version | head -n 1)" "${FORGE_RELEASE_
 require_equal "python version" "$(python3 --version | head -n 1)" "${PYTHON_VERSION_PREFIX}"
 require_equal "jq version" "$(jq --version | head -n 1)" "${JQ_VERSION_PREFIX}"
 require_equal "solhint version" "$(solhint --version | head -n 1)" "${SOLHINT_VERSION_PREFIX}"
+require_equal "ripgrep version" "$(rg --version | head -n 1)" "${RIPGREP_VERSION}"
 require_equal "forge binary digest" "$(sha256sum "$(command -v forge)" | awk '{print $1}')" "${FORGE_RELEASE_SHA256}"
 require_equal "cast binary digest" "$(sha256sum "$(command -v cast)" | awk '{print $1}')" "${CAST_RELEASE_SHA256}"
 require_equal "anvil binary digest" "$(sha256sum "$(command -v anvil)" | awk '{print $1}')" "${ANVIL_RELEASE_SHA256}"

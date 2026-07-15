@@ -34,6 +34,8 @@ jobs:
 
       - name: Install pinned dependencies
         run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes ripgrep=14.1.0-1
           source scripts/toolchain.lock
           forge install "foundry-rs/forge-std@${FORGE_STD_REVISION}" --no-git
           bash scripts/bootstrap.sh
