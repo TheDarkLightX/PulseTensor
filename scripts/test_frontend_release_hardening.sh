@@ -6,8 +6,13 @@ source "${ROOT_DIR}/scripts/frontend_release_lib.sh"
 
 TMP_DIR="$(mktemp -d)"
 DEFAULT_PATH_FIXTURE="${ROOT_DIR}/runs/frontend_release_claim_test_$$"
+MOCK_LIVE_DIST="${ROOT_DIR}/frontend/dist"
+MOCK_LIVE_DIST_CREATED=0
 cleanup_test() {
   rm -rf -- "${TMP_DIR}" "${DEFAULT_PATH_FIXTURE}"
+  if [[ "${MOCK_LIVE_DIST_CREATED}" == "1" ]]; then
+    rm -rf -- "${MOCK_LIVE_DIST}"
+  fi
 }
 trap cleanup_test EXIT
 
@@ -269,7 +274,17 @@ expect_failure node "${ROOT_DIR}/scripts/validate_ipfs_cid.mjs" --kind file --ci
 export MOCK_IPFS_STATE="${TMP_DIR}/mock-ipfs-state"
 export MOCK_DIRECTORY_CID="${VALID_DIRECTORY_CID}"
 export MOCK_FILE_CID="${VALID_FILE_CID}"
-export MOCK_LIVE_DIST="${ROOT_DIR}/frontend/dist"
+if [[ ! -e "${MOCK_LIVE_DIST}" ]]; then
+  mkdir -p "${MOCK_LIVE_DIST}/assets"
+  printf '<!doctype html><script type="module" src="./assets/app.js"></script>\n' \
+    > "${MOCK_LIVE_DIST}/index.html"
+  printf 'console.log("release regression fixture");\n' \
+    > "${MOCK_LIVE_DIST}/assets/app.js"
+  MOCK_LIVE_DIST_CREATED=1
+elif [[ ! -d "${MOCK_LIVE_DIST}" || -L "${MOCK_LIVE_DIST}" ]]; then
+  fail "frontend dist exists but is not a safe directory"
+fi
+export MOCK_LIVE_DIST
 mkdir -p "${MOCK_IPFS_STATE}"
 ipfs() {
   if [[ "${1:-}" == "add" && "${2:-}" == "--help" ]]; then
