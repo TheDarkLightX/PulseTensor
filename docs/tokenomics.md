@@ -45,12 +45,24 @@ Distribution on finalization for funded amount `F`:
 - `miner = protocol - treasury`
 - `proposer = F - protocol`
 
+The exact-inference escrow uses a simpler success-only split for task reward `R`:
+
+- `fee = floor(R * protocolFeeBps / 10000)`
+- `providerBeneficiary = R - fee`
+- expiry, verifier revocation, or adapter/base-verifier unavailability: `refundTo = R`, `fee = 0`
+
+The exact lane snapshots its capped fee and treasury at task creation. The proof binds those values and the
+beneficiary, so a relayer cannot redirect payment. Verifier configuration addition/deprecation is delayed and
+generation-bound; emergency revocation is immediate but can only enable the full-refund path.
+
 ## Incentives Implemented Today
 
 - **Narrow duplicate/replay deterrence**: a proposer bond and permissionless challenges penalize the two exact duplicate-leaf conditions above. They do not prove inference correctness and do not penalize a unique false result. The canonical leaf helper includes the epoch, so a cross-epoch challenge against canonically constructed leaves cannot use an identical leaf; this replay rule must not be treated as a general fraud-proof system.
 - **No retroactive rent extraction**: fee snapshot prevents governance from changing economics after batch commit.
 - **Liveness under dispute**: fee payers can withdraw escrow before finalization; challenged batches do not trap user funds.
 - **Usage-linked treasury inflow**: treasury receipts scale with finalized funded fees rather than a dollar-denominated promise; whether that inflow covers operating costs is not established.
+- **Proof-contingent exact-task inflow**: the exact lane charges only when its configured verifier accepts the
+  contract-reconstructed public values; failure/refund paths produce no treasury income.
 - **Miner retention**: miner sink creates direct demand-side revenue, complementing emission schedules.
 
 ## Illustrative Starting Scenario (Not a Launch Recommendation)

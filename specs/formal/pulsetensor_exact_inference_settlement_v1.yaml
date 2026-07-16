@@ -1,0 +1,283 @@
+ir_version: "pulsetensor-formal-ir/v1"
+meta:
+  model_id: "pulsetensor_exact_inference_settlement_v1"
+  created_by: "codex"
+  seed: 1
+  notes: >-
+    Bounded single-configuration/single-task abstract state model for append-only
+    proof-verifier configuration, exact-inference escrow settlement, full refunds,
+    and pull claims. Aggregate multi-task accounting requires a separate Foundry
+    invariant handler and later two-task refinement model. This model specifies
+    safety obligations but is not a refinement proof to Solidity/EVM.
+observables:
+  state_vars:
+    - "config_exists"
+    - "config_deprecated"
+    - "config_revoked"
+    - "verifier_code_available"
+    - "task_state"
+    - "deadline_passed"
+    - "proof_valid"
+    - "protocol_fee_bps"
+    - "open_escrow"
+    - "claimable"
+    - "contract_balance"
+    - "treasury_claimable"
+    - "refund_claimable"
+    - "beneficiary_claimable"
+  effects: ["rc"]
+types: []
+state_vars:
+  - id: "config_exists"
+    role: "control"
+    type: {kind: "bool"}
+  - id: "config_deprecated"
+    role: "control"
+    type: {kind: "bool"}
+  - id: "config_revoked"
+    role: "control"
+    type: {kind: "bool"}
+  - id: "verifier_code_available"
+    role: "control"
+    type: {kind: "bool"}
+  - id: "task_state"
+    role: "control"
+    type: {kind: "enum", values: ["NONE", "OPEN", "PROOF_SETTLED", "EXPIRED_REFUND", "REVOKED_REFUND", "UNAVAILABLE_REFUND"]}
+  - id: "deadline_passed"
+    role: "control"
+    type: {kind: "bool"}
+  - id: "proof_valid"
+    role: "control"
+    type: {kind: "bool"}
+  - id: "protocol_fee_bps"
+    role: "data"
+    type: {kind: "int", min: 0, max: 3000}
+  - id: "open_escrow"
+    role: "data"
+    type: {kind: "int", min: 0, max: 100}
+  - id: "claimable"
+    role: "data"
+    type: {kind: "int", min: 0, max: 100}
+  - id: "contract_balance"
+    role: "data"
+    type: {kind: "int", min: 0, max: 100}
+  - id: "treasury_claimable"
+    role: "data"
+    type: {kind: "int", min: 0, max: 100}
+  - id: "refund_claimable"
+    role: "data"
+    type: {kind: "int", min: 0, max: 100}
+  - id: "beneficiary_claimable"
+    role: "data"
+    type: {kind: "int", min: 0, max: 100}
+invariants:
+  - id: "Solvent"
+    kind: "safety"
+    expr:
+      op: ">="
+      args:
+        - {var: "contract_balance"}
+        - {op: "+", args: [{var: "open_escrow"}, {var: "claimable"}]}
+  - id: "TerminalHasNoOpenEscrow"
+    kind: "safety"
+    expr:
+      op: "=>"
+      args:
+        - {op: "not-in", args: [{var: "task_state"}, {set: ["NONE", "OPEN"]}]}
+        - {op: "=", args: [{var: "open_escrow"}, {const: 0}]}
+  - id: "OpenHasEscrow"
+    kind: "safety"
+    expr:
+      op: "=>"
+      args:
+        - {op: "=", args: [{var: "task_state"}, {enum: "OPEN"}]}
+        - {op: ">", args: [{var: "open_escrow"}, {const: 0}]}
+  - id: "ClaimsPartition"
+    kind: "safety"
+    expr:
+      op: "="
+      args:
+        - {var: "claimable"}
+        - {op: "+", args: [{var: "treasury_claimable"}, {var: "refund_claimable"}, {var: "beneficiary_claimable"}]}
+  - id: "RefundAndSuccessExclusive"
+    kind: "safety"
+    expr:
+      op: "=>"
+      args:
+        - {op: ">", args: [{var: "refund_claimable"}, {const: 0}]}
+        - {op: "and", args: [{op: "=", args: [{var: "treasury_claimable"}, {const: 0}]}, {op: "=", args: [{var: "beneficiary_claimable"}, {const: 0}]}]}
+init:
+  - {var: "config_exists", expr: {bool: false}}
+  - {var: "config_deprecated", expr: {bool: false}}
+  - {var: "config_revoked", expr: {bool: false}}
+  - {var: "verifier_code_available", expr: {bool: true}}
+  - {var: "task_state", expr: {enum: "NONE"}}
+  - {var: "deadline_passed", expr: {bool: false}}
+  - {var: "proof_valid", expr: {bool: false}}
+  - {var: "protocol_fee_bps", expr: {const: 0}}
+  - {var: "open_escrow", expr: {const: 0}}
+  - {var: "claimable", expr: {const: 0}}
+  - {var: "contract_balance", expr: {const: 0}}
+  - {var: "treasury_claimable", expr: {const: 0}}
+  - {var: "refund_claimable", expr: {const: 0}}
+  - {var: "beneficiary_claimable", expr: {const: 0}}
+actions:
+  - id: "add_config_after_delay"
+    params: []
+    guard: {op: "=", args: [{var: "config_exists"}, {bool: false}]}
+    updates:
+      - {var: "config_exists", expr: {bool: true}}
+    effects: {rc: {const: 0}}
+  - id: "deprecate_config_after_delay"
+    params: []
+    guard:
+      op: "and"
+      args:
+        - {op: "=", args: [{var: "config_exists"}, {bool: true}]}
+        - {op: "=", args: [{var: "config_deprecated"}, {bool: false}]}
+        - {op: "=", args: [{var: "config_revoked"}, {bool: false}]}
+    updates:
+      - {var: "config_deprecated", expr: {bool: true}}
+    effects: {rc: {const: 0}}
+  - id: "revoke_config"
+    params: []
+    guard:
+      op: "and"
+      args:
+        - {op: "=", args: [{var: "config_exists"}, {bool: true}]}
+        - {op: "=", args: [{var: "config_revoked"}, {bool: false}]}
+    updates:
+      - {var: "config_revoked", expr: {bool: true}}
+    effects: {rc: {const: 0}}
+  - id: "create_task"
+    params:
+      - {id: "value", type: {kind: "int", min: 1, max: 100}}
+      - {id: "fee_bps", type: {kind: "int", min: 0, max: 3000}}
+    guard:
+      op: "and"
+      args:
+        - {op: "=", args: [{var: "config_exists"}, {bool: true}]}
+        - {op: "=", args: [{var: "config_deprecated"}, {bool: false}]}
+        - {op: "=", args: [{var: "config_revoked"}, {bool: false}]}
+        - {op: "=", args: [{var: "verifier_code_available"}, {bool: true}]}
+        - {op: "=", args: [{var: "task_state"}, {enum: "NONE"}]}
+        - {op: "=", args: [{var: "deadline_passed"}, {bool: false}]}
+    updates:
+      - {var: "task_state", expr: {enum: "OPEN"}}
+      - {var: "open_escrow", expr: {param: "value"}}
+      - {var: "contract_balance", expr: {param: "value"}}
+      - {var: "protocol_fee_bps", expr: {param: "fee_bps"}}
+    effects: {rc: {const: 0}}
+  - id: "make_proof_valid"
+    params: []
+    guard: {op: "=", args: [{var: "proof_valid"}, {bool: false}]}
+    updates:
+      - {var: "proof_valid", expr: {bool: true}}
+    effects: {rc: {const: 0}}
+  - id: "advance_past_deadline"
+    params: []
+    guard: {op: "=", args: [{var: "deadline_passed"}, {bool: false}]}
+    updates:
+      - {var: "deadline_passed", expr: {bool: true}}
+    effects: {rc: {const: 0}}
+  - id: "make_verifier_unavailable"
+    params: []
+    guard: {op: "=", args: [{var: "verifier_code_available"}, {bool: true}]}
+    updates:
+      - {var: "verifier_code_available", expr: {bool: false}}
+    effects: {rc: {const: 0}}
+  - id: "submit_valid_proof"
+    params: []
+    guard:
+      op: "and"
+      args:
+        - {op: "=", args: [{var: "task_state"}, {enum: "OPEN"}]}
+        - {op: "=", args: [{var: "deadline_passed"}, {bool: false}]}
+        - {op: "=", args: [{var: "config_revoked"}, {bool: false}]}
+        - {op: "=", args: [{var: "verifier_code_available"}, {bool: true}]}
+        - {op: "=", args: [{var: "proof_valid"}, {bool: true}]}
+    updates:
+      - {var: "task_state", expr: {enum: "PROOF_SETTLED"}}
+      - {var: "claimable", expr: {var: "open_escrow"}}
+      - {var: "treasury_claimable", expr: {op: "/", args: [{op: "*", args: [{var: "open_escrow"}, {var: "protocol_fee_bps"}]}, {const: 10000}]}}
+      - {var: "beneficiary_claimable", expr: {op: "-", args: [{var: "open_escrow"}, {op: "/", args: [{op: "*", args: [{var: "open_escrow"}, {var: "protocol_fee_bps"}]}, {const: 10000}]}]}}
+      - {var: "open_escrow", expr: {const: 0}}
+    effects: {rc: {const: 0}}
+  - id: "refund_expired"
+    params: []
+    guard:
+      op: "and"
+      args:
+        - {op: "=", args: [{var: "task_state"}, {enum: "OPEN"}]}
+        - {op: "=", args: [{var: "deadline_passed"}, {bool: true}]}
+    updates:
+      - {var: "task_state", expr: {enum: "EXPIRED_REFUND"}}
+      - {var: "claimable", expr: {var: "open_escrow"}}
+      - {var: "refund_claimable", expr: {var: "open_escrow"}}
+      - {var: "open_escrow", expr: {const: 0}}
+    effects: {rc: {const: 0}}
+  - id: "refund_revoked"
+    params: []
+    guard:
+      op: "and"
+      args:
+        - {op: "=", args: [{var: "task_state"}, {enum: "OPEN"}]}
+        - {op: "=", args: [{var: "config_revoked"}, {bool: true}]}
+    updates:
+      - {var: "task_state", expr: {enum: "REVOKED_REFUND"}}
+      - {var: "claimable", expr: {var: "open_escrow"}}
+      - {var: "refund_claimable", expr: {var: "open_escrow"}}
+      - {var: "open_escrow", expr: {const: 0}}
+    effects: {rc: {const: 0}}
+  - id: "refund_unavailable"
+    params: []
+    guard:
+      op: "and"
+      args:
+        - {op: "=", args: [{var: "task_state"}, {enum: "OPEN"}]}
+        - {op: "=", args: [{var: "verifier_code_available"}, {bool: false}]}
+    updates:
+      - {var: "task_state", expr: {enum: "UNAVAILABLE_REFUND"}}
+      - {var: "claimable", expr: {var: "open_escrow"}}
+      - {var: "refund_claimable", expr: {var: "open_escrow"}}
+      - {var: "open_escrow", expr: {const: 0}}
+    effects: {rc: {const: 0}}
+  - id: "claim_beneficiary"
+    params:
+      - {id: "amount", type: {kind: "int", min: 1, max: 100}}
+    guard:
+      op: "and"
+      args:
+        - {op: "<=", args: [{param: "amount"}, {var: "beneficiary_claimable"}]}
+        - {op: "<=", args: [{param: "amount"}, {var: "contract_balance"}]}
+    updates:
+      - {var: "claimable", expr: {op: "-", args: [{var: "claimable"}, {param: "amount"}]}}
+      - {var: "beneficiary_claimable", expr: {op: "-", args: [{var: "beneficiary_claimable"}, {param: "amount"}]}}
+      - {var: "contract_balance", expr: {op: "-", args: [{var: "contract_balance"}, {param: "amount"}]}}
+    effects: {rc: {const: 0}}
+  - id: "claim_treasury"
+    params:
+      - {id: "amount", type: {kind: "int", min: 1, max: 100}}
+    guard:
+      op: "and"
+      args:
+        - {op: "<=", args: [{param: "amount"}, {var: "treasury_claimable"}]}
+        - {op: "<=", args: [{param: "amount"}, {var: "contract_balance"}]}
+    updates:
+      - {var: "claimable", expr: {op: "-", args: [{var: "claimable"}, {param: "amount"}]}}
+      - {var: "treasury_claimable", expr: {op: "-", args: [{var: "treasury_claimable"}, {param: "amount"}]}}
+      - {var: "contract_balance", expr: {op: "-", args: [{var: "contract_balance"}, {param: "amount"}]}}
+    effects: {rc: {const: 0}}
+  - id: "claim_refund"
+    params:
+      - {id: "amount", type: {kind: "int", min: 1, max: 100}}
+    guard:
+      op: "and"
+      args:
+        - {op: "<=", args: [{param: "amount"}, {var: "refund_claimable"}]}
+        - {op: "<=", args: [{param: "amount"}, {var: "contract_balance"}]}
+    updates:
+      - {var: "claimable", expr: {op: "-", args: [{var: "claimable"}, {param: "amount"}]}}
+      - {var: "refund_claimable", expr: {op: "-", args: [{var: "refund_claimable"}, {param: "amount"}]}}
+      - {var: "contract_balance", expr: {op: "-", args: [{var: "contract_balance"}, {param: "amount"}]}}
+    effects: {rc: {const: 0}}

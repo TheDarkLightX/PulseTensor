@@ -27,7 +27,12 @@ from datetime import datetime, timezone
 sizes_log = os.environ["SIZES_LOG"]
 report_path = os.environ["REPORT_PATH"]
 deploy_optimizer_runs = os.environ["DEPLOY_OPTIMIZER_RUNS"]
-target_contracts = ("PulseTensorCore", "PulseTensorInferenceSettlement")
+target_contracts = (
+    "PulseTensorCore",
+    "PulseTensorInferenceSettlement",
+    "PulseTensorExactInferenceSettlementV1",
+    "RiscZeroVerifierAdapter",
+)
 
 with open(sizes_log, "r", encoding="utf-8") as handle:
     lines = handle.readlines()
@@ -82,7 +87,9 @@ with open(report_path, "w", encoding="utf-8") as handle:
 print(
     "Deploy code-size gate passed "
     f"(optimizer_runs={deploy_optimizer_runs}, "
-    f"PulseTensorCore_margin={results['PulseTensorCore']['runtime_margin']}, "
-    f"PulseTensorInferenceSettlement_margin={results['PulseTensorInferenceSettlement']['runtime_margin']})"
+    + ", ".join(
+        f"{name}_margin={results[name]['runtime_margin']}" for name in target_contracts
+    )
+    + ")"
 )
 PY

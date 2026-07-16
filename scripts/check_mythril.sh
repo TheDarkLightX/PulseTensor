@@ -47,11 +47,17 @@ fi
 mkdir -p "${OUT_DIR}"
 rm -f "${OUT_DIR}/mythril_core_findings.json" \
       "${OUT_DIR}/mythril_settlement_findings.json" \
+      "${OUT_DIR}/mythril_exact_settlement_findings.json" \
+      "${OUT_DIR}/mythril_risc_zero_adapter_findings.json" \
       "${OUT_DIR}/mythril_summary.json" \
       "${OUT_DIR}/mythril_core.stderr.log" \
       "${OUT_DIR}/mythril_settlement.stderr.log" \
+      "${OUT_DIR}/mythril_exact_settlement.stderr.log" \
+      "${OUT_DIR}/mythril_risc_zero_adapter.stderr.log" \
       "${OUT_DIR}/PulseTensorCore.bin-runtime" \
-      "${OUT_DIR}/PulseTensorInferenceSettlement.bin-runtime"
+      "${OUT_DIR}/PulseTensorInferenceSettlement.bin-runtime" \
+      "${OUT_DIR}/PulseTensorExactInferenceSettlementV1.bin-runtime" \
+      "${OUT_DIR}/RiscZeroVerifierAdapter.bin-runtime"
 
 pushd "${ROOT_DIR}" >/dev/null
 forge build >/dev/null
@@ -123,6 +129,12 @@ extract_bytecode \
 extract_bytecode \
   "${ROOT_DIR}/out/PulseTensorInferenceSettlement.sol/PulseTensorInferenceSettlement.json" \
   "${OUT_DIR}/PulseTensorInferenceSettlement.bin-runtime"
+extract_bytecode \
+  "${ROOT_DIR}/out/PulseTensorExactInferenceSettlementV1.sol/PulseTensorExactInferenceSettlementV1.json" \
+  "${OUT_DIR}/PulseTensorExactInferenceSettlementV1.bin-runtime"
+extract_bytecode \
+  "${ROOT_DIR}/out/RiscZeroVerifierAdapter.sol/RiscZeroVerifierAdapter.json" \
+  "${OUT_DIR}/RiscZeroVerifierAdapter.bin-runtime"
 
 run_mythril \
   "runs/security/PulseTensorCore.bin-runtime" \
@@ -132,14 +144,26 @@ run_mythril \
   "runs/security/PulseTensorInferenceSettlement.bin-runtime" \
   "${OUT_DIR}/mythril_settlement_findings.json" \
   "${OUT_DIR}/mythril_settlement.stderr.log"
+run_mythril \
+  "runs/security/PulseTensorExactInferenceSettlementV1.bin-runtime" \
+  "${OUT_DIR}/mythril_exact_settlement_findings.json" \
+  "${OUT_DIR}/mythril_exact_settlement.stderr.log"
+run_mythril \
+  "runs/security/RiscZeroVerifierAdapter.bin-runtime" \
+  "${OUT_DIR}/mythril_risc_zero_adapter_findings.json" \
+  "${OUT_DIR}/mythril_risc_zero_adapter.stderr.log"
 
 python3 "${ROOT_DIR}/scripts/check_mythril_report.py" "${OUT_DIR}/mythril_core_findings.json"
 python3 "${ROOT_DIR}/scripts/check_mythril_report.py" "${OUT_DIR}/mythril_settlement_findings.json"
+python3 "${ROOT_DIR}/scripts/check_mythril_report.py" "${OUT_DIR}/mythril_exact_settlement_findings.json"
+python3 "${ROOT_DIR}/scripts/check_mythril_report.py" "${OUT_DIR}/mythril_risc_zero_adapter_findings.json"
 
 python3 "${ROOT_DIR}/scripts/check_mythril_findings.py" \
   --root "${ROOT_DIR}" \
   --core-report "${OUT_DIR}/mythril_core_findings.json" \
   --settlement-report "${OUT_DIR}/mythril_settlement_findings.json" \
+  --exact-settlement-report "${OUT_DIR}/mythril_exact_settlement_findings.json" \
+  --adapter-report "${OUT_DIR}/mythril_risc_zero_adapter_findings.json" \
   --image "${IMAGE}" \
   --max-depth "${MAX_DEPTH}" \
   --transaction-count "${TX_COUNT}" \
@@ -148,4 +172,4 @@ python3 "${ROOT_DIR}/scripts/check_mythril_findings.py" \
   --wall-timeout-seconds "${WALL_TIMEOUT_SECONDS}" \
   --output "${OUT_DIR}/mythril_summary.json"
 
-echo "Mythril gate passed (reports: ${OUT_DIR}/mythril_core_findings.json, ${OUT_DIR}/mythril_settlement_findings.json, ${OUT_DIR}/mythril_summary.json)"
+echo "Mythril gate passed (four contract reports and summary written under ${OUT_DIR})"

@@ -40,6 +40,8 @@ def main() -> None:
     parser.add_argument("--root", required=True, type=Path)
     parser.add_argument("--core-report", required=True, type=Path)
     parser.add_argument("--settlement-report", required=True, type=Path)
+    parser.add_argument("--exact-settlement-report", required=True, type=Path)
+    parser.add_argument("--adapter-report", required=True, type=Path)
     parser.add_argument("--image", required=True)
     parser.add_argument("--max-depth", required=True)
     parser.add_argument("--transaction-count", required=True)
@@ -65,6 +67,8 @@ def main() -> None:
     targets = (
         ("PulseTensorCore", args.core_report),
         ("PulseTensorInferenceSettlement", args.settlement_report),
+        ("PulseTensorExactInferenceSettlementV1", args.exact_settlement_report),
+        ("RiscZeroVerifierAdapter", args.adapter_report),
     )
     contracts: list[dict[str, Any]] = []
     total_disallowed = 0

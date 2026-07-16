@@ -6,8 +6,12 @@ runs/security/requirements_traceability_report.json
 runs/security/deploy_code_size_report.json
 runs/slither/slither_report.json
 runs/slither/slither_inference_settlement_report.json
+runs/slither/slither_exact_inference_settlement_report.json
+runs/slither/slither_risc_zero_adapter_report.json
 runs/security/mythril_core_findings.json
 runs/security/mythril_settlement_findings.json
+runs/security/mythril_exact_settlement_findings.json
+runs/security/mythril_risc_zero_adapter_findings.json
 runs/security/mythril_summary.json
 runs/security/fuzz.log
 runs/security/invariant.log
@@ -19,3 +23,4 @@ runs/local_e2e/pulsetensor_deploy_receipt.json
 runs/formal/pulsetensor_emergency_mode_goal_frontier.report.json
 runs/formal/pulsetensor_tokenomics_goal_frontier.report.json
 runs/formal/pulsetensor_participant_regret_goal_frontier.report.json
+runs/formal/pulsetensor_exact_inference_settlement_v1.report.json

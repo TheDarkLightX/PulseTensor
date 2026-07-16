@@ -1,11 +1,14 @@
 # External Audit Plan
 
-Last updated: 2026-02-23
+Last updated: 2026-07-15
 
 ## Scope
 
 - `src/PulseTensorCore.sol`
 - `src/PulseTensorInferenceSettlement.sol`
+- `src/PulseTensorExactInferenceSettlementV1.sol`
+- `src/adapters/RiscZeroVerifierAdapter.sol`
+- `src/interfaces/IPulseTensorProofVerifier.sol`
 - `src/core/PulseTensorDomain.sol`
 - Release-gate scripts under `scripts/` that enforce fail-closed promotion.
 

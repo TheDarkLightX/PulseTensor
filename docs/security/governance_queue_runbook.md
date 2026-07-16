@@ -1,11 +1,13 @@
 # Governance Queue Runbook
 
-Last updated: 2026-02-23
+Last updated: 2026-07-15
 
 ## Scope
 
 - Core owner-action queue in `PulseTensorCore`.
 - Settlement policy queues in `PulseTensorInferenceSettlement`.
+- Exact-inference verifier addition/deprecation queues and one-way emergency revocation in
+  `PulseTensorExactInferenceSettlementV1`.
 
 ## Alert Conditions
 

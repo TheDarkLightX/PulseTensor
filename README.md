@@ -12,6 +12,8 @@ PulseTensor currently has executable Solidity tests, fuzz/invariant campaigns, a
 - Support isolated per-mechanism incentives inside subnets with independent epoch schedules.
 - Add optional smooth-decay emission quotes (timelocked governance toggle) to reduce step shocks from pure halving schedules.
 - Settle high-volume inference receipts in a separate optimistic batch-root contract with challenge windows and bonds.
+- Settle correctness-dependent bounded inference tasks through a separate keyless ZK lane whose proof journal and
+  PLS escrow terms are reconstructed and bound on-chain.
 - Keep settlement governance fail-closed with queued policy updates and current-epoch-only batch commits.
 - Add a governance-capped inference fee policy (batch-snapshotted) so protocol usage can fund miners and a development treasury without retroactive fee changes.
 - Preserve commit/reveal liveness under pause by allowing reveal and challenge resolution while stake-changing actions remain paused.
@@ -136,6 +138,12 @@ coverage targets, from `specs/formal/requirements_traceability.json`.
   - Finalization routes funded fees to proposer + miner sink + treasury sink using the batch-snapshotted fee policy.
   - Anyone can submit the implemented identical-leaf duplicate or prior-finalized-batch replay proofs during the challenge window; these checks do not establish general result correctness.
   - Proposers/challengers claim refunds/rewards through pull claims.
+- **Exact-inference requester/provider**
+  - A requester escrows PLS against immutable input/model commitments and a bounded deadline.
+  - A provider proves the configured program and names a beneficiary; anyone may relay the proof without changing
+    its payout.
+  - Expiry, permanent verifier revocation, or adapter/base-verifier code loss credits the full escrow to the
+    snapshotted refund address. See [`docs/zk_exact_inference_v1.md`](docs/zk_exact_inference_v1.md).
 
 ## Tokenomics (PLS-native)
 
@@ -147,6 +155,9 @@ coverage targets, from `specs/formal/requirements_traceability.json`.
   - Fee policy is governance-timelocked, cancellable, and expires if not executed within a bounded window.
   - Fee policy is snapshotted at batch commit to prevent ex-post governance fee extraction.
 - Development funding can come from treasury sink claims from real usage, rather than foundation grants.
+- The exact-inference lane separately snapshots a success fee capped at 30%; the full escrow is refunded with no fee
+  if the task expires or its verifier configuration is revoked/unavailable. This is realized PLS flow, not a USD
+  salary or price guarantee.
 
 Fast local iteration without full security scans:
 
@@ -178,6 +189,10 @@ make verify-echidna
 - `src/`: PulseTensor smart contracts.
   - `src/PulseTensorCore.sol`: core subnet, stake, commit/reveal, slashing, and emission schedule logic.
   - `src/PulseTensorInferenceSettlement.sol`: optional optimistic batch accounting with exact duplicate-leaf/replay challenges; it is not a general inference fraud-proof module.
+  - `src/PulseTensorExactInferenceSettlementV1.sol`: proof-backed bounded-task escrow with append-only verifier
+    configurations, replay-safe public values, and pull payments.
+  - `src/adapters/RiscZeroVerifierAdapter.sol`: direct immutable RISC Zero verifier adapter; proxy/router admission is
+    intentionally outside the supported production profile.
 - `frontend/`: backend-free static dApp UI with dedicated Core + Settlement consoles (wallet + RPC direct contract access).
 - `test/`: Foundry tests.
 - `specs/formal/`: formalized protocol state-model specifications.
@@ -190,6 +205,7 @@ make verify-echidna
 - `docs/bittensor_delta.md`: what we keep vs improve from Bittensor.
 - `docs/formal_workflow.md`: required verification gates.
 - `docs/assurance_scope.md`: exact verified, tested, specified, and still-unproved claims.
+- `docs/zk_exact_inference_v1.md`: exact relation, canonical proof journal, escrow state machine, and release blockers.
 - `specs/formal/requirements_traceability.json`: requirement-to-function/test traceability matrix with explicit BVA coverage.
 - `docs/frontend_decentralization.md`: host-anywhere frontend model and trust surface.
 - `docs/roadmap.md`: phased build plan.

@@ -14,6 +14,7 @@ This document defines what PulseTensor's current evidence does and does not esta
 | Slither, Mythril, Solhint, compiler-bug, and anti-pattern gates | The configured tools found no non-allowlisted issue in their supported rule sets when the recorded run completed. | Absence of all vulnerabilities, economic attacks, or specification defects. |
 | Local Anvil end-to-end replay | The scripted deployment and lifecycle path completes on a fresh local chain. | PulseChain mainnet behavior, network reliability, or operator correctness. |
 | Goal-frontier regressions | The deterministic solver reproduces realizability and witness outcomes for the finite states, transitions, and labels authored in each scenario model. | Validation of the state labels, probabilities, economic calibration, participant behavior, demand, Sybil resistance, PLS purchasing power, or real-world sustainability. |
+| Exact-inference bounded model | The dependency-free runner exhausts its disclosed one-config/one-task Python transition system, checks its accounting/state invariants, exercises known-bad mutations, and rejects drift in the descriptive YAML digest. | Interpretation of the YAML expressions, aggregate multi-task behavior, a Solidity/EVM refinement proof, or cryptographic soundness of a future guest/verifier deployment. |
 
 The required `Contract Assurance` workflow runs the deploy-profile tests, the
 security analyzers, an actual digest-pinned Echidna campaign, the local
@@ -41,20 +42,28 @@ The current Echidna harness is intentionally narrow. It fuzzes two validator act
 
 ## Formal status
 
-The files under `specs/formal/` are formalized, bounded transition-system specifications. They are useful design contracts and traceability anchors. The public repository currently does not execute a model checker over them and does not contain a machine-checked refinement proof connecting:
+The files under `specs/formal/` are formalized, bounded transition-system specifications. They are useful design contracts and traceability anchors. The exact-inference lane has an executable, exhaustive Python model over a disclosed boundary set; it binds but does not interpret the descriptive YAML. The other YAML files remain non-executed design models. The public repository does not contain a machine-checked refinement proof connecting:
 
 1. the state-model transitions,
 2. the Solidity source,
 3. compiler output, and
 4. deployed PulseChain bytecode.
 
-Accordingly, the accurate current phrase is **formal-specification-driven and adversarially tested**, not **fully formally verified**.
+Accordingly, the accurate current phrase is **formal-specification-driven, bounded-model-checked, and adversarially tested**, not **fully formally verified**.
 
 ## Current inference-settlement boundary
 
 `PulseTensorInferenceSettlement` is an optimistic batch-accounting shell, not a semantic or ZK verifier. It checks Merkle inclusion and can slash an identical leaf duplicated within one batch or repeated from an earlier finalized batch. It does not establish that an inference is correct, useful, available, or produced by a claimed model. A unique arbitrary result can pass the current challenge surface, and funded fees are distributed when the batch finalizes before any leaf is individually revealed or settled.
 
-The canonical leaf includes both `epoch` and `resultHash`, while the replay challenge requires the identical leaf hash across different epochs. Consequently, canonical same-request replay across epochs—and same-request substitution with a different result—does not produce the identical hash required by that challenge. Do not place correctness-dependent value on this optimistic path. A separate proof-backed settlement path must use a request nullifier independent of epoch and output, bind every value-authoritative public input into the proof journal, and release funds only after proof verification.
+The canonical leaf includes both `epoch` and `resultHash`, while the replay challenge requires the identical leaf hash across different epochs. Consequently, canonical same-request replay across epochs—and same-request substitution with a different result—does not produce the identical hash required by that challenge. Do not place correctness-dependent value on this optimistic path.
+
+`PulseTensorExactInferenceSettlementV1` now implements the separate proof-backed escrow boundary: requester-scoped
+nullifiers, append-only verifier configurations, contract-reconstructed public values, proof-before-accounting
+transitions, full fee-free failure refunds, and PLS pull claims. Its RISC Zero adapter treats `programId` as a public
+program commitment, not an immutable signing key. This does **not** yet prove inference correctness in deployment:
+the repository still needs the specified guest, reproducible program ID, cross-language ABI vector, genuine proof
+fixture, PulseChain testnet verifier canary, and independent review. Governance approval of the program/configuration
+remains a semantic trust boundary, and a stable code hash cannot make a storage-mutable or proxy adapter safe.
 
 ## Claims that can be made after the relevant gates pass
 

@@ -9,6 +9,8 @@ export FOUNDRY_OPTIMIZER_RUNS="1"
 
 pushd "${ROOT_DIR}" >/dev/null
 bash scripts/check_private_boundaries.sh
+python3 scripts/check_exact_inference_model.py --self-test-spec-binding
+python3 scripts/check_exact_inference_model.py
 forge fmt --check
 forge build
 forge test

@@ -39,7 +39,10 @@ fi
 EXCLUDE_CSV="$(IFS=, ; echo "${EXCLUDE_DETECTORS[*]}")"
 
 mkdir -p "${OUT_DIR}"
-rm -f "${OUT_DIR}/slither_report.json" "${OUT_DIR}/slither_inference_settlement_report.json"
+rm -f "${OUT_DIR}/slither_report.json" \
+      "${OUT_DIR}/slither_inference_settlement_report.json" \
+      "${OUT_DIR}/slither_exact_inference_settlement_report.json" \
+      "${OUT_DIR}/slither_risc_zero_adapter_report.json"
 
 pushd "${ROOT_DIR}" >/dev/null
 "${SLITHER_BIN}" src/PulseTensorCore.sol \
@@ -56,6 +59,20 @@ pushd "${ROOT_DIR}" >/dev/null
   --exclude-optimization \
   --exclude "${EXCLUDE_CSV}" \
   --json "${OUT_DIR}/slither_inference_settlement_report.json"
+"${SLITHER_BIN}" src/PulseTensorExactInferenceSettlementV1.sol \
+  --exclude-dependencies \
+  --exclude-informational \
+  --exclude-low \
+  --exclude-optimization \
+  --exclude "${EXCLUDE_CSV}" \
+  --json "${OUT_DIR}/slither_exact_inference_settlement_report.json"
+"${SLITHER_BIN}" src/adapters/RiscZeroVerifierAdapter.sol \
+  --exclude-dependencies \
+  --exclude-informational \
+  --exclude-low \
+  --exclude-optimization \
+  --exclude "${EXCLUDE_CSV}" \
+  --json "${OUT_DIR}/slither_risc_zero_adapter_report.json"
 popd >/dev/null
 
-echo "Slither checks passed (exclude=${EXCLUDE_CSV}; reports: ${OUT_DIR}/slither_report.json, ${OUT_DIR}/slither_inference_settlement_report.json)"
+echo "Slither checks passed (exclude=${EXCLUDE_CSV}; four contract reports written under ${OUT_DIR})"
