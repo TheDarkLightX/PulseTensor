@@ -1,0 +1,58 @@
+name: Frontend Assurance
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-assurance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend:
+    name: Test, build, and reproduce static dApp
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Checkout reviewed commit
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Setup exact Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22.17.0"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install locked frontend dependencies
+        run: npm --prefix frontend ci
+
+      - name: Run frontend assurance gate
+        run: make verify-ui
+
+      - name: Package validated release evidence
+        env:
+          # This is recorded as caller-reported context, not as a signature or
+          # independently verifiable CI attestation.
+          PULSETENSOR_FRONTEND_ASSURANCE_CONTEXT: caller-reported-make-verify-ui-passed
+        run: >-
+          bash scripts/release_frontend_community.sh
+          --skip-build
+          --out-dir runs/frontend_release_ci
+
+      - name: Upload validated release evidence
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: validated-frontend-${{ github.event.pull_request.head.sha || github.sha }}
+          path: runs/frontend_release_ci/**
+          if-no-files-found: error
+          retention-days: 14
