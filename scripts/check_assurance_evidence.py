@@ -282,6 +282,8 @@ def main() -> None:
     for mythril_report in (
         "runs/security/mythril_core_findings.json",
         "runs/security/mythril_settlement_findings.json",
+        "runs/security/mythril_exact_settlement_findings.json",
+        "runs/security/mythril_risc_zero_adapter_findings.json",
     ):
         subprocess.run(
             [
@@ -329,6 +331,10 @@ def main() -> None:
                 str(safe_repo_file(root, "runs/security/mythril_core_findings.json")),
                 "--settlement-report",
                 str(safe_repo_file(root, "runs/security/mythril_settlement_findings.json")),
+                "--exact-settlement-report",
+                str(safe_repo_file(root, "runs/security/mythril_exact_settlement_findings.json")),
+                "--adapter-report",
+                str(safe_repo_file(root, "runs/security/mythril_risc_zero_adapter_findings.json")),
                 "--image",
                 toolchain_value(root, "MYTHRIL_IMAGE_LOCK"),
                 "--max-depth",

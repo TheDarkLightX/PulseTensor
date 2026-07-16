@@ -79,9 +79,11 @@ contract PulseTensorCore {
     mapping(uint16 => address) public subnetOwner;
     mapping(uint16 => address) public pendingSubnetOwner;
     mapping(uint16 => address) public subnetGovernance;
+    mapping(uint16 => uint64) public subnetGovernanceGeneration;
     mapping(uint16 => uint64) public subnetOwnerActionDelayBlocks;
     mapping(uint16 => mapping(bytes32 => uint64)) public subnetOwnerActionReadyAtBlock;
     mapping(uint16 => mapping(bytes32 => address)) public subnetOwnerActionQueuedBy;
+    mapping(uint16 => mapping(bytes32 => uint256)) private subnetOwnerActionQueuedGovernanceGeneration;
     mapping(uint16 => bool) public subnetPaused;
     mapping(uint16 => uint16) public validatorCount;
     mapping(uint16 => mapping(address => uint256)) public stakeOf;
@@ -354,6 +356,7 @@ contract PulseTensorCore {
 
         subnetGovernance[netuid] = governance;
         subnetOwnerActionDelayBlocks[netuid] = ownerActionDelayBlocks;
+        subnetGovernanceGeneration[netuid] += 1;
         emit SubnetGovernanceConfigured(netuid, governance, ownerActionDelayBlocks);
     }
 
@@ -397,9 +400,7 @@ contract PulseTensorCore {
         address ownerRecipient,
         uint256 totalAmount
     ) external subnetExists(netuid) onlySubnetGovernance(netuid) returns (bytes32 actionId, uint64 readyAtBlock) {
-        if (validatorRecipient == address(0) || minerRecipient == address(0) || ownerRecipient == address(0)) {
-            revert InvalidAddress();
-        }
+        _validateSplitRecipients(validatorRecipient, minerRecipient, ownerRecipient);
         if (totalAmount == 0) revert PulseTensorDomain.ZeroAmount();
         actionId = _emissionSplitActionId(netuid, validatorRecipient, minerRecipient, ownerRecipient, totalAmount);
         readyAtBlock = _queueOwnerAction(netuid, actionId);
@@ -427,9 +428,7 @@ contract PulseTensorCore {
         uint256 totalAmount
     ) external subnetExists(netuid) onlySubnetGovernance(netuid) returns (bytes32 actionId, uint64 readyAtBlock) {
         _validateMechanismId(mechid);
-        if (validatorRecipient == address(0) || minerRecipient == address(0) || ownerRecipient == address(0)) {
-            revert InvalidAddress();
-        }
+        _validateSplitRecipients(validatorRecipient, minerRecipient, ownerRecipient);
         if (totalAmount == 0) revert PulseTensorDomain.ZeroAmount();
         actionId = _mechanismEmissionSplitActionId(
             netuid, mechid, validatorRecipient, minerRecipient, ownerRecipient, totalAmount
@@ -468,9 +467,7 @@ contract PulseTensorCore {
         address minerRecipient,
         address ownerRecipient
     ) external subnetExists(netuid) onlySubnetGovernance(netuid) returns (bytes32 actionId, uint64 readyAtBlock) {
-        if (validatorRecipient == address(0) || minerRecipient == address(0) || ownerRecipient == address(0)) {
-            revert InvalidAddress();
-        }
+        _validateSplitRecipients(validatorRecipient, minerRecipient, ownerRecipient);
         actionId = _epochEmissionPayoutActionId(netuid, epoch, validatorRecipient, minerRecipient, ownerRecipient);
         readyAtBlock = _queueOwnerAction(netuid, actionId);
     }
@@ -511,9 +508,7 @@ contract PulseTensorCore {
         address ownerRecipient
     ) external subnetExists(netuid) onlySubnetGovernance(netuid) returns (bytes32 actionId, uint64 readyAtBlock) {
         _validateMechanismId(mechid);
-        if (validatorRecipient == address(0) || minerRecipient == address(0) || ownerRecipient == address(0)) {
-            revert InvalidAddress();
-        }
+        _validateSplitRecipients(validatorRecipient, minerRecipient, ownerRecipient);
         actionId = _mechanismEpochEmissionPayoutActionId(
             netuid, mechid, epoch, validatorRecipient, minerRecipient, ownerRecipient
         );
@@ -526,8 +521,7 @@ contract PulseTensorCore {
         onlySubnetGovernance(netuid)
     {
         if (subnetOwnerActionReadyAtBlock[netuid][actionId] == 0) revert OwnerActionNotQueued();
-        delete subnetOwnerActionReadyAtBlock[netuid][actionId];
-        delete subnetOwnerActionQueuedBy[netuid][actionId];
+        _deleteOwnerAction(netuid, actionId);
         emit SubnetOwnerActionCancelled(netuid, actionId, msg.sender);
     }
 
@@ -674,9 +668,7 @@ contract PulseTensorCore {
         address payable ownerRecipient,
         uint256 totalAmount
     ) external nonReentrant subnetExists(netuid) onlySubnetGovernance(netuid) {
-        if (validatorRecipient == address(0) || minerRecipient == address(0) || ownerRecipient == address(0)) {
-            revert InvalidAddress();
-        }
+        _validateSplitRecipients(validatorRecipient, minerRecipient, ownerRecipient);
         if (totalAmount == 0) revert PulseTensorDomain.ZeroAmount();
 
         bytes32 actionId =
@@ -728,9 +720,7 @@ contract PulseTensorCore {
         uint256 totalAmount
     ) external nonReentrant subnetExists(netuid) onlySubnetGovernance(netuid) {
         _validateMechanismId(mechid);
-        if (validatorRecipient == address(0) || minerRecipient == address(0) || ownerRecipient == address(0)) {
-            revert InvalidAddress();
-        }
+        _validateSplitRecipients(validatorRecipient, minerRecipient, ownerRecipient);
         if (totalAmount == 0) revert PulseTensorDomain.ZeroAmount();
 
         bytes32 actionId = _mechanismEmissionSplitActionId(
@@ -765,9 +755,7 @@ contract PulseTensorCore {
         address payable minerRecipient,
         address payable ownerRecipient
     ) external nonReentrant subnetExists(netuid) onlySubnetGovernance(netuid) {
-        if (validatorRecipient == address(0) || minerRecipient == address(0) || ownerRecipient == address(0)) {
-            revert InvalidAddress();
-        }
+        _validateSplitRecipients(validatorRecipient, minerRecipient, ownerRecipient);
         if (subnetEpochEmissionHalvingPeriod[netuid] == 0) revert EmissionScheduleNotConfigured();
         if (epoch >= currentEpoch(netuid)) revert EpochEmissionNotFinalized();
         if (subnetEpochEmissionPaid[netuid][epoch]) revert EpochEmissionAlreadyPaid();
@@ -810,9 +798,7 @@ contract PulseTensorCore {
         address payable ownerRecipient
     ) external nonReentrant subnetExists(netuid) onlySubnetGovernance(netuid) {
         _validateMechanismId(mechid);
-        if (validatorRecipient == address(0) || minerRecipient == address(0) || ownerRecipient == address(0)) {
-            revert InvalidAddress();
-        }
+        _validateSplitRecipients(validatorRecipient, minerRecipient, ownerRecipient);
         if (mechanismEpochEmissionHalvingPeriod[netuid][mechid] == 0) revert EmissionScheduleNotConfigured();
         if (epoch >= currentEpoch(netuid)) revert EpochEmissionNotFinalized();
         if (mechanismEpochEmissionPaid[netuid][mechid][epoch]) revert EpochEmissionAlreadyPaid();
@@ -881,8 +867,7 @@ contract PulseTensorCore {
         stakeOf[netuid][msg.sender] = newStake;
         subnet.totalStake = newTotalStake;
 
-        (bool sent,) = msg.sender.call{value: amount}("");
-        if (!sent) revert TransferFailed();
+        _transferValue(payable(msg.sender), amount);
 
         emit StakeRemoved(netuid, msg.sender, amount, stakeOf[netuid][msg.sender]);
     }
@@ -1162,8 +1147,7 @@ contract PulseTensorCore {
         uint64 existingReadyAtBlock = subnetOwnerActionReadyAtBlock[netuid][actionId];
         if (existingReadyAtBlock != 0) {
             if (!_isOwnerActionExpired(existingReadyAtBlock)) revert OwnerActionAlreadyQueued();
-            delete subnetOwnerActionReadyAtBlock[netuid][actionId];
-            delete subnetOwnerActionQueuedBy[netuid][actionId];
+            _deleteOwnerAction(netuid, actionId);
         }
 
         uint64 delay = subnetOwnerActionDelayBlocks[netuid];
@@ -1176,6 +1160,7 @@ contract PulseTensorCore {
         readyAtBlock = uint64(readyAt);
         subnetOwnerActionReadyAtBlock[netuid][actionId] = readyAtBlock;
         subnetOwnerActionQueuedBy[netuid][actionId] = msg.sender;
+        subnetOwnerActionQueuedGovernanceGeneration[netuid][actionId] = subnetGovernanceGeneration[netuid];
 
         emit SubnetOwnerActionQueued(netuid, actionId, readyAtBlock, msg.sender);
     }
@@ -1185,12 +1170,20 @@ contract PulseTensorCore {
         if (readyAtBlock == 0) revert OwnerActionNotQueued();
         address queuedBy = subnetOwnerActionQueuedBy[netuid][actionId];
         if (queuedBy == address(0) || queuedBy != msg.sender) revert OwnerActionQueuedByMismatch();
+        if (subnetOwnerActionQueuedGovernanceGeneration[netuid][actionId] != subnetGovernanceGeneration[netuid]) {
+            revert OwnerActionQueuedByMismatch();
+        }
         if (block.number < readyAtBlock) revert OwnerActionNotReady();
         if (_isOwnerActionExpired(readyAtBlock)) revert OwnerActionExpired();
 
+        _deleteOwnerAction(netuid, actionId);
+        emit SubnetOwnerActionExecuted(netuid, actionId, msg.sender);
+    }
+
+    function _deleteOwnerAction(uint16 netuid, bytes32 actionId) internal {
         delete subnetOwnerActionReadyAtBlock[netuid][actionId];
         delete subnetOwnerActionQueuedBy[netuid][actionId];
-        emit SubnetOwnerActionExecuted(netuid, actionId, msg.sender);
+        delete subnetOwnerActionQueuedGovernanceGeneration[netuid][actionId];
     }
 
     function _isOwnerActionExpired(uint64 readyAtBlock) internal view returns (bool) {
@@ -1414,6 +1407,15 @@ contract PulseTensorCore {
         if (baseEmissionPerEpoch == 0) revert InvalidEmissionSchedule();
         if (floorEmissionPerEpoch > baseEmissionPerEpoch) revert InvalidEmissionSchedule();
         if (halvingPeriodEpochs == 0) revert InvalidEmissionSchedule();
+    }
+
+    function _validateSplitRecipients(address validatorRecipient, address minerRecipient, address ownerRecipient)
+        internal
+        pure
+    {
+        if (validatorRecipient == address(0) || minerRecipient == address(0) || ownerRecipient == address(0)) {
+            revert InvalidAddress();
+        }
     }
 
     function _validateMechanismId(uint16 mechid) internal pure {

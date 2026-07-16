@@ -1,6 +1,6 @@
 {
   "schema": "pulsetensor/requirements-traceability/v1",
-  "as_of_utc": "2026-02-28",
+  "as_of_utc": "2026-07-15",
   "contracts": [
     {
       "id": "core",
@@ -56,6 +56,44 @@
       ]
     },
     {
+      "id": "exact_settlement",
+      "path": "src/PulseTensorExactInferenceSettlementV1.sol",
+      "spec": "specs/formal/pulsetensor_exact_inference_settlement_v1.yaml",
+      "required_functions": [
+        "queueVerifierConfig",
+        "executeVerifierConfig",
+        "queueVerifierConfigDeprecation",
+        "executeVerifierConfigDeprecation",
+        "cancelGovernanceAction",
+        "revokeVerifierConfig",
+        "createExactInferenceTask",
+        "submitExactInferenceProof",
+        "refundExpired",
+        "refundRevoked",
+        "refundVerifierUnavailable",
+        "claim",
+        "encodeExactInferencePublicValues",
+        "computeExactInferenceOutputCommitment",
+        "computeRequestNullifier",
+        "adapterRuntimeCodeHashMatches",
+        "verifierCodeAvailable",
+        "verifierAcceptsNewTasks",
+        "verifierCanSettleOpenTasks",
+        "currentAdapterRuntimeCodeHash",
+        "accountingInvariantHolds"
+      ]
+    },
+    {
+      "id": "risc_zero_adapter",
+      "path": "src/adapters/RiscZeroVerifierAdapter.sol",
+      "spec": "docs/zk_exact_inference_v1.md",
+      "required_functions": [
+        "proofSystemId",
+        "verify",
+        "verifierRuntimeCodeHashMatches"
+      ]
+    },
+    {
       "id": "domain",
       "path": "src/core/PulseTensorDomain.sol",
       "spec": "specs/formal/pulsetensor_core.yaml",
@@ -103,11 +141,15 @@
     "min_requirements_per_contract": {
       "core": 8,
       "settlement": 8,
+      "exact_settlement": 10,
+      "risc_zero_adapter": 3,
       "domain": 4
     },
     "min_bva_requirements_per_contract": {
       "core": 4,
       "settlement": 4,
+      "exact_settlement": 6,
+      "risc_zero_adapter": 2,
       "domain": 2
     }
   },
@@ -240,6 +282,11 @@
           "kind": "test",
           "file": "test/PulseTensorCore.t.sol",
           "function": "testQueuedOwnerActionBindsToQueuingGovernanceAfterRotation"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.t.sol",
+          "function": "testQueuedOwnerActionCannotReviveAfterGovernanceRoundTrip"
         },
         {
           "kind": "test",
@@ -614,6 +661,11 @@
           "kind": "test",
           "file": "test/PulseTensorCore.inference_emission.t.sol",
           "function": "testInferenceBatchPolicyQueueBindsToQueuingGovernanceAfterRotation"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceBatchPolicyQueueCannotReviveAfterGovernanceRoundTrip"
         }
       ],
       "evidence": [
@@ -659,6 +711,11 @@
           "kind": "test",
           "file": "test/PulseTensorCore.inference_emission.t.sol",
           "function": "testInferenceFeePolicyQueueBindsToQueuingGovernanceAfterRotation"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorCore.inference_emission.t.sol",
+          "function": "testInferenceFeePolicyQueueCannotReviveAfterGovernanceRoundTrip"
         }
       ],
       "evidence": [
@@ -1051,6 +1108,688 @@
         "src/core/PulseTensorDomain.sol",
         "test/PulseTensorDomain.t.sol",
         "test/PulseTensorCore.fuzz.t.sol"
+      ]
+    },
+    {
+      "id": "EXACT-REQ-001",
+      "contract": "exact_settlement",
+      "title": "Verifier admission actions enforce delay, cancellation, expiry, and governance-generation binding",
+      "criticality": "critical",
+      "categories": [
+        "governance-queue",
+        "access-control"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "authorized-vs-unauthorized-caller",
+        "pre-ready",
+        "ready-block",
+        "expired-window",
+        "generation-round-trip"
+      ],
+      "covered_functions": [
+        "queueVerifierConfig",
+        "executeVerifierConfig",
+        "cancelGovernanceAction"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_exact_inference_settlement_v1.yaml",
+        "docs/zk_exact_inference_v1.md"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testUnauthorizedCallerCannotManageVerifierConfigs"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testQueueDelayAndExecuteVerifierConfig"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testGovernanceGenerationRejectsAtoBtoAQueuedActionRevival"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testGovernanceCanCancelExactConfigActionAndRequeue"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testVerifierConfigGovernanceActionExpiresAndCanBeRequeued"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorExactInferenceSettlementV1.sol",
+        "test/PulseTensorExactInferenceSettlementV1.t.sol",
+        "docs/zk_exact_inference_v1.md"
+      ]
+    },
+    {
+      "id": "EXACT-REQ-002",
+      "contract": "exact_settlement",
+      "title": "Delayed deprecation stops new tasks at execution while preserving existing-task settlement",
+      "criticality": "critical",
+      "categories": [
+        "configuration-lifecycle",
+        "liveness"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "authorized-vs-unauthorized-caller",
+        "execution-block",
+        "late-execution-block",
+        "generation-round-trip",
+        "new-task-vs-open-task"
+      ],
+      "covered_functions": [
+        "queueVerifierConfigDeprecation",
+        "executeVerifierConfigDeprecation",
+        "verifierAcceptsNewTasks",
+        "verifierCanSettleOpenTasks"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_exact_inference_settlement_v1.yaml",
+        "docs/zk_exact_inference_v1.md"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testUnauthorizedCallerCannotManageVerifierConfigs"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testGovernanceGenerationRejectsAtoBtoADeprecationRevival"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testDeprecationBlocksNewTasksButExistingTaskCanSettle"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testLateDeprecationExecutionStopsNewTasksAtExecutionBlock"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorExactInferenceSettlementV1.sol",
+        "test/PulseTensorExactInferenceSettlementV1.t.sol",
+        "specs/formal/pulsetensor_exact_inference_settlement_v1.yaml"
+      ]
+    },
+    {
+      "id": "EXACT-REQ-003",
+      "contract": "exact_settlement",
+      "title": "Fee policy caps success fees and couples zero-fee mode to a zero treasury",
+      "criticality": "critical",
+      "categories": [
+        "fee-policy",
+        "boundary-values"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "fee-cap",
+        "fee-cap-plus-one",
+        "zero-fee-mode",
+        "treasury-coupling"
+      ],
+      "covered_functions": [
+        "queueVerifierConfig",
+        "executeVerifierConfig"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_exact_inference_settlement_v1.yaml",
+        "docs/zk_exact_inference_v1.md"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testQueueDelayAndExecuteVerifierConfig"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testVerifierConfigFeeBoundaryAndTreasuryCoupling"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorExactInferenceSettlementV1.sol",
+        "test/PulseTensorExactInferenceSettlementV1.t.sol",
+        "docs/tokenomics.md"
+      ]
+    },
+    {
+      "id": "EXACT-REQ-004",
+      "contract": "exact_settlement",
+      "title": "Task admission and request nullifiers reject invalid bounds and requester-local replay",
+      "criticality": "critical",
+      "categories": [
+        "task-admission",
+        "replay-protection"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "zero-reward",
+        "mechanism-max-and-max-plus-one",
+        "zero-commitment",
+        "deadline-now-max-and-max-plus-one",
+        "same-vs-different-requester"
+      ],
+      "covered_functions": [
+        "createExactInferenceTask",
+        "computeRequestNullifier"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_exact_inference_settlement_v1.yaml",
+        "docs/zk_exact_inference_v1.md"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testTaskAndProofBoundariesFailClosed"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testRequesterScopedNoncePreventsSelfReplayWithoutCrossRequesterGriefing"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testPublicCommitmentHelpersMatchCanonicalDefinitions"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorExactInferenceSettlementV1.sol",
+        "test/PulseTensorExactInferenceSettlementV1.t.sol",
+        "docs/zk_exact_inference_v1.md"
+      ]
+    },
+    {
+      "id": "EXACT-REQ-005",
+      "contract": "exact_settlement",
+      "title": "Proof settlement binds the canonical journal, program, result, selector, and proof envelope",
+      "criticality": "critical",
+      "categories": [
+        "proof-binding",
+        "domain-separation"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "proof-underflow-and-over-max",
+        "selector-mismatch",
+        "class-index-max-plus-one",
+        "every-canonical-word",
+        "program-and-proof-mutation"
+      ],
+      "covered_functions": [
+        "submitExactInferenceProof",
+        "encodeExactInferencePublicValues",
+        "computeExactInferenceOutputCommitment"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_exact_inference_settlement_v1.yaml",
+        "docs/zk_exact_inference_v1.md"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testTaskAndProofBoundariesFailClosed"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testStrictDigestProofRejectsChangedBeneficiaryWithoutStateChange"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testEveryCanonicalPublicValueWordAndProgramMutationIsRejected"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testCanonicalPublicValuesGoldenVector"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testPublicCommitmentHelpersMatchCanonicalDefinitions"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorExactInferenceSettlementV1.sol",
+        "test/PulseTensorExactInferenceSettlementV1.t.sol",
+        "docs/zk_exact_inference_v1.md"
+      ]
+    },
+    {
+      "id": "EXACT-REQ-006",
+      "contract": "exact_settlement",
+      "title": "Permissionless proof relay pays only the proved beneficiary and verifier failure is state-atomic",
+      "criticality": "critical",
+      "categories": [
+        "relay-safety",
+        "reentrancy"
+      ],
+      "boundary_value_analysis": false,
+      "covered_functions": [
+        "submitExactInferenceProof",
+        "accountingInvariantHolds"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_exact_inference_settlement_v1.yaml",
+        "docs/zk_exact_inference_v1.md"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testCopiedProofRelayerPaysProvedBeneficiaryAndConservesFee"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testStrictDigestProofRejectsChangedBeneficiaryWithoutStateChange"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testMaliciousVerifierReentryCannotChangeSettlementState"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorExactInferenceSettlementV1.sol",
+        "test/PulseTensorExactInferenceSettlementV1.t.sol"
+      ]
+    },
+    {
+      "id": "EXACT-REQ-007",
+      "contract": "exact_settlement",
+      "title": "An open task closes exactly once through settlement or a fee-free terminal refund",
+      "criticality": "critical",
+      "categories": [
+        "state-machine",
+        "refund-liveness"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "at-vs-after-deadline",
+        "open-vs-terminal",
+        "revoked-vs-available",
+        "available-vs-unavailable"
+      ],
+      "covered_functions": [
+        "revokeVerifierConfig",
+        "submitExactInferenceProof",
+        "refundExpired",
+        "refundRevoked",
+        "refundVerifierUnavailable"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_exact_inference_settlement_v1.yaml",
+        "docs/zk_exact_inference_v1.md"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testUnauthorizedCallerCannotManageVerifierConfigs"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testProofCanSettleAtDeadlineWhileExpiryRefundCannot"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testExpiredTaskRefundsFullEscrowWithoutFeeAndCannotCloseTwice"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testRevokedTaskRefundsFullEscrowWithoutFee"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testAdapterCodeDriftRefundsFullEscrowWithoutFee"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.invariant.t.sol",
+          "function": "invariant_TerminalTasksNeverTransitionAgain"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorExactInferenceSettlementV1.sol",
+        "test/PulseTensorExactInferenceSettlementV1.t.sol",
+        "test/PulseTensorExactInferenceSettlementV1.invariant.t.sol"
+      ]
+    },
+    {
+      "id": "EXACT-REQ-008",
+      "contract": "exact_settlement",
+      "title": "Adapter and base-verifier availability are code-hash pinned and fail closed into full refund",
+      "criticality": "critical",
+      "categories": [
+        "verifier-availability",
+        "code-integrity"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "adapter-match-and-drift",
+        "base-match-and-drift",
+        "canonical-and-malformed-bool",
+        "availability-gas-cap"
+      ],
+      "covered_functions": [
+        "adapterRuntimeCodeHashMatches",
+        "verifierCodeAvailable",
+        "currentAdapterRuntimeCodeHash",
+        "refundVerifierUnavailable"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_exact_inference_settlement_v1.yaml",
+        "docs/zk_exact_inference_v1.md"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testQueueDelayAndExecuteVerifierConfig"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testAdapterCodeDriftRefundsFullEscrowWithoutFee"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testMalformedAvailabilityResponseUnlocksFailClosedRefund"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testAvailabilityProbeGasBoundFailsClosedAtAdmission"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testRiscZeroBaseCodeDriftBlocksUseAndUnlocksImmediateFullRefund"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testCounterexampleMutableVerifierChangesSemanticsWithoutChangingCodehash"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testCounterexampleProxyUpgradeChangesSemanticsWithoutChangingCodehash"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorExactInferenceSettlementV1.sol",
+        "src/interfaces/IPulseTensorProofVerifier.sol",
+        "test/PulseTensorExactInferenceSettlementV1.t.sol",
+        "docs/zk_exact_inference_v1.md"
+      ]
+    },
+    {
+      "id": "EXACT-REQ-009",
+      "contract": "exact_settlement",
+      "title": "Pull claims enforce bounds, rollback failed transfers, and prevent reentrant withdrawal",
+      "criticality": "critical",
+      "categories": [
+        "pull-payments",
+        "reentrancy"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "zero",
+        "partial",
+        "exact-balance",
+        "over-balance"
+      ],
+      "covered_functions": [
+        "claim",
+        "accountingInvariantHolds"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_exact_inference_settlement_v1.yaml",
+        "docs/zk_exact_inference_v1.md"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testClaimZeroExactAndOverBalanceBoundaries"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testPartialAndFailedClaimKeepAccountingExact"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testReentrantClaimCannotWithdrawTwice"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.invariant.t.sol",
+          "function": "invariant_ClaimableValueIsDerivedExactly"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.invariant.t.sol",
+          "function": "invariant_SettlementRemainsSolvent"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorExactInferenceSettlementV1.sol",
+        "test/PulseTensorExactInferenceSettlementV1.t.sol",
+        "test/PulseTensorExactInferenceSettlementV1.invariant.t.sol"
+      ]
+    },
+    {
+      "id": "EXACT-REQ-010",
+      "contract": "exact_settlement",
+      "title": "Funded value, escrow, settlements, refunds, claims, fees, and open-task counters remain exact",
+      "criticality": "critical",
+      "categories": [
+        "accounting",
+        "solvency"
+      ],
+      "boundary_value_analysis": false,
+      "covered_functions": [
+        "createExactInferenceTask",
+        "submitExactInferenceProof",
+        "refundExpired",
+        "refundRevoked",
+        "refundVerifierUnavailable",
+        "claim",
+        "accountingInvariantHolds"
+      ],
+      "spec_refs": [
+        "specs/formal/pulsetensor_exact_inference_settlement_v1.yaml",
+        "docs/zk_exact_inference_v1.md"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testAccountingIdentitiesAcrossSettlementExpiryAndRevocation"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.invariant.t.sol",
+          "function": "invariant_FundedValueIsPartitionedExactly"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.invariant.t.sol",
+          "function": "invariant_ClaimableValueIsDerivedExactly"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.invariant.t.sol",
+          "function": "invariant_SettlementRemainsSolvent"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.invariant.t.sol",
+          "function": "invariant_OpenTaskCountersMatchTrackedOpenSet"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.invariant.t.sol",
+          "function": "invariant_TerminalTasksNeverTransitionAgain"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.invariant.t.sol",
+          "function": "invariant_FeesComeOnlyFromSettledTasks"
+        }
+      ],
+      "evidence": [
+        "src/PulseTensorExactInferenceSettlementV1.sol",
+        "test/PulseTensorExactInferenceSettlementV1.t.sol",
+        "test/PulseTensorExactInferenceSettlementV1.invariant.t.sol",
+        "scripts/check_exact_inference_model.py"
+      ]
+    },
+    {
+      "id": "RISC0-REQ-001",
+      "contract": "risc_zero_adapter",
+      "title": "RISC Zero V3 identity, version, selector, and direct-verifier runtime hash are pinned at admission",
+      "criticality": "critical",
+      "categories": [
+        "verifier-admission",
+        "code-integrity"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "zero-and-non-code-address",
+        "zero-selector-and-hash",
+        "selector-match-and-mismatch",
+        "version-match-and-mismatch",
+        "runtime-match-and-mismatch"
+      ],
+      "covered_functions": [
+        "proofSystemId",
+        "verifierRuntimeCodeHashMatches"
+      ],
+      "spec_refs": [
+        "docs/zk_exact_inference_v1.md"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testRiscZeroAdapterConstructorAndProgramBoundariesFailClosed"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testRiscZeroAdapterBindsSelectorJournalAndBaseCodehash"
+        }
+      ],
+      "evidence": [
+        "src/adapters/RiscZeroVerifierAdapter.sol",
+        "src/interfaces/IRiscZeroVerifier.sol",
+        "src/interfaces/IPulseTensorProofVerifier.sol",
+        "test/PulseTensorExactInferenceSettlementV1.t.sol",
+        "docs/zk_exact_inference_v1.md"
+      ]
+    },
+    {
+      "id": "RISC0-REQ-002",
+      "contract": "risc_zero_adapter",
+      "title": "Verification binds the program, SHA-256 journal, selector, exact V3 seal envelope, and base code",
+      "criticality": "critical",
+      "categories": [
+        "proof-verification",
+        "boundary-values"
+      ],
+      "boundary_value_analysis": true,
+      "bva_dimensions": [
+        "zero-program",
+        "selector-match-and-mismatch",
+        "seal-259-260-261-bytes",
+        "base-runtime-match-and-drift"
+      ],
+      "covered_functions": [
+        "verify"
+      ],
+      "spec_refs": [
+        "docs/zk_exact_inference_v1.md"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testRiscZeroAdapterConstructorAndProgramBoundariesFailClosed"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testRiscZeroAdapterBindsSelectorJournalAndBaseCodehash"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testRiscZeroBaseCodeDriftBlocksUseAndUnlocksImmediateFullRefund"
+        }
+      ],
+      "evidence": [
+        "src/adapters/RiscZeroVerifierAdapter.sol",
+        "src/interfaces/IRiscZeroVerifier.sol",
+        "test/PulseTensorExactInferenceSettlementV1.t.sol",
+        "docs/zk_exact_inference_v1.md"
+      ]
+    },
+    {
+      "id": "RISC0-REQ-003",
+      "contract": "risc_zero_adapter",
+      "title": "Base-verifier runtime drift is reported to settlement for fail-closed task liveness",
+      "criticality": "high",
+      "categories": [
+        "availability",
+        "refund-liveness"
+      ],
+      "boundary_value_analysis": false,
+      "covered_functions": [
+        "verifierRuntimeCodeHashMatches"
+      ],
+      "spec_refs": [
+        "docs/zk_exact_inference_v1.md"
+      ],
+      "verifications": [
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testRiscZeroBaseCodeDriftBlocksUseAndUnlocksImmediateFullRefund"
+        }
+      ],
+      "evidence": [
+        "src/adapters/RiscZeroVerifierAdapter.sol",
+        "src/PulseTensorExactInferenceSettlementV1.sol",
+        "test/PulseTensorExactInferenceSettlementV1.t.sol",
+        "docs/zk_exact_inference_v1.md"
       ]
     }
   ]

@@ -580,6 +580,38 @@ contract PulseTensorCoreInferenceEmissionTest {
         assert(minProposerBondWei == 0.1 ether);
     }
 
+    function testInferenceBatchPolicyQueueCannotReviveAfterGovernanceRoundTrip() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
+        FeatureActor governanceA = new FeatureActor();
+        FeatureActor governanceB = new FeatureActor();
+        core.configureSubnetGovernance(netuid, address(governanceA), 2);
+        uint16 mechid = 26;
+
+        (, uint64 readyAt) =
+            governanceA.queueInferenceBatchPolicyUpdateWithAction(settlement, netuid, mechid, true, 6, 8, 0.1 ether);
+        uint64 queuedGeneration = core.subnetGovernanceGeneration(netuid);
+
+        core.configureSubnetGovernance(netuid, address(governanceB), 2);
+        core.configureSubnetGovernance(netuid, address(governanceA), 2);
+        assert(core.subnetGovernanceGeneration(netuid) == queuedGeneration + 2);
+        vm.roll(readyAt);
+
+        bool staleConfigureReverted = false;
+        try governanceA.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 6, 8, 0.1 ether) {}
+        catch {
+            staleConfigureReverted = true;
+        }
+        assert(staleConfigureReverted);
+
+        governanceA.cancelInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 6, 8, 0.1 ether);
+        uint64 replacementReadyAt =
+            governanceA.queueInferenceBatchPolicyUpdate(settlement, netuid, mechid, true, 6, 8, 0.1 ether);
+        vm.roll(replacementReadyAt);
+        governanceA.configureInferenceBatchPolicy(settlement, netuid, mechid, true, 6, 8, 0.1 ether);
+        (bool enabled,,,) = settlement.batchPolicies(netuid, mechid);
+        assert(enabled);
+    }
+
     function testInferenceFeePolicyQueueExpiresAndCanBeRequeued() public {
         uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
         FeatureActor governance = new FeatureActor();
@@ -687,6 +719,47 @@ contract PulseTensorCoreInferenceEmissionTest {
         assert(treasuryFeeBps == 3_500);
         assert(treasury == address(treasurySink));
         assert(miner == address(minerSink));
+    }
+
+    function testInferenceFeePolicyQueueCannotReviveAfterGovernanceRoundTrip() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
+        FeatureActor governanceA = new FeatureActor();
+        FeatureActor governanceB = new FeatureActor();
+        FeatureActor treasurySink = new FeatureActor();
+        FeatureActor minerSink = new FeatureActor();
+        core.configureSubnetGovernance(netuid, address(governanceA), 2);
+        uint16 mechid = 27;
+
+        (, uint64 readyAt) = governanceA.queueInferenceFeePolicyUpdateWithAction(
+            settlement, netuid, mechid, true, 1_200, 3_500, address(treasurySink), address(minerSink)
+        );
+        uint64 queuedGeneration = core.subnetGovernanceGeneration(netuid);
+
+        core.configureSubnetGovernance(netuid, address(governanceB), 2);
+        core.configureSubnetGovernance(netuid, address(governanceA), 2);
+        assert(core.subnetGovernanceGeneration(netuid) == queuedGeneration + 2);
+        vm.roll(readyAt);
+
+        bool staleConfigureReverted = false;
+        try governanceA.configureInferenceFeePolicy(
+            settlement, netuid, mechid, true, 1_200, 3_500, address(treasurySink), address(minerSink)
+        ) {} catch {
+            staleConfigureReverted = true;
+        }
+        assert(staleConfigureReverted);
+
+        governanceA.cancelInferenceFeePolicyUpdate(
+            settlement, netuid, mechid, true, 1_200, 3_500, address(treasurySink), address(minerSink)
+        );
+        uint64 replacementReadyAt = governanceA.queueInferenceFeePolicyUpdate(
+            settlement, netuid, mechid, true, 1_200, 3_500, address(treasurySink), address(minerSink)
+        );
+        vm.roll(replacementReadyAt);
+        governanceA.configureInferenceFeePolicy(
+            settlement, netuid, mechid, true, 1_200, 3_500, address(treasurySink), address(minerSink)
+        );
+        (bool enabled,,,,) = settlement.feePolicies(netuid, mechid);
+        assert(enabled);
     }
 
     function testInferenceBatchFeeFundingWithdrawAndFinalizeDistribution() public {

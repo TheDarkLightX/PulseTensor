@@ -125,7 +125,7 @@ Required outcome:
   - Exit `0`: compiler known-bug gate + control matrix + requirements traceability/BVA + anti-pattern + readiness docs + Solhint + Slither allowlist lock + Slither + Mythril + deterministic fuzz/invariant checks pass (and Echidna when `RUN_ECHIDNA=1`), and security artifact freshness manifest passes.
   - Exit non-zero: any security gate fails.
 - `scripts/check_deploy_code_size.sh`
-  - Exit `0`: the deployment-optimizer build (`FOUNDRY_OPTIMIZER_RUNS=1`, also enforced by the deployment script) keeps `PulseTensorCore` and `PulseTensorInferenceSettlement` within EVM runtime/initcode limits.
+  - Exit `0`: the deployment-optimizer build (`FOUNDRY_OPTIMIZER_RUNS=1`, also enforced by the deployment script) keeps `PulseTensorCore`, both settlement contracts, and the RISC Zero adapter within EVM runtime/initcode limits.
   - Exit non-zero: deploy profile exceeds code-size limits or size report parsing fails.
 - `scripts/check_requirements_traceability.sh`
   - Exit `0`: requirements matrix schema, function coverage, test linkage, and BVA minimums pass; report written to `runs/security/requirements_traceability_report.json`.

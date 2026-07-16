@@ -24,6 +24,8 @@ done
 findings_args=(
   --root "${ROOT_DIR}"
   --core-report "${FIXTURE_DIR}/mythril_jsonv2_success.json"
+  --exact-settlement-report "${FIXTURE_DIR}/mythril_jsonv2_success.json"
+  --adapter-report "${FIXTURE_DIR}/mythril_jsonv2_success.json"
   --image "mythril/test@sha256:fixture"
   --max-depth 8
   --transaction-count 1

@@ -1,6 +1,6 @@
 {
   "schema": "pulsetensor/security-control-matrix/v1",
-  "as_of_utc": "2026-02-25",
+  "as_of_utc": "2026-07-15",
   "sources": {
     "owasp_scsvs": "https://scs.owasp.org/SCSVS/",
     "owasp_top10": "https://scs.owasp.org/sctop10/",
@@ -21,6 +21,8 @@
       "evidence": [
         "src/PulseTensorCore.sol",
         "src/PulseTensorInferenceSettlement.sol",
+        "src/PulseTensorExactInferenceSettlementV1.sol",
+        "test/PulseTensorExactInferenceSettlementV1.t.sol",
         "test/PulseTensorCore.t.sol"
       ]
     },
@@ -31,6 +33,8 @@
       "evidence": [
         "src/PulseTensorCore.sol",
         "src/PulseTensorInferenceSettlement.sol",
+        "src/PulseTensorExactInferenceSettlementV1.sol",
+        "src/adapters/RiscZeroVerifierAdapter.sol",
         "scripts/check_slither.sh"
       ]
     },
@@ -42,8 +46,11 @@
         "test/PulseTensorCore.t.sol",
         "test/PulseTensorCore.fuzz.t.sol",
         "test/PulseTensorCore.invariant.t.sol",
+        "test/PulseTensorExactInferenceSettlementV1.t.sol",
+        "test/PulseTensorExactInferenceSettlementV1.invariant.t.sol",
         "specs/formal/pulsetensor_core.yaml",
-        "specs/formal/pulsetensor_inference_settlement.yaml"
+        "specs/formal/pulsetensor_inference_settlement.yaml",
+        "specs/formal/pulsetensor_exact_inference_settlement_v1.yaml"
       ]
     },
     {
@@ -53,7 +60,9 @@
       "evidence": [
         "src/core/PulseTensorDomain.sol",
         "src/PulseTensorCore.sol",
-        "src/PulseTensorInferenceSettlement.sol"
+        "src/PulseTensorInferenceSettlement.sol",
+        "src/PulseTensorExactInferenceSettlementV1.sol",
+        "src/adapters/RiscZeroVerifierAdapter.sol"
       ]
     },
     {
@@ -63,7 +72,8 @@
       "rationale": "Current contracts do not use randomness for security-critical decisions.",
       "evidence": [
         "src/PulseTensorCore.sol",
-        "src/PulseTensorInferenceSettlement.sol"
+        "src/PulseTensorInferenceSettlement.sol",
+        "src/PulseTensorExactInferenceSettlementV1.sol"
       ]
     },
     {
@@ -73,7 +83,8 @@
       "evidence": [
         "src/PulseTensorCore.sol",
         "test/PulseTensorCore.t.sol",
-        "test/PulseTensorCore.fuzz.t.sol"
+        "test/PulseTensorCore.fuzz.t.sol",
+        "test/PulseTensorExactInferenceSettlementV1.t.sol"
       ]
     },
     {
@@ -84,7 +95,8 @@
       "evidence": [
         "docs/roadmap.md",
         "src/PulseTensorCore.sol",
-        "src/PulseTensorInferenceSettlement.sol"
+        "src/PulseTensorInferenceSettlement.sol",
+        "src/PulseTensorExactInferenceSettlementV1.sol"
       ]
     },
     {
@@ -94,7 +106,9 @@
       "evidence": [
         "src/PulseTensorCore.sol",
         "src/PulseTensorInferenceSettlement.sol",
-        "test/PulseTensorCore.t.sol"
+        "src/PulseTensorExactInferenceSettlementV1.sol",
+        "test/PulseTensorCore.t.sol",
+        "test/PulseTensorExactInferenceSettlementV1.t.sol"
       ]
     },
     {
@@ -105,7 +119,9 @@
         "src/core/PulseTensorDomain.sol",
         "src/PulseTensorCore.sol",
         "src/PulseTensorInferenceSettlement.sol",
-        "test/PulseTensorCore.fuzz.t.sol"
+        "src/PulseTensorExactInferenceSettlementV1.sol",
+        "test/PulseTensorCore.fuzz.t.sol",
+        "test/PulseTensorExactInferenceSettlementV1.invariant.t.sol"
       ]
     },
     {
@@ -116,7 +132,9 @@
         "src/PulseTensorCore.sol",
         "src/PulseTensorInferenceSettlement.sol",
         "test/PulseTensorCore.t.sol",
-        "test/PulseTensorCore.inference_emission.t.sol"
+        "test/PulseTensorCore.inference_emission.t.sol",
+        "src/PulseTensorExactInferenceSettlementV1.sol",
+        "test/PulseTensorExactInferenceSettlementV1.t.sol"
       ]
     }
   ],
@@ -134,7 +152,9 @@
         "docs/security/governance_committee_charter.md",
         "docs/security/signer_selection_checklist.md",
         "docs/security/multisig_operations.md",
-        "specs/formal/pulsetensor_core.yaml"
+        "specs/formal/pulsetensor_core.yaml",
+        "docs/zk_exact_inference_v1.md",
+        "specs/formal/pulsetensor_exact_inference_settlement_v1.yaml"
       ]
     },
     {
@@ -160,6 +180,8 @@
         "test/PulseTensorCore.t.sol",
         "test/PulseTensorCore.fuzz.t.sol",
         "test/PulseTensorCore.invariant.t.sol",
+        "test/PulseTensorExactInferenceSettlementV1.t.sol",
+        "test/PulseTensorExactInferenceSettlementV1.invariant.t.sol",
         "scripts/check_fuzz_invariant.sh"
       ]
     },
@@ -170,7 +192,9 @@
       "evidence": [
         "src/PulseTensorCore.sol",
         "src/PulseTensorInferenceSettlement.sol",
-        "test/PulseTensorCore.t.sol"
+        "src/PulseTensorExactInferenceSettlementV1.sol",
+        "test/PulseTensorCore.t.sol",
+        "test/PulseTensorExactInferenceSettlementV1.t.sol"
       ]
     },
     {
@@ -180,7 +204,9 @@
       "evidence": [
         "src/PulseTensorCore.sol",
         "src/PulseTensorInferenceSettlement.sol",
-        "test/PulseTensorCore.inference_emission.t.sol"
+        "src/PulseTensorExactInferenceSettlementV1.sol",
+        "test/PulseTensorCore.inference_emission.t.sol",
+        "test/PulseTensorExactInferenceSettlementV1.invariant.t.sol"
       ]
     },
     {
@@ -219,7 +245,9 @@
       "evidence": [
         "src/PulseTensorCore.sol",
         "src/PulseTensorInferenceSettlement.sol",
-        "test/PulseTensorCore.t.sol"
+        "src/PulseTensorExactInferenceSettlementV1.sol",
+        "test/PulseTensorCore.t.sol",
+        "test/PulseTensorExactInferenceSettlementV1.t.sol"
       ]
     },
     {
@@ -233,7 +261,10 @@
         "scripts/check_artifact_freshness.sh",
         "docs/security/artifact_manifest.release.txt",
         "specs/formal/pulsetensor_core.yaml",
-        "specs/formal/pulsetensor_inference_settlement.yaml"
+        "specs/formal/pulsetensor_inference_settlement.yaml",
+        "specs/formal/pulsetensor_exact_inference_settlement_v1.yaml",
+        "scripts/check_exact_inference_model.py",
+        "test/PulseTensorExactInferenceSettlementV1.invariant.t.sol"
       ]
     },
     {
@@ -244,7 +275,9 @@
       "evidence": [
         "src/PulseTensorCore.sol",
         "src/PulseTensorInferenceSettlement.sol",
-        "test/PulseTensorCore.inference_emission.t.sol"
+        "src/PulseTensorExactInferenceSettlementV1.sol",
+        "test/PulseTensorCore.inference_emission.t.sol",
+        "test/PulseTensorExactInferenceSettlementV1.invariant.t.sol"
       ]
     },
     {

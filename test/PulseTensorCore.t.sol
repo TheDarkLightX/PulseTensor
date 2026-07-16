@@ -852,6 +852,36 @@ contract PulseTensorCoreTest {
         assert(core.subnetPaused(netuid));
     }
 
+    function testQueuedOwnerActionCannotReviveAfterGovernanceRoundTrip() public {
+        uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
+        StakeActor governanceA = new StakeActor();
+        StakeActor governanceB = new StakeActor();
+        core.configureSubnetGovernance(netuid, address(governanceA), 2);
+
+        (bytes32 actionId, uint64 readyAtBlock) = governanceA.queueSubnetPause(core, netuid, true);
+        uint64 queuedGeneration = core.subnetGovernanceGeneration(netuid);
+        assert(queuedGeneration == 1);
+
+        core.configureSubnetGovernance(netuid, address(governanceB), 2);
+        core.configureSubnetGovernance(netuid, address(governanceA), 2);
+        assert(core.subnetGovernanceGeneration(netuid) == queuedGeneration + 2);
+        vm.roll(readyAtBlock);
+
+        bool staleExecuteReverted = false;
+        try governanceA.setSubnetPaused(core, netuid, true) {}
+        catch {
+            staleExecuteReverted = true;
+        }
+        assert(staleExecuteReverted);
+        assert(!core.subnetPaused(netuid));
+
+        governanceA.cancelSubnetOwnerAction(core, netuid, actionId);
+        (, uint64 replacementReadyAtBlock) = governanceA.queueSubnetPause(core, netuid, true);
+        vm.roll(replacementReadyAtBlock);
+        governanceA.setSubnetPaused(core, netuid, true);
+        assert(core.subnetPaused(netuid));
+    }
+
     function testOwnerActionQueueExpiresAndCanBeRequeued() public {
         uint16 netuid = core.createSubnet(64, 1 ether, 500, 2, 16);
         StakeActor governance = new StakeActor();

@@ -166,6 +166,21 @@ This is the baseline design transfer for PulseTensor.
    - Covered by:
      - `test/PulseTensorCore.inference_emission.t.sol` (`testInferenceFeePolicyRequiresQueuedGovernanceAction`, `testInferenceBatchFeeFundingWithdrawAndFinalizeDistribution`, `testInferenceBatchFeeFundingCannotExceedDeclaredTotal`, `testInferenceFeeWithdrawBlockedAfterFinalize`, `testInferenceSelfChallengeGetsNoBounty`)
 
+12. **Keyless exact-inference proof escrow**
+   - Added a separate `PulseTensorExactInferenceSettlementV1` lane so correctness-dependent rewards do not rely on
+     three human verifiers or optimistic replay checks.
+   - A verifier configuration binds a public program commitment, relation, proof system, selector, direct adapter
+     runtime hash, underlying verifier runtime hash, and capped PLS fee terms. It contains no private signing key.
+   - Configurations are append-only: delayed addition/deprecation plus one-way emergency revocation; governance
+     generation binding defeats A→B→A stale-action revival.
+   - Public values bind chain/contract/task, exact task specification, request nullifier, input/model/output,
+     beneficiary, provider, and fee snapshot before any escrow becomes claimable.
+   - Full fee-free refunds remain available after expiry, revocation, or adapter/base-verifier code loss.
+   - The bounded settlement model is executable, digest-bound, and mutation-tested, but the guest, genuine receipt,
+     Solidity/EVM refinement proof, and PulseChain testnet canary remain release blockers.
+   - Specified by `docs/zk_exact_inference_v1.md` and
+     `specs/formal/pulsetensor_exact_inference_settlement_v1.yaml`.
+
 ## Deterministic Evidence Artifacts
 
 - Security manifest: `docs/security/artifact_manifest.security.txt`
@@ -174,6 +189,11 @@ This is the baseline design transfer for PulseTensor.
 - `runs/security/control_matrix_report.json`
 - `runs/slither/slither_report.json`
 - `runs/slither/slither_inference_settlement_report.json`
+- `runs/slither/slither_exact_inference_settlement_report.json`
+- `runs/slither/slither_risc_zero_adapter_report.json`
 - `runs/security/mythril_core_findings.json`
 - `runs/security/mythril_settlement_findings.json`
+- `runs/security/mythril_exact_settlement_findings.json`
+- `runs/security/mythril_risc_zero_adapter_findings.json`
 - `runs/security/mythril_summary.json`
+- `runs/formal/pulsetensor_exact_inference_settlement_v1.report.json`
