@@ -12,7 +12,7 @@ This avoids bootstrapping risk from launching an unaudited new token too early.
   - Receive proposer-bond refunds only after unchallenged finalization.
   - Receive proposer share of finalized batch fees.
 - **Challengers**
-  - Earn challenge bounties from slashed proposer bonds for valid fraud proofs.
+  - Earn challenge bounties only when the implemented Merkle proofs show that the exact same `bytes32` leaf appears twice in the current batch or also appears in a prior finalized batch.
   - Self-challenges receive no bounty.
 - **Miners**
   - Receive miner-sink fee flow from finalized batch fees.
@@ -45,17 +45,17 @@ Distribution on finalization for funded amount `F`:
 - `miner = protocol - treasury`
 - `proposer = F - protocol`
 
-## Why This Is Incentive-Aligned
+## Incentives Implemented Today
 
-- **Fraud deterrence**: proposer bond + permissionless challenges penalize invalid commitments.
+- **Narrow duplicate/replay deterrence**: a proposer bond and permissionless challenges penalize the two exact duplicate-leaf conditions above. They do not prove inference correctness and do not penalize a unique false result. The canonical leaf helper includes the epoch, so a cross-epoch challenge against canonically constructed leaves cannot use an identical leaf; this replay rule must not be treated as a general fraud-proof system.
 - **No retroactive rent extraction**: fee snapshot prevents governance from changing economics after batch commit.
 - **Liveness under dispute**: fee payers can withdraw escrow before finalization; challenged batches do not trap user funds.
-- **Protocol sustainability**: treasury funding grows with real usage, not with inflation assumptions.
+- **Usage-linked treasury inflow**: treasury receipts scale with finalized funded fees rather than a dollar-denominated promise; whether that inflow covers operating costs is not established.
 - **Miner retention**: miner sink creates direct demand-side revenue, complementing emission schedules.
 
-## Suggested Initial Parameters
+## Illustrative Starting Scenario (Not a Launch Recommendation)
 
-For early mainnet safety:
+The existing test vector uses:
 
 - `protocolFeeBps = 1200` (12%)
 - `treasuryFeeBps = 3500` (35% of protocol fee, 4.2% of gross)
@@ -64,7 +64,20 @@ For early mainnet safety:
   - miner sink: 7.8%
   - treasury sink: 4.2%
 
-This keeps service providers strongly incentivized while still generating protocol-native development revenue.
+These percentages demonstrate accounting and governance paths; they are not derived from observed demand, validator costs, Sybil resistance, PLS purchasing power, or a maintainer-runway model. They should be exercised on testnet and replaced by bounded parameters justified with measured PLS-denominated usage and cost data before value is placed at risk.
+
+## PLS-Native Maintainer Funding
+
+There is no protocol source of dollars and no need to invent one. A sustainable mechanism can distribute only PLS that users have actually escrowed. A future treasury/streaming contract should define, entirely in PLS:
+
+- `realizedProtocolFees(epoch)`: fees finalized in the epoch, never forecast revenue;
+- `maintainerBudget(epoch) = realizedProtocolFees(epoch) * maintainerShareBps / 10000`;
+- a governance-approved per-epoch PLS cap and an emergency pause;
+- pull-based claims to a replaceable maintainer payee or multisig, with no immutable secret key or lifetime entitlement;
+- an epoch-denominated reserve guard based on trailing realized PLS outflow, not a dollar oracle; and
+- transparent one-time bounties separated from recurring maintenance funding.
+
+The founder can sell earned PLS if dollars are personally needed, but the protocol cannot guarantee the exchange value or that realized demand will cover living costs. Until usage data exists, any percentage is a bounded experiment rather than a salary promise. Launch should therefore avoid a new inflationary token and avoid fixed obligations funded by hoped-for future volume.
 
 ## Frontier-Derived Recommendation
 
@@ -87,22 +100,24 @@ make verify-tokenomics-frontier
 Current deterministic frontier result:
 
 1. Safety-oriented maximal set:
-   - `{G1_SOLVENCY_SAFETY, G2_LIVENESS, G3_CHALLENGE_FAIRNESS, G4_TREASURY_SUSTAINABILITY, G5_ANTI_SYBIL}`
+   - `{G1_SOLVENCY_SAFETY, G2_LIVENESS, G3_CHALLENGE_FAIRNESS, G4_TREASURY_INFLOW_TARGET, G5_ANTI_SYBIL}`
 2. Growth-oriented maximal set:
-   - `{G2_LIVENESS, G4_TREASURY_SUSTAINABILITY, G6_AGGRESSIVE_TREASURY_GROWTH}`
+   - `{G2_LIVENESS, G4_TREASURY_INFLOW_TARGET, G6_AGGRESSIVE_TREASURY_GROWTH}`
 
 Interpretation:
 
 - Full objective set is unrealizable.
 - Minimal relaxation from full set is dropping `G6_AGGRESSIVE_TREASURY_GROWTH`.
-- Therefore, the recommended default remains `balanced`; `growth` should be treated as an explicit risk-accepting mode.
+- Within the authored labels, `balanced` preserves more labels marked safety-oriented than `growth`.
+
+This frontier is a deterministic consistency check over labels assigned by the model author. It does not derive demand, costs, prices, participant behavior, Sybil resistance, or treasury sufficiency from the fee parameters, and it is not empirical or game-theoretic proof that the `balanced` profile is economically sustainable.
 
 Participant-regret invariants are also explored with:
 
 - `configs/formal/pulsetensor_participant_regret_goal_frontier.json`
 - `scripts/check_participant_regret_frontier.sh`
 
-Result: the maximal low-regret set keeps solvency/accounting safety, timelocked governance, capped fees, no retroactive fee extraction, pre-finalize escrow exits, challenge fairness, and bounded slashing. Aggressive treasury growth is a separate maximal mode and should remain opt-in only.
+Within the authored labels, one maximal set keeps the states labeled solvency/accounting safety, timelocked governance, capped fees, no retroactive fee extraction, pre-finalize escrow exits, challenge fairness, and bounded slashing; aggressive treasury growth is a separate maximal set. The solver does not measure actual participant regret or establish those economic labels.
 
 ## Relation to Bittensor-Inspired Design
 

@@ -4,14 +4,18 @@ set -euo pipefail
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_DIR="${ROOT_DIR}/runs/slither"
 SLITHER_BIN="${ROOT_DIR}/.venv/bin/slither"
+SLITHER_PYTHON="${ROOT_DIR}/.venv/bin/python"
 ALLOWLIST_PATH="${ROOT_DIR}/docs/security/slither_exclusions.allowlist"
+source "${ROOT_DIR}/scripts/toolchain.lock"
 
-if [[ ! -x "${SLITHER_BIN}" ]]; then
-  if ! command -v slither >/dev/null 2>&1; then
-    echo "slither not found (install in .venv or on PATH)"
-    exit 1
-  fi
-  SLITHER_BIN="slither"
+if [[ ! -x "${SLITHER_BIN}" || ! -x "${SLITHER_PYTHON}" ]]; then
+  echo "pinned Slither environment not found; run scripts/bootstrap.sh"
+  exit 1
+fi
+actual_slither_version="$("${SLITHER_PYTHON}" -c 'import importlib.metadata; print(importlib.metadata.version("slither-analyzer"))')"
+if [[ "${actual_slither_version}" != "${SLITHER_VERSION}" ]]; then
+  echo "Slither version mismatch: expected ${SLITHER_VERSION}, found ${actual_slither_version}"
+  exit 1
 fi
 
 if [[ ! -f "${ALLOWLIST_PATH}" ]]; then

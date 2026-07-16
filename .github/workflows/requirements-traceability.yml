@@ -6,25 +6,37 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
+concurrency:
+  group: requirements-traceability-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   traceability:
     name: Validate requirements matrix
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
+      - name: Checkout reviewed commit
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          python-version: "3.12"
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Setup exact Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12.3"
 
       - name: Run requirements traceability gate
         run: make verify-requirements-traceability
 
       - name: Upload traceability report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: requirements-traceability-report
+          name: requirements-traceability-${{ github.event.pull_request.head.sha || github.sha }}
           path: runs/security/requirements_traceability_report.json
+          if-no-files-found: error
+          retention-days: 30

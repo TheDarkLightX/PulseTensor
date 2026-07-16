@@ -1,0 +1,12 @@
+testMode: property
+testLimit: 1
+seqLen: 1
+workers: 1
+seed: 1
+coverage: true
+format: text
+stopOnFail: true
+maxTimeDelay: 0
+maxBlockDelay: 1
+balanceContract: 100000000000000000000
+cryticArgs: ["--compile-force-framework", "foundry"]

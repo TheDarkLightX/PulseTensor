@@ -30,9 +30,8 @@ contract PulseTensorCoreFuzzTest is Test {
         uint16 mechid,
         uint64 epoch
     ) internal view returns (bytes32) {
-        return keccak256(
-            abi.encode(weightsHash, salt, validator, netuid, mechid, epoch, block.chainid, address(core), 1)
-        );
+        return
+            keccak256(abi.encode(weightsHash, salt, validator, netuid, mechid, epoch, block.chainid, address(core), 1));
     }
 
     function _quoteDefaultEmissionSplit(uint256 totalAmount)
@@ -304,8 +303,7 @@ contract PulseTensorCoreFuzzTest is Test {
 
     function testFuzz_DefaultEmissionSplitConservesTotal(uint96 totalRaw) public pure {
         uint256 totalAmount = bound(uint256(totalRaw), 1, 1_000 ether);
-        (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount) =
-            _quoteDefaultEmissionSplit(totalAmount);
+        (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount) = _quoteDefaultEmissionSplit(totalAmount);
         assertEq(validatorAmount + minerAmount + ownerAmount, totalAmount);
     }
 

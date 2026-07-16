@@ -118,14 +118,16 @@ bash scripts/check_tokenomics_goal_frontier.sh
 
 Expected maximal frontier sets:
 
-1. `{G1_SOLVENCY_SAFETY, G2_LIVENESS, G3_CHALLENGE_FAIRNESS, G4_TREASURY_SUSTAINABILITY, G5_ANTI_SYBIL}`
-2. `{G2_LIVENESS, G4_TREASURY_SUSTAINABILITY, G6_AGGRESSIVE_TREASURY_GROWTH}`
+1. `{G1_SOLVENCY_SAFETY, G2_LIVENESS, G3_CHALLENGE_FAIRNESS, G4_TREASURY_INFLOW_TARGET, G5_ANTI_SYBIL}`
+2. `{G2_LIVENESS, G4_TREASURY_INFLOW_TARGET, G6_AGGRESSIVE_TREASURY_GROWTH}`
 
 Interpretation:
 
 - Keeping aggressive treasury growth as a hard objective conflicts with solvency/fairness/anti-Sybil objectives.
 - Dropping only `G6_AGGRESSIVE_TREASURY_GROWTH` yields the largest safety-oriented realizable set.
-- This supports the `balanced` profile as default and `growth` as opt-in when explicitly accepting higher risk.
+- Within these authored labels, `balanced` retains more safety-labeled objectives and `growth` accepts the states labeled higher risk.
+
+This is scenario-label consistency, not economic calibration. The solver does not validate the labels, probabilities, market response, demand, PLS purchasing power, operating costs, or Sybil assumptions. In particular, `G4_TREASURY_INFLOW_TARGET` means only that the authored state is not labeled below a selected target; it does not establish that the target is sufficient or attainable.
 
 ## Participant-Regret Invariant Frontier Example
 
@@ -156,7 +158,7 @@ Interpretation:
 
 - The full set is unrealizable: maximizing aggressive treasury growth conflicts with user-protective safety invariants.
 - Minimal relaxation from the full set is dropping only `G9_AGGRESSIVE_TREASURY_GROWTH`.
-- Recommended default invariant profile is the first maximal set (safety + low participant regret).
+- Within the authored labels, the first maximal set is the safety-oriented scenario and the second is the aggressive-growth scenario. The solver does not measure participant regret or validate either label against behavior or market data.
 
 ## Outputs and Review
 

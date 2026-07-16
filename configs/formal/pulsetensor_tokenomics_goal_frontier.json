@@ -1,6 +1,6 @@
 {
   "schema": "pulsetensor/goal-frontier-model/v1",
-  "description": "PulseTensor tokenomics profile tradeoff model across security, liveness, fairness, treasury sustainability, and aggressive treasury growth objectives.",
+  "description": "Authored PulseTensor tokenomics scenario-label tradeoff model; it is not an empirical calibration or proof of economic sustainability.",
   "initial_state": "select_profile_sys",
   "states": {
     "select_profile_sys": {
@@ -45,7 +45,7 @@
         "fairness_safe",
         "sybil_resistance_strong",
         "liveness_low",
-        "treasury_yield_low",
+        "treasury_inflow_below_target",
         "treasury_not_aggressive"
       ],
       "transitions": [
@@ -59,7 +59,7 @@
         "fairness_safe",
         "sybil_resistance_strong",
         "liveness_low",
-        "treasury_yield_low",
+        "treasury_inflow_below_target",
         "treasury_not_aggressive"
       ],
       "transitions": [
@@ -74,7 +74,7 @@
         "fairness_safe",
         "sybil_resistance_strong",
         "liveness_ok",
-        "treasury_yield_sustainable",
+        "treasury_inflow_target_met",
         "treasury_not_aggressive"
       ],
       "transitions": [
@@ -88,7 +88,7 @@
         "fairness_safe",
         "sybil_resistance_strong",
         "liveness_ok",
-        "treasury_yield_sustainable",
+        "treasury_inflow_target_met",
         "treasury_not_aggressive"
       ],
       "transitions": [
@@ -100,7 +100,7 @@
       "controller": "environment",
       "labels": [
         "liveness_ok",
-        "treasury_yield_sustainable",
+        "treasury_inflow_target_met",
         "treasury_yield_aggressive",
         "sybil_risk_high"
       ],
@@ -112,7 +112,7 @@
       "controller": "environment",
       "labels": [
         "liveness_ok",
-        "treasury_yield_sustainable",
+        "treasury_inflow_target_met",
         "treasury_yield_aggressive",
         "sybil_risk_high",
         "fairness_risk_high",
@@ -140,9 +140,9 @@
       "forbidden_labels": ["fairness_risk_high"]
     },
     {
-      "id": "G4_TREASURY_SUSTAINABILITY",
-      "description": "Avoid treasury yield levels that are too low for sustained operations.",
-      "forbidden_labels": ["treasury_yield_low"]
+      "id": "G4_TREASURY_INFLOW_TARGET",
+      "description": "Avoid authored scenario states labeled below the selected treasury-inflow target; the model does not calibrate that target or prove operating sufficiency.",
+      "forbidden_labels": ["treasury_inflow_below_target"]
     },
     {
       "id": "G5_ANTI_SYBIL",
