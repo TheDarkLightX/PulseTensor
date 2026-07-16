@@ -1,4 +1,4 @@
-# Formal Workflow (Correct by Construction)
+# Formal-Specification and Assurance Workflow
 
 This workflow is mandatory for protocol-changing smart-contract work in PulseTensor.
 
@@ -42,7 +42,7 @@ Required outcome:
 
 Required outcome:
 
-- No spec-to-implementation drift for promoted protocol behavior.
+- Reviewable specification, implementation, and test updates are linked for promoted protocol behavior. This structural gate can reveal missing links; it does not prove semantic equivalence or eliminate specification-to-implementation drift.
 
 ## Gate 4: Requirements Traceability + BVA Coverage
 
@@ -93,10 +93,10 @@ Required outcome:
 
 - Required release/merge gate:
   - `make verify-release`
-  - Runs toolchain lock checks, build/tests, security suite, mandatory Echidna, and release artifact freshness checks.
-- Complete assurance gate (recommended before deploy candidate promotion):
+  - Runs exact pinned-component checks, build/tests, security suite, mandatory Echidna, deploy-size validation, local live-chain E2E, all frontier checks, and a commit-bound evidence manifest.
+- Compatibility alias:
   - `make verify-complete`
-  - Runs release gate + traceability + local live-chain E2E + goal/tokenomics/participant-regret frontier checks + complete artifact freshness.
+  - Delegates to the one canonical `make verify-release` pipeline.
 - Fast local iteration (not release/merge gate):
   - `make verify-dev`
   - Runs boundary checks + build/tests.
@@ -111,12 +111,12 @@ Required outcome:
   - Validates end-to-end deployed flow locally and emits a deterministic run artifact.
 - Extended release entrypoint:
   - `make verify-release-full`
-  - Same security posture as `make verify-release`, with a dedicated entrypoint for CI profile separation.
+  - Compatibility alias that delegates to `make verify-release`.
 
 ## CLI Contract
 
 - `scripts/verify_toolchain.sh`
-  - Exit `0`: required commands are present and pinned version prefixes match lock file.
+  - Exit `0`: required commands are present and pinned component versions and binary/content hashes match the lock file.
   - Exit non-zero: missing command or version mismatch.
 - `scripts/check_private_boundaries.sh`
   - Exit `0`: private dependency directories remain untracked, no SSH-style repo URLs are present in tracked files, and public documentation does not depend on local private dependency paths.
@@ -125,7 +125,7 @@ Required outcome:
   - Exit `0`: compiler known-bug gate + control matrix + requirements traceability/BVA + anti-pattern + readiness docs + Solhint + Slither allowlist lock + Slither + Mythril + deterministic fuzz/invariant checks pass (and Echidna when `RUN_ECHIDNA=1`), and security artifact freshness manifest passes.
   - Exit non-zero: any security gate fails.
 - `scripts/check_deploy_code_size.sh`
-  - Exit `0`: deployment-optimizer build (`FOUNDRY_OPTIMIZER_RUNS` default `1`) keeps `PulseTensorCore` and `PulseTensorInferenceSettlement` within EVM runtime/initcode limits.
+  - Exit `0`: the deployment-optimizer build (`FOUNDRY_OPTIMIZER_RUNS=1`, also enforced by the deployment script) keeps `PulseTensorCore` and `PulseTensorInferenceSettlement` within EVM runtime/initcode limits.
   - Exit non-zero: deploy profile exceeds code-size limits or size report parsing fails.
 - `scripts/check_requirements_traceability.sh`
   - Exit `0`: requirements matrix schema, function coverage, test linkage, and BVA minimums pass; report written to `runs/security/requirements_traceability_report.json`.
@@ -146,13 +146,13 @@ Required outcome:
   - Exit `0`: participant-regret model yields expected deterministic maximal frontier and minimal relaxations.
   - Exit non-zero: synthesized frontier deviates from expected deterministic result.
 - `scripts/verify_release.sh`
-  - Exit `0`: toolchain lock + release gate pass with `RUN_ECHIDNA=1`.
+  - Exit `0`: the canonical release pipeline passes: exact toolchain; exact Echidna property/action inventory, campaign-strength checks, and detected negative control; deployment-profile size/tests; analyzers; local lifecycle; formal-frontier regressions; and commit-bound evidence.
   - Exit non-zero: any upstream gate failure.
 - `scripts/verify_release_full.sh`
-  - Exit `0`: same release posture as `verify_release.sh` through a separate CI-friendly entrypoint.
+  - Exit `0`: the canonical `verify_release.sh` pipeline passes through this compatibility alias.
   - Exit non-zero: any upstream gate failure.
 - `scripts/verify_complete.sh`
-  - Exit `0`: release gate + requirements traceability + local E2E + goal/tokenomics/participant-regret frontier checks + complete artifact freshness pass.
+  - Exit `0`: the canonical `verify_release.sh` pipeline passes through this compatibility alias.
   - Exit non-zero: any upstream gate failure.
 
 ## Definition of Done (Protocol Change)

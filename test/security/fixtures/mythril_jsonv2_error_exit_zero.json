@@ -1,0 +1,17 @@
+[
+  {
+    "issues": [],
+    "sourceType": "",
+    "sourceFormat": "",
+    "sourceList": [],
+    "meta": {
+      "logs": [
+        {
+          "level": "error",
+          "hidden": true,
+          "msg": "simulated Mythril internal analysis failure"
+        }
+      ]
+    }
+  }
+]

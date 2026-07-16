@@ -3,12 +3,13 @@ set -euo pipefail
 
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT_DIR="${ROOT_DIR}/runs/security"
-IMAGE="${MYTHRIL_IMAGE:-mythril/myth@sha256:49e11758e359d0b410f648df5bbcba28a52e091a78e4772b5c02b9043666b4ff}"
-MAX_DEPTH="${MYTHRIL_MAX_DEPTH:-8}"
-TX_COUNT="${MYTHRIL_TRANSACTION_COUNT:-1}"
-EXEC_TIMEOUT="${MYTHRIL_EXECUTION_TIMEOUT:-15}"
-SOLVER_TIMEOUT_MS="${MYTHRIL_SOLVER_TIMEOUT_MS:-8000}"
-WALL_TIMEOUT_SECONDS="${MYTHRIL_WALL_TIMEOUT_SECONDS:-120}"
+source "${ROOT_DIR}/scripts/toolchain.lock"
+IMAGE="${MYTHRIL_IMAGE_LOCK}"
+MAX_DEPTH="${MYTHRIL_MAX_DEPTH_LOCK}"
+TX_COUNT="${MYTHRIL_TRANSACTION_COUNT_LOCK}"
+EXEC_TIMEOUT="${MYTHRIL_EXECUTION_TIMEOUT_LOCK}"
+SOLVER_TIMEOUT_MS="${MYTHRIL_SOLVER_TIMEOUT_MS_LOCK}"
+WALL_TIMEOUT_SECONDS="${MYTHRIL_WALL_TIMEOUT_SECONDS_LOCK}"
 ALLOWLIST_PATH="${ROOT_DIR}/docs/security/mythril_ignored_swc.allowlist"
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -22,6 +23,7 @@ if ! command -v jq >/dev/null 2>&1; then
 fi
 
 bash "${ROOT_DIR}/scripts/check_mythril_allowlist.sh"
+bash "${ROOT_DIR}/scripts/test_mythril_report_checker.sh"
 
 if [[ ! -f "${ALLOWLIST_PATH}" ]]; then
   echo "Mythril SWC allowlist not found: ${ALLOWLIST_PATH}"
@@ -78,7 +80,8 @@ run_mythril() {
 
   set +e
   timeout "${WALL_TIMEOUT_SECONDS}s" docker run --rm \
-    -v "${ROOT_DIR}:/src" \
+    --network none \
+    -v "${ROOT_DIR}:/src:ro" \
     -w /src \
     "${IMAGE}" \
       myth analyze \
@@ -130,93 +133,19 @@ run_mythril \
   "${OUT_DIR}/mythril_settlement_findings.json" \
   "${OUT_DIR}/mythril_settlement.stderr.log"
 
-ROOT_DIR="${ROOT_DIR}" OUT_DIR="${OUT_DIR}" MYTHRIL_IMAGE="${IMAGE}" MYTHRIL_MAX_DEPTH="${MAX_DEPTH}" \
-MYTHRIL_TRANSACTION_COUNT="${TX_COUNT}" MYTHRIL_EXECUTION_TIMEOUT="${EXEC_TIMEOUT}" \
-MYTHRIL_SOLVER_TIMEOUT_MS="${SOLVER_TIMEOUT_MS}" python3 - <<'PY'
-import json
-import os
-import pathlib
-import sys
+python3 "${ROOT_DIR}/scripts/check_mythril_report.py" "${OUT_DIR}/mythril_core_findings.json"
+python3 "${ROOT_DIR}/scripts/check_mythril_report.py" "${OUT_DIR}/mythril_settlement_findings.json"
 
-root = pathlib.Path(os.environ["ROOT_DIR"])
-out_dir = pathlib.Path(os.environ["OUT_DIR"])
-allowlist_path = root / "docs/security/mythril_ignored_swc.allowlist"
-
-allowlisted = []
-for raw_line in allowlist_path.read_text(encoding="utf-8").splitlines():
-    line = raw_line.split("#", 1)[0].strip()
-    if line:
-        allowlisted.append(line)
-allowlisted_set = set(allowlisted)
-
-targets = [
-    ("PulseTensorCore", out_dir / "mythril_core_findings.json"),
-    ("PulseTensorInferenceSettlement", out_dir / "mythril_settlement_findings.json"),
-]
-
-summary_contracts = []
-total_disallowed = 0
-for contract_name, report_path in targets:
-    payload = json.loads(report_path.read_text(encoding="utf-8"))
-    if not isinstance(payload, list) or len(payload) == 0:
-        raise SystemExit(f"Mythril output is malformed: {report_path}")
-
-    issues = payload[0].get("issues")
-    if not isinstance(issues, list):
-        raise SystemExit(f"Mythril issues list missing: {report_path}")
-
-    allowed_count = 0
-    disallowed = []
-    for issue in issues:
-        swc_id = issue.get("swcID")
-        if not isinstance(swc_id, str) or swc_id.strip() == "":
-            swc_id = "UNKNOWN"
-        if swc_id in allowlisted_set:
-            allowed_count += 1
-        else:
-            disallowed.append(
-                {
-                    "swc_id": swc_id,
-                    "severity": issue.get("severity"),
-                    "title": issue.get("swcTitle"),
-                }
-            )
-
-    total_disallowed += len(disallowed)
-    summary_contracts.append(
-        {
-            "contract": contract_name,
-            "report": str(report_path.relative_to(root)),
-            "total_issues": len(issues),
-            "allowlisted_issues": allowed_count,
-            "disallowed_issues": disallowed,
-        }
-    )
-
-summary = {
-    "schema": "pulsetensor/security-mythril-summary/v1",
-    "image": os.environ.get("MYTHRIL_IMAGE", "mythril/myth"),
-    "params": {
-        "max_depth": os.environ.get("MYTHRIL_MAX_DEPTH", "8"),
-        "transaction_count": os.environ.get("MYTHRIL_TRANSACTION_COUNT", "1"),
-        "execution_timeout": os.environ.get("MYTHRIL_EXECUTION_TIMEOUT", "15"),
-        "solver_timeout_ms": os.environ.get("MYTHRIL_SOLVER_TIMEOUT_MS", "8000"),
-    },
-    "allowlisted_swc_ids": allowlisted,
-    "contracts": summary_contracts,
-    "ok": total_disallowed == 0,
-}
-(out_dir / "mythril_summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
-
-if total_disallowed != 0:
-    for contract in summary_contracts:
-        if contract["disallowed_issues"]:
-            print(
-                f"Mythril disallowed findings in {contract['contract']}: "
-                f"{len(contract['disallowed_issues'])}",
-                file=sys.stderr,
-            )
-    raise SystemExit(1)
-PY
+python3 "${ROOT_DIR}/scripts/check_mythril_findings.py" \
+  --root "${ROOT_DIR}" \
+  --core-report "${OUT_DIR}/mythril_core_findings.json" \
+  --settlement-report "${OUT_DIR}/mythril_settlement_findings.json" \
+  --image "${IMAGE}" \
+  --max-depth "${MAX_DEPTH}" \
+  --transaction-count "${TX_COUNT}" \
+  --execution-timeout "${EXEC_TIMEOUT}" \
+  --solver-timeout-ms "${SOLVER_TIMEOUT_MS}" \
+  --wall-timeout-seconds "${WALL_TIMEOUT_SECONDS}" \
+  --output "${OUT_DIR}/mythril_summary.json"
 
 echo "Mythril gate passed (reports: ${OUT_DIR}/mythril_core_findings.json, ${OUT_DIR}/mythril_settlement_findings.json, ${OUT_DIR}/mythril_summary.json)"

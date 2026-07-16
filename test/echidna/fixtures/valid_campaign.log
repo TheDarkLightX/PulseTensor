@@ -1,0 +1,15 @@
+Echidna 2.3.2
+echidna_active_commit_epoch_consistent_with_pending_count: passing
+echidna_registered_validators_can_validate: passing
+echidna_pending_commitment_count_bounded: passing
+echidna_validator_count_exact_and_bounded: passing
+echidna_stake_and_native_liabilities_conserved: passing
+
+Unique instructions: 4338
+Unique codehashes: 3
+Corpus size: 12
+Seed: 1
+Total calls: 8000
+--- PULSETENSOR ECHIDNA PRIMARY END status=0 ---
+echidna_gate_known_failure: failed
+--- PULSETENSOR ECHIDNA NEGATIVE END status=1 ---

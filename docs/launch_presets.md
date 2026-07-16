@@ -1,6 +1,6 @@
-# Launch Presets (Safe Defaults)
+# Launch Parameter Presets (Uncalibrated Examples)
 
-This document defines startup parameter tiers for PulseTensor subnet launches, with game-theoretic intent:
+This document defines illustrative parameter tiers for testnet experiments. They bound contract inputs and express design intent; they are not empirically calibrated, independently audited, or proven safe for mainnet:
 
 - prevent cheap Sybil validator entry,
 - keep challenge incentives live,
@@ -19,19 +19,19 @@ Canonical machine-readable source:
 - Higher entry friction (`minValidatorStake`) and longer governance delay.
 - Longer settlement challenge windows and higher proposer bonds.
 
-Use when:
+Consider for:
 
-- initial mainnet launch,
+- initial testnet and tiny-value canary experiments,
 - uncertain adversarial surface,
 - low tolerance for parameter volatility.
 
-### `balanced` (default recommendation)
+### `balanced` (reference test vector)
 
 - Middle-ground profile for broad participation with bounded risk.
 - Preserves anti-spam constraints while allowing faster market iteration.
-- Recommended first public baseline if ops capacity is moderate.
+- Useful as the repository's middle test vector.
 
-Use when:
+Consider only when:
 
 - after initial smoke phase,
 - on-chain activity is consistent,
@@ -43,7 +43,7 @@ Use when:
 - Lower stake and bond barriers with shorter epochs/challenge windows.
 - Higher protocol fee lane for faster treasury accrual.
 
-Use when:
+Consider only when:
 
 - protocol telemetry shows resilient validator/challenger behavior,
 - governance and monitoring are mature,
@@ -51,8 +51,8 @@ Use when:
 
 ## Game-Theory Rationale
 
-- **Sybil resistance**: validator capital lock (`minValidatorStake`) and cap (`maxValidators`) raise attacker cost.
-- **Fraud deterrence**: proposer bond + challenge bounty make invalid batch commits economically dominated.
+- **Nominal entry cost**: validator capital lock (`minValidatorStake`) and cap (`maxValidators`) raise the PLS cost of occupying validator slots, but do not prove Sybil resistance or prevent coordinated identities.
+- **Narrow duplicate/replay incentives**: proposer bonds fund bounties for the exact duplicate-leaf conditions implemented today. A unique false inference is not slashable through this path, so no general fraud-deterrence claim follows.
 - **Credible fee policy**: settlement fee policy is timelocked and snapshotted at commit, removing retroactive governance rent extraction.
 - **Liveness**: fee funders can withdraw pre-finalization, reducing trapped-capital griefing.
 - **Governance risk control**: owner/governance actions are queued with enforced delay, creating observability and reaction time.
@@ -86,10 +86,12 @@ Notes:
 
 ## Operational Guidance
 
-- Start with `balanced` unless you explicitly need slower (`conservative`) or faster (`growth`) economics.
+- Start experimentation with `conservative` on testnet. Do not infer mainnet safety from a preset name or renderer output.
 - Keep protocol fee lane at or below the enforced cap and avoid sudden fee shocks across epochs.
 - Re-evaluate presets only after collecting on-chain evidence:
   - challenge frequency,
   - replay/duplicate fraud attempts,
   - proposer default rate,
   - validator concentration.
+
+Before any value-bearing launch, calibrate parameters from observed PLS-denominated demand/costs, test the separate proof-backed correctness path, bind deployed bytecode to release evidence, and obtain independent review.

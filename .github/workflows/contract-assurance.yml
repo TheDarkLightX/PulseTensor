@@ -1,0 +1,68 @@
+name: Contract Assurance
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: contract-assurance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-evidence:
+    name: Required assurance evidence
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout reviewed commit
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+
+      - name: Setup exact Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065
+        with:
+          python-version: "3.12.3"
+
+      - name: Setup exact Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: "22.17.0"
+
+      - name: Setup exact Foundry release
+        uses: foundry-rs/foundry-toolchain@b00af27efadbc7b4ca8b82abbd903b17cc874d2a
+        with:
+          version: v1.1.0
+
+      - name: Install pinned dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install --no-install-recommends --yes ripgrep=14.1.0-1
+          source scripts/toolchain.lock
+          forge install "foundry-rs/forge-std@${FORGE_STD_REVISION}" --no-git
+          bash scripts/bootstrap.sh
+
+      - name: Run canonical release assurance gate
+        run: make verify-release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Retain review evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: contract-assurance-${{ github.event.pull_request.head.sha || github.sha }}
+          path: |
+            runs/assurance/**
+            runs/security/**
+            runs/slither/**
+            runs/local_e2e/**
+            runs/formal/**
+          if-no-files-found: error
+          retention-days: 30

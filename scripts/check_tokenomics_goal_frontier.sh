@@ -26,12 +26,12 @@ expected_maximal = [
         "G1_SOLVENCY_SAFETY",
         "G2_LIVENESS",
         "G3_CHALLENGE_FAIRNESS",
-        "G4_TREASURY_SUSTAINABILITY",
+        "G4_TREASURY_INFLOW_TARGET",
         "G5_ANTI_SYBIL",
     ],
     [
         "G2_LIVENESS",
-        "G4_TREASURY_SUSTAINABILITY",
+        "G4_TREASURY_INFLOW_TARGET",
         "G6_AGGRESSIVE_TREASURY_GROWTH",
     ],
 ]

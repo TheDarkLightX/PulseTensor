@@ -1,0 +1,9 @@
+[
+  {
+    "issues": [],
+    "sourceType": "raw-bytecode",
+    "sourceFormat": "evm-bytecode",
+    "sourceList": ["PulseTensorCore.bin-runtime"],
+    "meta": {}
+  }
+]

@@ -1,6 +1,14 @@
-testMode: assertion
+testMode: property
 testLimit: 8000
 seqLen: 30
 workers: 1
 seed: 1
+coverage: true
+format: text
+stopOnFail: false
+maxTimeDelay: 0
+maxBlockDelay: 4
 balanceContract: 100000000000000000000
+cryticArgs: ["--compile-force-framework", "foundry"]
+filterBlacklist: false
+filterFunctions: ["PulseTensorCoreEchidna.act_addStakeA(uint96)", "PulseTensorCoreEchidna.act_addStakeB(uint96)", "PulseTensorCoreEchidna.act_removeStakeA(uint96)", "PulseTensorCoreEchidna.act_removeStakeB(uint96)", "PulseTensorCoreEchidna.act_registerA()", "PulseTensorCoreEchidna.act_registerB()", "PulseTensorCoreEchidna.act_unregisterA()", "PulseTensorCoreEchidna.act_unregisterB()", "PulseTensorCoreEchidna.act_commitA(bytes32)", "PulseTensorCoreEchidna.act_commitB(bytes32)", "PulseTensorCoreEchidna.act_revealA()", "PulseTensorCoreEchidna.act_revealB()", "PulseTensorCoreEchidna.act_challengeA(bool)", "PulseTensorCoreEchidna.act_challengeB(bool)"]

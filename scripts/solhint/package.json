@@ -1,0 +1,10 @@
+{
+  "name": "pulsetensor-solhint-toolchain",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Repository-locked Solhint toolchain for PulseTensor assurance checks.",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "solhint": "5.1.0"
+  }
+}

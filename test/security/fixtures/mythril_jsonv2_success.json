@@ -1,0 +1,13 @@
+[
+  {
+    "issues": [],
+    "sourceType": "raw-bytecode",
+    "sourceFormat": "evm-bytecode",
+    "sourceList": ["PulseTensorCore.bin-runtime"],
+    "meta": {
+      "mythril_execution_info": {
+        "analysis_duration": 123
+      }
+    }
+  }
+]

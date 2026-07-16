@@ -2,6 +2,8 @@
 
 PulseTensor is a Pulsechain-native decentralized AI protocol inspired by Bittensor, with fail-closed contract verification gates as the default workflow.
 
+PulseTensor currently has executable Solidity tests, fuzz/invariant campaigns, and security gates plus formalized state-model specifications. It does **not** yet have a machine-checked refinement proof from those specifications to Solidity or deployed bytecode. See [`docs/assurance_scope.md`](docs/assurance_scope.md) for the exact assurance boundary.
+
 ## Goals
 
 - Bring agent networks and decentralized AI coordination to Pulsechain.
@@ -20,7 +22,8 @@ Prerequisites already supported in this environment:
 
 - `forge` / `anvil`
 - `python3`
-- `docker` (required for Mythril gate and Echidna fallback)
+- `docker` (required for the digest-pinned Mythril and Echidna gates)
+- exact `jq`, `solhint`, and `rg` versions from `scripts/toolchain.lock`
 
 Run:
 
@@ -43,20 +46,27 @@ make ui-install
 make ui-dev
 ```
 
-Deploy contracts (core + settlement) and write deployment receipt:
+Deploy contracts (core + settlement) with a protected signer and write a deployment receipt:
 
 ```bash
 RPC_URL=https://rpc.v4.testnet.pulsechain.com \
-PRIVATE_KEY=0x... \
-make deploy
+bash scripts/deploy_pulsetensor.sh \
+  --expected-chain-id 943 \
+  --account pulsetensor-deployer
 ```
 
 Receipt path: `runs/deployments/pulsetensor_deploy_receipt.json`.
 
-Deployment uses a size-safe compiler profile by default (`FOUNDRY_OPTIMIZER_RUNS=1`) to keep `PulseTensorCore`
-within EVM code-size limits. Override only if `bash scripts/check_deploy_code_size.sh` still passes.
+Production raw private-key and mnemonic arguments/environment variables are rejected. Encrypted Foundry
+accounts/keystores (with hidden prompt or password file), Ledger, Trezor, AWS KMS, and Foundry's hidden
+interactive signing are supported. See [`docs/deployment_security.md`](docs/deployment_security.md) for signer
+examples, chain confirmation and rehearsal steps, the unavoidable public-chain privacy boundary, and the
+local-test-only key guard.
 
-Render launch-safe subnet/mechanism presets (with queue/execute rollout plan):
+Deployment requires the attested size-safe compiler profile (`FOUNDRY_OPTIMIZER_RUNS=1`) because `PulseTensorCore`
+is close to the EVM runtime-code limit. The production script rejects profile overrides.
+
+Render bounded, uncalibrated subnet/mechanism test presets (with queue/execute rollout plan):
 
 ```bash
 bash scripts/render_launch_preset.sh --preset balanced --netuid 1 --mechid 0 \
@@ -97,8 +107,9 @@ Publish release artifacts to IPFS (dist CID + tarball CID + receipt):
 make ui-ipfs
 ```
 
-`make verify-release` is the canonical merge gate and includes mandatory Echidna.
-It also fail-closes on deploy code-size viability (`scripts/check_deploy_code_size.sh`).
+`make verify-release` is the single canonical merge and pre-deploy assurance gate. It includes mandatory
+Echidna, deploy code-size viability, local live-chain replay, all frontier checks, and a commit-bound evidence
+manifest. `make verify-complete` and `make verify-release-full` are compatibility aliases to the same pipeline.
 
 `make verify-local-e2e` runs a deterministic live-chain local integration flow on fresh Anvil:
 deploys contracts, executes governance queue/execute paths, runs validator commit/reveal, and validates inference
@@ -106,10 +117,6 @@ commit/finalize/settle/claim behavior. Report path: `runs/local_e2e/local_e2e_re
 
 `make verify-requirements-traceability` validates requirement-to-test/function coverage, including boundary-value
 coverage targets, from `specs/formal/requirements_traceability.json`.
-
-`make verify-complete` is the single full-assurance gate: toolchain lock, deploy size viability, release security
-verification, local live-chain E2E replay, goal-frontier checks, tokenomics frontier checks, participant-regret
-frontier checks, and complete artifact freshness validation.
 
 ## Participation Modes
 
@@ -127,7 +134,7 @@ frontier checks, and complete artifact freshness validation.
   - Prefer `computeInferenceLeaf(netuid, mechid, epoch, requestId, resultHash)` when constructing leaves off-chain to avoid cross-epoch/request collisions.
   - Fee payers escrow inference fees per batch (`fundInferenceBatchFees`) and can withdraw before finalization (`withdrawInferenceBatchFees`).
   - Finalization routes funded fees to proposer + miner sink + treasury sink using the batch-snapshotted fee policy.
-  - Anyone can challenge invalid roots in challenge window.
+  - Anyone can submit the implemented identical-leaf duplicate or prior-finalized-batch replay proofs during the challenge window; these checks do not establish general result correctness.
   - Proposers/challengers claim refunds/rewards through pull claims.
 
 ## Tokenomics (PLS-native)
@@ -147,7 +154,7 @@ Fast local iteration without full security scans:
 make verify-dev
 ```
 
-Extended release gate (same checks, separate entrypoint for CI profiles):
+Compatibility alias for the canonical release gate:
 
 ```bash
 make verify-release-full
@@ -160,17 +167,17 @@ make ui-build
 make ui-hash
 ```
 
-Optional deep fuzzing (Echidna) inside security gate:
+Run only the digest-pinned Echidna campaign during local investigation:
 
 ```bash
-RUN_ECHIDNA=1 make verify-release
+make verify-echidna
 ```
 
 ## Repo Layout
 
 - `src/`: PulseTensor smart contracts.
   - `src/PulseTensorCore.sol`: core subnet, stake, commit/reveal, slashing, and emission schedule logic.
-  - `src/PulseTensorInferenceSettlement.sol`: optional inference batch-root settlement and fraud-challenge module.
+  - `src/PulseTensorInferenceSettlement.sol`: optional optimistic batch accounting with exact duplicate-leaf/replay challenges; it is not a general inference fraud-proof module.
 - `frontend/`: backend-free static dApp UI with dedicated Core + Settlement consoles (wallet + RPC direct contract access).
 - `test/`: Foundry tests.
 - `specs/formal/`: formalized protocol state-model specifications.
@@ -182,10 +189,11 @@ RUN_ECHIDNA=1 make verify-release
 
 - `docs/bittensor_delta.md`: what we keep vs improve from Bittensor.
 - `docs/formal_workflow.md`: required verification gates.
+- `docs/assurance_scope.md`: exact verified, tested, specified, and still-unproved claims.
 - `specs/formal/requirements_traceability.json`: requirement-to-function/test traceability matrix with explicit BVA coverage.
 - `docs/frontend_decentralization.md`: host-anywhere frontend model and trust surface.
 - `docs/roadmap.md`: phased build plan.
-- `docs/launch_presets.md`: safe launch parameter tiers + game-theoretic rationale.
+- `docs/launch_presets.md`: uncalibrated parameter tiers, limits, and design rationale.
 - `docs/goal_frontier_synthesis.md`: deterministic multi-goal frontier synthesis for mechanism/design exploration.
 - `docs/tokenomics.md`: game-theoretic tokenomics design and parameter recommendations.
 - `docs/participant_regret_invariants.md`: safety-oriented invariant profile selected to minimize participant regret.

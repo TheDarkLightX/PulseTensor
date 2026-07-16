@@ -1,26 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+umask 077
+
 ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-OUT_DIR="${ROOT_DIR}/runs/local_e2e"
-ANVIL_LOG="${OUT_DIR}/anvil.log"
-DEPLOY_LOG="${OUT_DIR}/deploy.log"
-CREATE_LOG="${OUT_DIR}/forge_create.log"
-REPORT_PATH="${OUT_DIR}/local_e2e_report.json"
-
-LOCAL_E2E_PORT="${LOCAL_E2E_PORT:-8547}"
-RPC_URL="${LOCAL_E2E_RPC_URL:-http://127.0.0.1:${LOCAL_E2E_PORT}}"
-CHAIN_ID_EXPECTED="${LOCAL_E2E_CHAIN_ID:-31337}"
-ANVIL_MNEMONIC="${LOCAL_E2E_MNEMONIC:-test test test test test test test test test test test junk}"
-
-# Optional key overrides. Defaults derive from mnemonic indices 0..3.
-OWNER_PK="${LOCAL_E2E_OWNER_PK:-}"
-VALIDATOR_PK="${LOCAL_E2E_VALIDATOR_PK:-}"
-FUNDER_PK="${LOCAL_E2E_FUNDER_PK:-}"
-MINER_PK="${LOCAL_E2E_MINER_PK:-}"
-
-NETUID=1
-MECHID=1
 
 log() {
   echo "[local-e2e] $*"
@@ -30,6 +13,63 @@ fail() {
   echo "[local-e2e] ERROR: $*" >&2
   exit 1
 }
+
+PUBLIC_TEST_MNEMONIC="test test test test test test test test test test test junk"
+NON_ASSURANCE_MODE="${PULSETENSOR_LOCAL_E2E_NON_ASSURANCE:-0}"
+case "${NON_ASSURANCE_MODE}" in
+  0)
+    for secret_override in \
+      LOCAL_E2E_MNEMONIC \
+      LOCAL_E2E_OWNER_PK \
+      LOCAL_E2E_VALIDATOR_PK \
+      LOCAL_E2E_FUNDER_PK \
+      LOCAL_E2E_MINER_PK \
+      LOCAL_E2E_RPC_URL; do
+      if [[ -n "${!secret_override+x}" ]]; then
+        fail "${secret_override} is forbidden in assurance mode; unset it or use the explicit non-assurance mode"
+      fi
+    done
+    OUT_DIR="${ROOT_DIR}/runs/local_e2e"
+    ANVIL_MNEMONIC="${PUBLIC_TEST_MNEMONIC}"
+    OWNER_PK=""
+    VALIDATOR_PK=""
+    FUNDER_PK=""
+    MINER_PK=""
+    ASSURANCE_MODE_JSON=true
+    CREDENTIAL_PROFILE="public-anvil-test-accounts"
+    ;;
+  1)
+    OUT_DIR="${ROOT_DIR}/runs/local_e2e_non_assurance"
+    ANVIL_MNEMONIC="${LOCAL_E2E_MNEMONIC:-${PUBLIC_TEST_MNEMONIC}}"
+    OWNER_PK="${LOCAL_E2E_OWNER_PK:-}"
+    VALIDATOR_PK="${LOCAL_E2E_VALIDATOR_PK:-}"
+    FUNDER_PK="${LOCAL_E2E_FUNDER_PK:-}"
+    MINER_PK="${LOCAL_E2E_MINER_PK:-}"
+    ASSURANCE_MODE_JSON=false
+    CREDENTIAL_PROFILE="non-assurance-local-overrides"
+    log "WARNING: explicit non-assurance mode; artifacts cannot satisfy the release gate"
+    ;;
+  *)
+    fail "PULSETENSOR_LOCAL_E2E_NON_ASSURANCE must be exactly 0 or 1"
+    ;;
+esac
+
+ANVIL_LOG="${OUT_DIR}/anvil.log"
+DEPLOY_LOG="${OUT_DIR}/deploy.log"
+CREATE_LOG="${OUT_DIR}/forge_create.log"
+REPORT_PATH="${OUT_DIR}/local_e2e_report.json"
+RECEIPT_PATH="${OUT_DIR}/pulsetensor_deploy_receipt.json"
+PARTIAL_RECEIPT_PATH="${OUT_DIR}/pulsetensor_deploy_receipt.partial.json"
+
+LOCAL_E2E_PORT="${LOCAL_E2E_PORT:-8547}"
+RPC_URL="${LOCAL_E2E_RPC_URL:-http://127.0.0.1:${LOCAL_E2E_PORT}}"
+CHAIN_ID_EXPECTED="${LOCAL_E2E_CHAIN_ID:-31337}"
+if [[ "${CHAIN_ID_EXPECTED}" != "31337" ]]; then
+  fail "local E2E chain ID must be 31337 so deterministic keys can never target a public network"
+fi
+
+NETUID=1
+MECHID=1
 
 assert_eq() {
   local expected="$1"
@@ -95,6 +135,28 @@ cleanup() {
 trap cleanup EXIT
 
 mkdir -p "${OUT_DIR}"
+[[ -d "${OUT_DIR}" && ! -L "${OUT_DIR}" ]] || fail "artifact directory must be a real directory: ${OUT_DIR}"
+chmod 700 "${OUT_DIR}"
+for sensitive_artifact in \
+  "${ANVIL_LOG}" \
+  "${DEPLOY_LOG}" \
+  "${CREATE_LOG}" \
+  "${REPORT_PATH}" \
+  "${RECEIPT_PATH}" \
+  "${PARTIAL_RECEIPT_PATH}"; do
+  if [[ -L "${sensitive_artifact}" || ( -e "${sensitive_artifact}" && ! -f "${sensitive_artifact}" ) ]]; then
+    fail "refusing unsafe artifact path: ${sensitive_artifact}"
+  fi
+  if [[ -f "${sensitive_artifact}" ]]; then
+    chmod 600 "${sensitive_artifact}"
+  fi
+done
+archive_id="$(date +%s%N)"
+for previous_current_artifact in "${REPORT_PATH}" "${RECEIPT_PATH}" "${PARTIAL_RECEIPT_PATH}"; do
+  if [[ -f "${previous_current_artifact}" ]]; then
+    mv "${previous_current_artifact}" "${previous_current_artifact}.previous.${archive_id}"
+  fi
+done
 : > "${CREATE_LOG}"
 
 if cast block-number --rpc-url "${RPC_URL}" >/dev/null 2>&1; then
@@ -143,23 +205,34 @@ MINER_ADDR="$(cast wallet address --private-key "${MINER_PK}")"
 log "deploying core and settlement"
 FOUNDRY_OPTIMIZER_RUNS="${FOUNDRY_OPTIMIZER_RUNS:-1}" \
 RPC_URL="${RPC_URL}" \
-PRIVATE_KEY="${OWNER_PK}" \
+PULSETENSOR_LOCAL_TEST_PRIVATE_KEY="${OWNER_PK}" \
 bash "${ROOT_DIR}/scripts/deploy_pulsetensor.sh" \
   --rpc-url "${RPC_URL}" \
-  --private-key "${OWNER_PK}" \
+  --expected-chain-id "${CHAIN_ID_EXPECTED}" \
   --out-dir "${OUT_DIR}" >"${DEPLOY_LOG}" 2>&1
 
-RECEIPT_PATH="${OUT_DIR}/pulsetensor_deploy_receipt.json"
 if [[ ! -f "${RECEIPT_PATH}" ]]; then
   fail "missing deployment receipt at ${RECEIPT_PATH}"
 fi
 
 CORE_ADDR="$(jq -r '.core_address' "${RECEIPT_PATH}")"
 SETTLEMENT_ADDR="$(jq -r '.settlement_address' "${RECEIPT_PATH}")"
+CORE_DEPLOY_TX="$(jq -r '.core_transaction_hash' "${RECEIPT_PATH}")"
+SETTLEMENT_DEPLOY_TX="$(jq -r '.settlement_transaction_hash' "${RECEIPT_PATH}")"
 
 if [[ -z "${CORE_ADDR}" || "${CORE_ADDR}" == "null" || -z "${SETTLEMENT_ADDR}" || "${SETTLEMENT_ADDR}" == "null" ]]; then
   fail "invalid deploy receipt contents in ${RECEIPT_PATH}"
 fi
+if [[ ! "${CORE_DEPLOY_TX}" =~ ^0x[0-9a-fA-F]{64}$ || ! "${SETTLEMENT_DEPLOY_TX}" =~ ^0x[0-9a-fA-F]{64}$ ]]; then
+  fail "deployment receipt is missing valid transaction hashes"
+fi
+jq -e \
+  --argjson chain_id "${CHAIN_ID_EXPECTED}" \
+  '.schema == "pulsetensor/deployment-receipt/v1" and
+   .status == "complete" and
+   .chain_id == $chain_id and
+   .broadcast == true' \
+  "${RECEIPT_PATH}" >/dev/null || fail "deployment receipt metadata is invalid"
 
 log "deploying governance feature actor"
 GOVERNANCE_ADDR="$(deploy_contract "test/PulseTensorCore.inference_emission.t.sol:FeatureActor" "FeatureActor")"
@@ -320,6 +393,8 @@ cat > "${REPORT_PATH}" <<EOF
 {
   "schema": "pulsetensor/local-e2e-report/v1",
   "generated_at_utc": "${GENERATED_AT_UTC}",
+  "assurance_mode": ${ASSURANCE_MODE_JSON},
+  "credential_profile": "${CREDENTIAL_PROFILE}",
   "rpc_url": "${RPC_URL}",
   "chain_id": ${CHAIN_ID_ACTUAL},
   "final_block": ${FINAL_BLOCK},

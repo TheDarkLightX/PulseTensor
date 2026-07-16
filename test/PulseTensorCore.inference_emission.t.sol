@@ -1041,25 +1041,14 @@ contract PulseTensorCoreInferenceEmissionTest {
 
         uint16 mechidMin = 41;
         uint64 readyAt = governance.queueInferenceBatchPolicyUpdate(
-            settlement,
-            netuid,
-            mechidMin,
-            true,
-            settlement.MIN_CHALLENGE_WINDOW_BLOCKS(),
-            1,
-            1
+            settlement, netuid, mechidMin, true, settlement.MIN_CHALLENGE_WINDOW_BLOCKS(), 1, 1
         );
         vm.roll(readyAt);
         governance.configureInferenceBatchPolicy(
-            settlement,
-            netuid,
-            mechidMin,
-            true,
-            settlement.MIN_CHALLENGE_WINDOW_BLOCKS(),
-            1,
-            1
+            settlement, netuid, mechidMin, true, settlement.MIN_CHALLENGE_WINDOW_BLOCKS(), 1, 1
         );
-        (bool minEnabled, uint64 minWindow, uint32 minItems, uint256 minBond) = settlement.batchPolicies(netuid, mechidMin);
+        (bool minEnabled, uint64 minWindow, uint32 minItems, uint256 minBond) =
+            settlement.batchPolicies(netuid, mechidMin);
         assert(minEnabled);
         assert(minWindow == settlement.MIN_CHALLENGE_WINDOW_BLOCKS());
         assert(minItems == 1);
@@ -1085,7 +1074,8 @@ contract PulseTensorCoreInferenceEmissionTest {
             settlement.MAX_BATCH_ITEMS(),
             1
         );
-        (bool maxEnabled, uint64 maxWindow, uint32 maxItems, uint256 maxBond) = settlement.batchPolicies(netuid, mechidMax);
+        (bool maxEnabled, uint64 maxWindow, uint32 maxItems, uint256 maxBond) =
+            settlement.batchPolicies(netuid, mechidMax);
         assert(maxEnabled);
         assert(maxWindow == settlement.MAX_CHALLENGE_WINDOW_BLOCKS());
         assert(maxItems == settlement.MAX_BATCH_ITEMS());
@@ -1143,7 +1133,13 @@ contract PulseTensorCoreInferenceEmissionTest {
 
         reverted = false;
         try governance.queueInferenceBatchPolicyUpdate(
-            settlement, netuid, mechid, true, settlement.MIN_CHALLENGE_WINDOW_BLOCKS(), settlement.MAX_BATCH_ITEMS() + 1, 1
+            settlement,
+            netuid,
+            mechid,
+            true,
+            settlement.MIN_CHALLENGE_WINDOW_BLOCKS(),
+            settlement.MAX_BATCH_ITEMS() + 1,
+            1
         ) {} catch {
             reverted = true;
         }
@@ -1203,14 +1199,20 @@ contract PulseTensorCoreInferenceEmissionTest {
         assert(miner == address(minerSink));
 
         uint16 mechidZeroProtocol = 46;
-        readyAt =
-            governance.queueInferenceFeePolicyUpdate(settlement, netuid, mechidZeroProtocol, true, 0, 0, address(0), address(0));
+        readyAt = governance.queueInferenceFeePolicyUpdate(
+            settlement, netuid, mechidZeroProtocol, true, 0, 0, address(0), address(0)
+        );
         vm.roll(readyAt);
         governance.configureInferenceFeePolicy(
             settlement, netuid, mechidZeroProtocol, true, 0, 0, address(0), address(0)
         );
-        (bool zeroEnabled, uint16 zeroProtocolFeeBps, uint16 zeroTreasuryFeeBps, address zeroTreasury, address zeroMiner) =
-            settlement.feePolicies(netuid, mechidZeroProtocol);
+        (
+            bool zeroEnabled,
+            uint16 zeroProtocolFeeBps,
+            uint16 zeroTreasuryFeeBps,
+            address zeroTreasury,
+            address zeroMiner
+        ) = settlement.feePolicies(netuid, mechidZeroProtocol);
         assert(zeroEnabled);
         assert(zeroProtocolFeeBps == 0);
         assert(zeroTreasuryFeeBps == 0);

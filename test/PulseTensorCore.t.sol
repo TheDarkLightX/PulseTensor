@@ -386,9 +386,8 @@ contract PulseTensorCoreTest {
         uint16 mechid,
         uint64 epoch
     ) internal view returns (bytes32) {
-        return keccak256(
-            abi.encode(weightsHash, salt, validator, netuid, mechid, epoch, block.chainid, address(core), 1)
-        );
+        return
+            keccak256(abi.encode(weightsHash, salt, validator, netuid, mechid, epoch, block.chainid, address(core), 1));
     }
 
     function _quoteDefaultEmissionSplit(uint256 totalAmount)
@@ -422,9 +421,16 @@ contract PulseTensorCoreTest {
         uint64 maxRevealDelayBlocks = core.MAX_REVEAL_DELAY_BLOCKS();
         uint64 maxEpochLengthBlocks = core.MAX_EPOCH_LENGTH_BLOCKS();
 
-        uint16 netuid = core.createSubnet(maxValidators, 1 wei, maxOwnerFeeBps, maxRevealDelayBlocks, maxEpochLengthBlocks);
-        (bool exists, uint16 configuredMaxValidators, uint16 configuredOwnerFeeBps, uint64 configuredRevealDelay, uint64 configuredEpochLength,,) =
-            core.subnets(netuid);
+        uint16 netuid =
+            core.createSubnet(maxValidators, 1 wei, maxOwnerFeeBps, maxRevealDelayBlocks, maxEpochLengthBlocks);
+        (
+            bool exists,
+            uint16 configuredMaxValidators,
+            uint16 configuredOwnerFeeBps,
+            uint64 configuredRevealDelay,
+            uint64 configuredEpochLength,
+            ,
+        ) = core.subnets(netuid);
         assert(exists);
         assert(configuredMaxValidators == maxValidators);
         assert(configuredOwnerFeeBps == maxOwnerFeeBps);
@@ -1307,9 +1313,8 @@ contract PulseTensorCoreTest {
         uint64 mechanismEpoch = core.currentEpoch(netuid);
         bytes32 mechanismHash = keccak256(abi.encodePacked("deferred-unregister-mech"));
         bytes32 mechanismSalt = bytes32(uint256(502));
-        bytes32 mechanismCommit = _computeMechanismCommitment(
-            mechanismHash, mechanismSalt, address(actor), netuid, mechid, mechanismEpoch
-        );
+        bytes32 mechanismCommit =
+            _computeMechanismCommitment(mechanismHash, mechanismSalt, address(actor), netuid, mechid, mechanismEpoch);
         actor.commitMechanismWeights(core, netuid, mechid, mechanismCommit);
         assert(core.pendingCommitmentCount(netuid, address(actor)) == 2);
 
@@ -1347,9 +1352,8 @@ contract PulseTensorCoreTest {
         uint64 mechanismEpoch = core.currentEpoch(netuid);
         bytes32 mechanismHash = keccak256(abi.encodePacked("final-unregister-mech"));
         bytes32 mechanismSalt = bytes32(uint256(602));
-        bytes32 mechanismCommit = _computeMechanismCommitment(
-            mechanismHash, mechanismSalt, address(actor), netuid, mechid, mechanismEpoch
-        );
+        bytes32 mechanismCommit =
+            _computeMechanismCommitment(mechanismHash, mechanismSalt, address(actor), netuid, mechid, mechanismEpoch);
         actor.commitMechanismWeights(core, netuid, mechid, mechanismCommit);
 
         (, bool firstUnregister) = core.challengeExpiredCommit(netuid, subnetEpoch, address(actor));
@@ -2012,8 +2016,7 @@ contract PulseTensorCoreTest {
             payable(address(ownerRecipient))
         );
 
-        (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount) =
-            _quoteDefaultEmissionSplit(totalAmount);
+        (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount) = _quoteDefaultEmissionSplit(totalAmount);
         assert(address(validatorRecipient).balance == validatorBefore + validatorAmount);
         assert(address(minerRecipient).balance == minerBefore + minerAmount);
         assert(address(ownerRecipient).balance == ownerBefore + ownerAmount);
@@ -2127,8 +2130,7 @@ contract PulseTensorCoreTest {
             payable(address(ownerRecipient))
         );
 
-        (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount) =
-            _quoteDefaultEmissionSplit(totalAmount);
+        (uint256 validatorAmount, uint256 minerAmount, uint256 ownerAmount) = _quoteDefaultEmissionSplit(totalAmount);
         assert(address(validatorRecipient).balance == validatorBefore + validatorAmount);
         assert(address(minerRecipient).balance == minerBefore + minerAmount);
         assert(address(ownerRecipient).balance == ownerBefore + ownerAmount);

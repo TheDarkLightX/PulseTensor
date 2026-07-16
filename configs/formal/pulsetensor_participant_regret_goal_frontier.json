@@ -1,6 +1,6 @@
 {
   "schema": "pulsetensor/goal-frontier-model/v1",
-  "description": "PulseTensor safety + participant-regret tradeoff model. Captures the tension between aggressive treasury posture and user-protective invariants.",
+  "description": "Authored PulseTensor safety-label and participant-regret scenario model; it is not empirical calibration or proof of participant behavior.",
   "initial_state": "select_regime_sys",
   "states": {
     "select_regime_sys": {
@@ -22,7 +22,7 @@
         "slash_bounded",
         "fee_cap_respected",
         "governance_timelock_live",
-        "treasury_growth_sustainable",
+        "treasury_inflow_target_met",
         "treasury_not_aggressive"
       ],
       "transitions": [
@@ -34,7 +34,7 @@
       "controller": "environment",
       "labels": [
         "treasury_growth_aggressive",
-        "treasury_growth_sustainable",
+        "treasury_inflow_target_met",
         "solvency_risk_high",
         "accounting_mismatch_risk_high",
         "fee_snapshot_risk_high",

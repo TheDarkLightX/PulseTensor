@@ -1,4 +1,4 @@
-.PHONY: build test fmt deploy preset synth-goal-frontier synth-tokenomics-frontier synth-participant-regret-frontier ui-install ui-dev ui-build ui-preview ui-hash ui-release ui-ipfs verify-private verify-goal-frontier verify-tokenomics-frontier verify-participant-regret-frontier verify-compiler-bugs verify-deploy-size verify-local-e2e verify-requirements-traceability verify-security-controls verify-security-antipatterns verify-solhint verify-slither-exclusions verify-slither verify-mythril-allowlist verify-mythril verify-fuzz-invariant verify-echidna verify-artifacts-security verify-artifacts-release verify-artifacts-complete verify-security verify-all verify-dev verify-release verify-release-full verify-complete
+.PHONY: build test fmt deploy preset synth-goal-frontier synth-tokenomics-frontier synth-participant-regret-frontier ui-install ui-dev ui-build ui-preview ui-hash ui-release ui-ipfs verify-private verify-goal-frontier verify-tokenomics-frontier verify-participant-regret-frontier verify-compiler-bugs verify-deploy-size verify-local-e2e verify-requirements-traceability verify-security-controls verify-security-antipatterns verify-solhint verify-slither-exclusions verify-slither verify-mythril-allowlist verify-mythril verify-fuzz-invariant verify-echidna-harness verify-echidna write-assurance-evidence verify-assurance-evidence verify-artifacts-security verify-artifacts-release verify-artifacts-complete verify-security verify-all verify-dev verify-release verify-release-full verify-complete
 
 build:
 	forge build
@@ -10,7 +10,7 @@ fmt:
 	forge fmt
 
 deploy:
-	bash scripts/deploy_pulsetensor.sh
+	bash scripts/deploy_pulsetensor.sh $${DEPLOY_ARGS:?set DEPLOY_ARGS with --expected-chain-id and one protected signer}
 
 preset:
 	bash scripts/render_launch_preset.sh --preset "$${PRESET:?set PRESET}" --netuid "$${NETUID:?set NETUID}" $${MECHID:+--mechid "$${MECHID}"} $${CORE:+--core "$${CORE}"} $${SETTLEMENT:+--settlement "$${SETTLEMENT}"} $${GOVERNANCE:+--governance "$${GOVERNANCE}"} $${OUT:+--out "$${OUT}"}
@@ -93,8 +93,17 @@ verify-mythril:
 verify-fuzz-invariant:
 	bash scripts/check_fuzz_invariant.sh
 
+verify-echidna-harness:
+	bash scripts/test_echidna_harness_checker.sh
+
 verify-echidna:
 	bash scripts/check_echidna.sh
+
+write-assurance-evidence:
+	bash scripts/write_assurance_evidence.sh
+
+verify-assurance-evidence:
+	bash scripts/verify_assurance_evidence.sh
 
 verify-artifacts-security:
 	bash scripts/check_artifact_freshness.sh docs/security/artifact_manifest.security.txt

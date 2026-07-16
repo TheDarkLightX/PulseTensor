@@ -1,0 +1,19 @@
+[
+  {
+    "issues": [
+      {
+        "swcID": "SWC-999",
+        "swcTitle": "Simulated disallowed finding",
+        "severity": "High"
+      }
+    ],
+    "sourceType": "raw-bytecode",
+    "sourceFormat": "evm-bytecode",
+    "sourceList": ["PulseTensorInferenceSettlement.bin-runtime"],
+    "meta": {
+      "mythril_execution_info": {
+        "analysis_duration": 456
+      }
+    }
+  }
+]
