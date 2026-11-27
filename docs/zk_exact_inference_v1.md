@@ -44,7 +44,8 @@ The settlement checks the adapter runtime code hash when a configuration is queu
 hash does not bind mutable storage or an implementation behind a proxy. Production admission therefore permits
 only a reviewed, stateless, non-proxy adapter whose base-verifier address and runtime hash are Solidity
 immutables. The RISC Zero adapter checks that base verifier's runtime code hash and the receipt seal selector on
-every verification, and its constructor requires the direct verifier's `VERSION()` to equal `3.0.0`. Solidity
+every verification, and its constructor requires the direct verifier's `VERSION()` to equal `3.1.0` and its selector
+to be `0xe71e6620`. RISC Zero superseded the 3.0.0 verifier in its [security advisory][risc0-verifier-advisory]. Solidity
 immutable constructor values are embedded into runtime code, so the recorded
 runtime hash commits to those values for this reviewed adapter implementation. A proxy-upgrade counterexample
 test must demonstrate why a stable proxy code hash is insufficient.
@@ -90,7 +91,7 @@ verify(proof, programId, sha256(publicValues))
 It uses the unconditional `verify` path, not a general claim-integrity API. The V3 Groth16 seal must be exactly
 260 bytes: its four-byte selector followed by eight canonical 32-byte proof words. Trailing bytes are rejected.
 The selector is a routing/version identifier, not a secret and not sufficient by itself; the base-verifier address,
-exact runtime code hash, and `3.0.0` version string are also bound. Version and selector checks prevent accidental family
+exact runtime code hash, and `3.1.0` version string are also bound. Version and selector checks prevent accidental family
 mismatches but cannot authenticate arbitrary code. Production admission must compare the base runtime hash to a
 reviewed deployment manifest derived from the pinned upstream source; accepting a caller-invented hash would merely
 pin malicious code.
@@ -125,8 +126,8 @@ outputCommitment = sha256(abi.encode(OUTPUT_DOMAIN, uint32(1), classIndex, score
 
 Here `INPUT_DOMAIN`, `MODEL_DOMAIN`, and `OUTPUT_DOMAIN` are the `bytes32` Keccak-256 hashes of
 `PULSETENSOR_EXACT_INPUT_V1`, `PULSETENSOR_EXACT_MODEL_V1`, and `PULSETENSOR_EXACT_OUTPUT_V1`, respectively.
-The Solidity settlement recomputes `outputCommitment`; the future guest must recompute all three commitments
-from its witness and reject any mismatch with the public task values.
+The Solidity settlement recomputes `outputCommitment`; the guest recomputes all three commitments from its witness
+and rejects any mismatch with the public task values. See [the guest runbook](../zk/README.md).
 
 The model commitment identifies the model's exact semantic bytes. An IPFS CID is optional distribution
 metadata and is not used as the semantic identity because different chunking/encodings can produce different
@@ -226,8 +227,10 @@ keccak256(
 ```
 
 The committed Solidity golden vector in `testCanonicalPublicValuesGoldenVector` is 736 bytes and has SHA-256
-`d6bf3e24201d46ca655687be218f9186309e1138e0866073e8fd6fabaaf02067`. A future Rust guest fixture must
-produce those exact bytes before the cross-language gate is considered complete.
+`d6bf3e24201d46ca655687be218f9186309e1138e0866073e8fd6fabaaf02067`. That original ABI-only vector
+uses placeholder commitments. The additional witness-backed [guest vector](../zk/tests/fixtures/journal.hex)
+is independently checked by Solidity and TypeScript and accepted by the Rust guest. Its journal SHA-256 is
+`26f1aa88e8028a95f25860a8fa880ecdd032773de6d66a9391ddbc406e8a0493`.
 
 ## Configuration lifecycle
 
@@ -367,13 +370,15 @@ Before any value-bearing deployment, additionally require:
   <https://arxiv.org/abs/2404.16109>
 - RISC Zero verifier ABI and integration model:
   <https://dev.risczero.com/api/blockchain-integration/contracts/verifier>
-- Pinned RISC Zero 3.0 interface used for adapter design:
-  <https://github.com/risc0/risc0-ethereum/blob/dc111ded68ee013f7d44dba138d02561ee33bbf8/contracts/src/IRiscZeroVerifier.sol>
+- Pinned RISC Zero 3.1.0 interface used for adapter design:
+  <https://github.com/risc0/risc0-ethereum/blob/ff30da77ba4afdd496290ebebedb205348b15d83/contracts/src/IRiscZeroVerifier.sol>
 - Pinned concrete RISC Zero Groth16 verifier defining `VERSION`, `SELECTOR`, and the eight-word seal:
-  <https://github.com/risc0/risc0-ethereum/blob/dc111ded68ee013f7d44dba138d02561ee33bbf8/contracts/src/groth16/RiscZeroGroth16Verifier.sol>
+  <https://github.com/risc0/risc0-ethereum/blob/ff30da77ba4afdd496290ebebedb205348b15d83/contracts/src/groth16/RiscZeroGroth16Verifier.sol>
 - SP1's compatible public-values/program-key interface, reserved for a later adapter:
   <https://github.com/succinctlabs/sp1-contracts/blob/d3629729c3216eb51bd4859d027a8eb729399fa4/contracts/src/ISP1Verifier.sol>
 
 These works motivate the staged design; they do not prove PulseTensor's implementation. The V1 sequence is
 deliberately settlement/journal/versioning first, small deterministic tensor relation second, and specialized
 large-model circuits only after the complete refinement and deployment pipeline is reproducible.
+
+[risc0-verifier-advisory]: https://github.com/risc0/risc0-ethereum/security/advisories/GHSA-mm6c-35cm-g4x2

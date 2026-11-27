@@ -13,6 +13,9 @@ import {
 } from "./exactAbi.ts";
 import type { ExactDeploymentManifest, ExactManifestVerifierConfig } from "./exactManifest.ts";
 
+const RISC_ZERO_SELECTOR = "0xe71e6620";
+const RISC_ZERO_VERSION_HASH = keccak256(toBytes("3.1.0"));
+
 export type ExactReadClient = {
   getChainId(): Promise<number>;
   getBlockNumber(): Promise<bigint>;
@@ -151,6 +154,8 @@ async function verifyConfig(
   const config = normalizeVerifierConfig(rawConfig);
   const label = `config ${expected.configId.toString()}`;
 
+  compare(identityIssues, sameHex(expected.proofSelector, RISC_ZERO_SELECTOR), `${label} supported verifier selector`, RISC_ZERO_SELECTOR, expected.proofSelector);
+  compare(identityIssues, sameHex(expected.verifierVersionHash, RISC_ZERO_VERSION_HASH), `${label} supported verifier version hash`, RISC_ZERO_VERSION_HASH, expected.verifierVersionHash);
   compare(identityIssues, config.exists, `${label} exists`, true.toString(), config.exists.toString());
   compare(identityIssues, config.netuid === expected.netuid, `${label} netuid`, expected.netuid, config.netuid);
   compare(

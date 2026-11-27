@@ -80,7 +80,7 @@ contract StorageMutableVerifier is IPulseTensorProofVerifier, IPulseTensorProofV
 }
 
 contract MockRiscZeroBaseVerifier is IRiscZeroVerifierWithSelector {
-    string public constant override VERSION = "3.0.0";
+    string public constant override VERSION = "3.1.0";
     bytes4 public immutable override SELECTOR;
     bytes32 public immutable expectedImageId;
     bytes32 public immutable expectedJournalDigest;
@@ -945,6 +945,47 @@ contract PulseTensorExactInferenceSettlementV1Test is Test {
         assertEq(sha256(encoded), 0xd6bf3e24201d46ca655687be218f9186309e1138e0866073e8fd6fabaaf02067);
     }
 
+    function testRustGuestJournalMatchesSolidityAbi() public view {
+        bytes memory witness = vm.parseBytes(string.concat("0x", vm.trim(vm.readFile("zk/tests/fixtures/witness.hex"))));
+        bytes memory journalBytes =
+            vm.parseBytes(string.concat("0x", vm.trim(vm.readFile("zk/tests/fixtures/journal.hex"))));
+        assertEq(witness.length, 208);
+        assertEq(journalBytes.length, 736);
+        PulseTensorExactInferenceSettlementV1.ExactInferencePublicValuesV1 memory journal =
+            abi.decode(journalBytes, (PulseTensorExactInferenceSettlementV1.ExactInferencePublicValuesV1));
+
+        int16[32] memory x;
+        int8[32][4] memory weights;
+        int32[4] memory biases;
+        int64[4] memory scores;
+        uint8 best;
+        for (uint256 i; i < x.length; i++) {
+            x[i] = int16(uint16(uint8(witness[2 * i])) | (uint16(uint8(witness[2 * i + 1])) << 8));
+        }
+        for (uint256 row; row < weights.length; row++) {
+            uint256 offset = 192 + 4 * row;
+            uint32 bias;
+            for (uint256 byteIndex; byteIndex < 4; byteIndex++) {
+                bias |= uint32(uint8(witness[offset + byteIndex])) << uint32(8 * byteIndex);
+            }
+            biases[row] = int32(bias);
+            scores[row] = int64(biases[row]);
+            for (uint256 column; column < x.length; column++) {
+                weights[row][column] = int8(uint8(witness[64 + 32 * row + column]));
+                scores[row] += int64(x[column]) * int64(weights[row][column]);
+            }
+            if (scores[row] > scores[best]) best = uint8(row);
+        }
+
+        journal.inputCommitment = sha256(abi.encode(keccak256("PULSETENSOR_EXACT_INPUT_V1"), uint32(1), x));
+        journal.modelCommitment =
+            sha256(abi.encode(keccak256("PULSETENSOR_EXACT_MODEL_V1"), uint32(1), weights, biases));
+        journal.classIndex = best;
+        journal.scores = scores;
+        journal.outputCommitment = settlement.computeExactInferenceOutputCommitment(best, scores);
+        assertEq(abi.encode(journal), journalBytes);
+    }
+
     function testPublicCommitmentHelpersMatchCanonicalDefinitions() public view {
         int64[4] memory scores = _scores();
         bytes32 expectedOutput =
@@ -965,7 +1006,7 @@ contract PulseTensorExactInferenceSettlementV1Test is Test {
     }
 
     function testRiscZeroAdapterBindsSelectorJournalAndBaseCodehash() public {
-        bytes4 selector = 0x73c457ba;
+        bytes4 selector = 0xe71e6620;
         bytes32 imageId = keccak256("risc-zero-image");
         bytes memory publicValues = abi.encode(bytes32("journal"), uint256(7));
         bytes memory seal = abi.encodePacked(selector, new bytes(8 * 32));
@@ -974,7 +1015,7 @@ contract PulseTensorExactInferenceSettlementV1Test is Test {
         bytes32 baseRuntimeCodeHash = address(base).codehash;
 
         vm.mockCall(
-            address(base), abi.encodeWithSelector(IRiscZeroVerifierWithSelector.VERSION.selector), abi.encode("2.3.1")
+            address(base), abi.encodeWithSelector(IRiscZeroVerifierWithSelector.VERSION.selector), abi.encode("3.0.0")
         );
         vm.expectRevert(RiscZeroVerifierAdapter.VerifierVersionMismatch.selector);
         new RiscZeroVerifierAdapter(address(base), selector, baseRuntimeCodeHash);
@@ -1008,7 +1049,7 @@ contract PulseTensorExactInferenceSettlementV1Test is Test {
     }
 
     function testRiscZeroAdapterConstructorAndProgramBoundariesFailClosed() public {
-        bytes4 selector = 0x73c457ba;
+        bytes4 selector = 0xe71e6620;
         bytes32 imageId = keccak256("risc-zero-image");
         bytes memory publicValues = abi.encode(bytes32("journal"), uint256(8));
         bytes memory seal = abi.encodePacked(selector, new bytes(8 * 32));
@@ -1038,13 +1079,21 @@ contract PulseTensorExactInferenceSettlementV1Test is Test {
         );
         new RiscZeroVerifierAdapter(address(base), wrongSelector, runtimeCodeHash);
 
+        bytes4 oldSelector = 0x73c457ba;
+        MockRiscZeroBaseVerifier wrongSetup =
+            new MockRiscZeroBaseVerifier(oldSelector, imageId, sha256(publicValues), keccak256(seal));
+        vm.expectRevert(
+            abi.encodeWithSelector(RiscZeroVerifierAdapter.VerifierSelectorMismatch.selector, selector, oldSelector)
+        );
+        new RiscZeroVerifierAdapter(address(wrongSetup), oldSelector, address(wrongSetup).codehash);
+
         RiscZeroVerifierAdapter adapter = new RiscZeroVerifierAdapter(address(base), selector, runtimeCodeHash);
         vm.expectRevert(RiscZeroVerifierAdapter.InvalidProgramId.selector);
         adapter.verify(bytes32(0), publicValues, seal);
     }
 
     function testRiscZeroBaseCodeDriftBlocksUseAndUnlocksImmediateFullRefund() public {
-        bytes4 selector = 0x73c457ba;
+        bytes4 selector = 0xe71e6620;
         bytes32 imageId = PROGRAM_ID;
         bytes memory placeholderJournal = abi.encode(bytes32("placeholder"));
         bytes memory placeholderSeal = abi.encodePacked(selector, new bytes(8 * 32));

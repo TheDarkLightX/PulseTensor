@@ -35,6 +35,10 @@ jobs:
       - name: Install locked frontend dependencies
         run: npm --prefix frontend ci
 
+      - name: Test the exact inference relation on the pinned Rust toolchain
+        working-directory: zk
+        run: cargo test --locked --features receipt
+
       - name: Run frontend assurance gate
         run: make verify-ui
 
