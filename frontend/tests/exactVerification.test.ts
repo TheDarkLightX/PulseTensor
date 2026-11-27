@@ -23,8 +23,8 @@ const BLOCK_HASH = `0x${"aa".repeat(32)}` as Hex;
 const PROGRAM = `0x${"11".repeat(32)}` as Hex;
 const RELATION = `0x${"22".repeat(32)}` as Hex;
 const PROOF_SYSTEM = `0x${"33".repeat(32)}` as Hex;
-const SELECTOR = "0x12345678" as Hex;
-const VERSION_HASH = keccak256(toBytes("3.0.0"));
+const SELECTOR = "0xe71e6620" as Hex;
+const VERSION_HASH = keccak256(toBytes("3.1.0"));
 
 function manifest() {
   return parseExactDeploymentManifest({
@@ -113,7 +113,7 @@ function client(adapterCode: Hex = ADAPTER_CODE, activatedAtBlock = 99n): ExactR
         case "RISC_ZERO_GROTH16_V3_SEAL_BYTES": return 260n;
         case "verifierRuntimeCodeHashMatches": return true;
         case "SELECTOR": return SELECTOR;
-        case "VERSION": return "3.0.0";
+        case "VERSION": return "3.1.0";
         case "verifierCodeAvailable": return adapterCode === ADAPTER_CODE;
         case "verifierAcceptsNewTasks": return adapterCode === ADAPTER_CODE;
         case "verifierCanSettleOpenTasks": return adapterCode === ADAPTER_CODE;
@@ -150,6 +150,20 @@ test("adapter drift blocks admission without blocking settlement identity and re
   assert.equal(result.identityVerified, true);
   assert.equal(result.admissionVerified, false);
   assert.match(result.readinessIssues.join("\n"), /adapter runtime code is unavailable or changed/);
+});
+
+test("superseded verifier manifests cannot authorize new tasks or settlement", async () => {
+  const stale = manifest();
+  stale.verifierConfigs[0].proofSelector = "0x73c457ba";
+  stale.verifierConfigs[0].verifierVersionHash = keccak256(toBytes("3.0.0"));
+  const result = await verifyExactDeployment(client(), stale);
+  assert.equal(result.admissionVerified, false);
+  assert.match(result.identityIssues.join("\n"), /supported verifier selector/);
+  assert.match(result.identityIssues.join("\n"), /supported verifier version hash/);
+  const settlement = await verifyExactLivePreflight(client(), stale, "settlement", { netuid: 1, configId: 7n });
+  assert.equal(settlement.actionVerified, false);
+  const recovery = await verifyExactLivePreflight(client(), stale, "recovery");
+  assert.equal(recovery.actionVerified, true);
 });
 
 test("deployment anchor rejects a verifier configuration activated after the checkpoint", async () => {

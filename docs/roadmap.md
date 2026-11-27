@@ -39,8 +39,8 @@ Exit criteria:
 - Implemented the Solidity half of a separate keyless ZK proof-backed settlement path whose public values bind the
   chain, contract, task, verifier configuration, model/input/output commitments, fee terms, provider, and beneficiary
   before value is credited.
-- Build the deterministic `PT_Q8_LINEAR_V1` guest, reproducible program ID, ABI golden vector, and genuine pinned
-  Groth16 receipt; the Solidity contract alone is not a deployable correctness claim.
+- Build and check the deterministic `PT_Q8_LINEAR_V1` guest against the Solidity ABI. See the [guest runbook](../zk/README.md).
+- Reproduce the release image and replay a genuine settlement across the 3.1.0 verifier on PulseChain testnet.
 - Run the direct verifier adapter and genuine proof canary on PulseChain testnet before adding the ZK lane to the
   production deployment script.
 - Deploy contracts to Pulsechain testnet.

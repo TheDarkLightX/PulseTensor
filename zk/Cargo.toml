@@ -1,0 +1,31 @@
+[package]
+name = "pulsetensor-exact"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.88"
+license = "MIT"
+publish = false
+default-run = "pulsetensor-exact"
+
+[workspace]
+members = ["guest"]
+default-members = ["."]
+resolver = "2"
+
+[dependencies]
+bincode = { version = "=1.3.3", optional = true }
+hex = "=0.4.3"
+hex-literal = "=0.4.1"
+risc0-zkvm = { version = "=3.1.0", default-features = false, features = ["std", "disable-dev-mode"], optional = true }
+sha2 = "=0.10.9"
+
+[features]
+receipt = ["dep:bincode", "dep:risc0-zkvm"]
+
+[[bin]]
+name = "check-receipt"
+path = "src/bin/check-receipt.rs"
+required-features = ["receipt"]
+
+[profile.release]
+overflow-checks = true

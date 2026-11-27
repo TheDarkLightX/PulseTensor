@@ -163,7 +163,7 @@ if not matrix_path.exists():
     fail(f"security control matrix not found: {matrix_path}")
 matrix = json.loads(matrix_path.read_text(encoding="utf-8"))
 compiler_policy = matrix.get("solidity_compiler_policy") or {}
-min_solc_version = str(compiler_policy.get("min_solc_version", "0.8.36"))
+min_solc_version = str(compiler_policy.get("min_solc_version", "0.8.39"))
 fail_on_low = bool(compiler_policy.get("fail_on_low_severity", True))
 official_branch_source = "https://raw.githubusercontent.com/ethereum/solidity/develop/docs/"
 configured_bugs_source = str(compiler_policy.get("bugs_source", official_branch_source)).rstrip("/") + "/"
