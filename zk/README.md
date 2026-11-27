@@ -78,3 +78,31 @@ IDs with the toolchain above and the committed lockfile. The program SHA-256 was
 The fixture produced a genuine composite receipt in 3m27s of local wall time. With development mode disabled,
 the checker accepted the receipt against the 736-byte fixture and rejected both a changed expected journal and a
 changed image ID. This benchmark covers the fixed Q8 relation and local composite proving.
+
+The same fixture produced a genuine Groth16 receipt in 6m10s on that CPU. The patched direct verifier and
+PulseTensor adapter accepted its seal on a local EVM, using 237,185 gas for the verifier call in the test. An
+altered image ID and an altered journal were both rejected. This is a local measurement of verification only.
+
+## Replay a funded task locally
+
+Use the pinned Foundry and Solidity versions in `scripts/toolchain.lock`. Install the project’s `forge-std`
+dependency and use the upstream RISC Zero Ethereum checkout at `ff30da77ba4afdd496290ebebedb205348b15d83`
+with its OpenZeppelin submodule initialized. From the repository root:
+
+```bash
+bash zk/replay-funded-task.sh /path/to/risc0-ethereum
+```
+
+The replay verifies the checked-in Groth16 receipt against the pinned image and journal. It then creates a local
+task with fake native currency, rebuilds its settlement journal, submits the extracted seal, and checks both
+withdrawals. This uses the real Core, settlement, adapter, and direct Groth16 verifier contracts. It is independent
+of PulseChain RPCs and public testnet balances.
+
+The local fixture funded 10,001 wei, credited 8,801 wei to the beneficiary and 1,200 wei to the treasury, and
+withdrew both amounts. The proof took 5m57s of CPU wall time. The proof submission used 412,884 gas before
+transaction and calldata charges. Deploying the four contracts in the local fixture used about 9.52 million gas
+before transaction overhead or governance setup. These measurements are for the pinned local test profile.
+
+To generate a new journal from the same local scenario, give the replay script a second argument with a new binary
+output path. Pass that file to `prepare` with the committed witness, then prove the resulting job with `--receipt-kind
+groth16` and verify the receipt with `check-receipt`.

@@ -153,9 +153,10 @@ does not guarantee unlinkability from funding flows or network metadata.
 
 ## Mainnet Blockers
 
-- Freeze and review a real deterministic inference guest and its canonical semantic input/model encoders.
-- Reproduce the guest build and publish source, toolchain/container, ELF/image, and recipe hashes.
-- Generate and independently validate a genuine receipt through the admitted direct verifier.
+- Independently review the implemented deterministic guest and canonical input/model encoders.
+- Publish and independently reproduce the release guest build with source, toolchain/container, ELF/image, and recipe hashes.
+- Validate the pinned Groth16 receipt through the verifier admitted on PulseChain testnet. The local verification and
+  replay are documented in [the guest runbook](../zk/README.md).
 - Complete an external security review of contract, adapter, guest, manifest workflow, and operator assumptions.
 - Run sustained PulseChain testnet canaries, including verifier disappearance/replacement, revocation, expiry, replay,
   malformed journal, malformed seal, fee rounding, and claim-recipient failure cases.

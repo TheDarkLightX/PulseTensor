@@ -53,6 +53,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
 
+      - name: Replay funded exact settlement with a genuine Groth16 proof
+        run: |
+          checkout="$RUNNER_TEMP/risc0-ethereum-3.1.0"
+          git clone --depth 1 --branch v3.1.0 https://github.com/risc0/risc0-ethereum.git "$checkout"
+          git -C "$checkout" submodule update --init --depth 1 lib/openzeppelin-contracts
+          bash zk/replay-funded-task.sh "$checkout"
+
       - name: Retain review evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
