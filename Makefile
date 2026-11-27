@@ -1,4 +1,4 @@
-.PHONY: build test fmt deploy preset synth-goal-frontier synth-tokenomics-frontier synth-participant-regret-frontier ui-install ui-dev ui-build ui-preview ui-hash ui-release ui-ipfs verify-private verify-goal-frontier verify-tokenomics-frontier verify-participant-regret-frontier verify-compiler-bugs verify-deploy-size verify-local-e2e verify-requirements-traceability verify-security-controls verify-security-antipatterns verify-solhint verify-slither-exclusions verify-slither verify-mythril-allowlist verify-mythril verify-fuzz-invariant verify-echidna-harness verify-echidna write-assurance-evidence verify-assurance-evidence verify-artifacts-security verify-artifacts-release verify-artifacts-complete verify-security verify-all verify-dev verify-release verify-release-full verify-complete
+.PHONY: build test fmt deploy preset synth-goal-frontier synth-tokenomics-frontier synth-participant-regret-frontier ui-install ui-dev ui-build ui-preview ui-test ui-reproducible ui-release-test ui-exact-manifest ui-hash ui-release ui-ipfs verify-ui verify-private verify-goal-frontier verify-tokenomics-frontier verify-participant-regret-frontier verify-compiler-bugs verify-deploy-size verify-local-e2e verify-requirements-traceability verify-security-controls verify-security-antipatterns verify-solhint verify-slither-exclusions verify-slither verify-mythril-allowlist verify-mythril verify-fuzz-invariant verify-echidna-harness verify-echidna write-assurance-evidence verify-assurance-evidence verify-artifacts-security verify-artifacts-release verify-artifacts-complete verify-security verify-all verify-dev verify-release verify-release-full verify-complete
 
 build:
 	forge build
@@ -36,6 +36,18 @@ ui-build:
 ui-preview:
 	npm --prefix frontend run preview
 
+ui-test:
+	npm --prefix frontend test
+
+ui-reproducible:
+	npm --prefix frontend run reproducible
+
+ui-release-test:
+	bash scripts/test_frontend_release_hardening.sh
+
+ui-exact-manifest:
+	npm --prefix frontend run prepare-exact-manifest -- --input "$${INPUT:?set INPUT to candidate JSON}" --output "$${OUTPUT:?set OUTPUT to canonical JSON}" --receipt "$${RECEIPT:?set RECEIPT to digest receipt JSON}"
+
 ui-hash:
 	bash scripts/hash_frontend_dist.sh
 
@@ -44,6 +56,14 @@ ui-release:
 
 ui-ipfs:
 	bash scripts/publish_frontend_ipfs.sh
+
+verify-ui:
+	npm --prefix frontend test
+	npm --prefix frontend run check
+	bash scripts/test_frontend_release_hardening.sh
+	npm --prefix frontend run build
+	bash scripts/check_frontend_dist_portable.sh frontend/dist
+	npm --prefix frontend run reproducible
 
 verify-private:
 	bash scripts/check_private_boundaries.sh

@@ -1,0 +1,6 @@
+{
+  "schema": "pulsetensor/exact-inference-deployment-registry/v1",
+  "status": "prelaunch",
+  "deployments": [],
+  "notice": "No exact-inference deployment is endorsed until a genuine guest receipt, reviewed verifier manifest, audit evidence, and PulseChain testnet canary are published."
+}

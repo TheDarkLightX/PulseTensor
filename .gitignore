@@ -15,3 +15,5 @@ runs/
 node_modules/
 frontend/dist/
 *.tsbuildinfo
+/zk/target/
+/zk/guest/elfs/

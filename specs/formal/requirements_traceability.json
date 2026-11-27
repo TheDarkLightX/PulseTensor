@@ -1364,6 +1364,11 @@
         {
           "kind": "test",
           "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
+          "function": "testRustGuestJournalMatchesSolidityAbi"
+        },
+        {
+          "kind": "test",
+          "file": "test/PulseTensorExactInferenceSettlementV1.t.sol",
           "function": "testPublicCommitmentHelpersMatchCanonicalDefinitions"
         }
       ],

@@ -1,7 +1,8 @@
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
   type Abi,
   type Address,
+  type Hex,
   createPublicClient,
   createWalletClient,
   custom,
@@ -9,8 +10,10 @@ import {
   isAddress,
   parseEther
 } from "viem";
+import { ExactInferenceConsole } from "./components/ExactInferenceConsole.tsx";
 import { pulsetensorCoreAbi, pulsetensorSettlementAbi } from "./lib/abi";
 import {
+  buildSafeExplorerTransactionUrl,
   chainPresets,
   defaultChainConfig,
   loadRuntimeConfigFromUrl,
@@ -23,8 +26,9 @@ import { formatPls, formatShortHash, toHexChainId } from "./lib/format";
 
 type StatusKind = "info" | "success" | "error";
 type StatusState = { kind: StatusKind; message: string };
-type AppPanel = "core" | "settlement";
+type AppPanel = "core" | "settlement" | "exact";
 type Bytes32Hex = `0x${string}`;
+type TransactionContext = { hash: Hex; explorerUrl: string | null };
 
 type SubnetSnapshot = {
   exists: boolean;
@@ -211,6 +215,21 @@ function findPresetId(config: RuntimeConfig): string {
   return preset?.presetId ?? "custom";
 }
 
+function serializeIntent(value: unknown): string {
+  return JSON.stringify(value, (_key, item) =>
+    typeof item === "bigint" ? { __pulsetensorBigInt: item.toString() } : item
+  );
+}
+
+function requestAccountAddress(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (typeof value === "object" && value !== null && "address" in value) {
+    const address = (value as { address?: unknown }).address;
+    return typeof address === "string" ? address : null;
+  }
+  return null;
+}
+
 function App() {
   const [activePanel, setActivePanel] = useState<AppPanel>("core");
   const [config, setConfig] = useState<RuntimeConfig>(() => {
@@ -226,8 +245,9 @@ function App() {
     message:
       "Static frontend only. No backend. All reads/writes go directly wallet + RPC to PulseChain contracts."
   });
-  const [lastTxHash, setLastTxHash] = useState<`0x${string}` | null>(null);
+  const [lastTransaction, setLastTransaction] = useState<TransactionContext | null>(null);
   const [isPendingTx, setIsPendingTx] = useState(false);
+  const genericWriteInFlight = useRef(false);
 
   const [netuidInput, setNetuidInput] = useState("1");
   const [nextNetuid, setNextNetuid] = useState<number | null>(null);
@@ -293,26 +313,58 @@ function App() {
   const [claimSettlementRewardAmount, setClaimSettlementRewardAmount] = useState("0.1");
   const [claimBondRefundAmount, setClaimBondRefundAmount] = useState("0.1");
 
+  const genericUiIntentKey = serializeIntent({
+    activePanel,
+    presetId,
+    config,
+    account: account?.toLowerCase() ?? null,
+    walletChainId,
+    netuidInput,
+    subnetCurrentEpoch: subnetSnapshot.currentEpoch,
+    createSubnetForm,
+    stakeAmount,
+    removeStakeAmount,
+    fundEmissionAmount,
+    claimRewardAmount,
+    mechidInput,
+    settlementLoadedEpoch: settlementSnapshot.loadedEpoch,
+    policyForm,
+    commitBatchForm,
+    finalizeEpochInput,
+    settleLeafForm,
+    challengeReplayForm,
+    challengeDuplicateForm,
+    claimSettlementRewardAmount,
+    claimBondRefundAmount
+  });
+  const genericUiIntentKeyRef = useRef(genericUiIntentKey);
+  genericUiIntentKeyRef.current = genericUiIntentKey;
+
   const coreAddress = isAddress(config.coreAddress) ? (config.coreAddress as Address) : undefined;
   const settlementAddress = isAddress(config.settlementAddress)
     ? (config.settlementAddress as Address)
     : undefined;
   const walletChainMatches = walletChainId === config.chainId;
-  const txExplorerUrl = lastTxHash
-    ? config.explorerUrl
-      ? `${config.explorerUrl.replace(/\/$/, "")}/tx/${lastTxHash}`
-      : null
-    : null;
+  const txExplorerUrl = lastTransaction?.explorerUrl ?? null;
 
   const publicClient = useMemo(() => {
     return createPublicClient({
       chain: toViemChain(config),
-      transport: http(config.rpcUrl)
+      ccipRead: false,
+      transport: http(config.rpcUrl, {
+        fetchOptions: { credentials: "omit", redirect: "error", referrerPolicy: "no-referrer" }
+      })
     });
   }, [config]);
 
-  function setStatusState(kind: StatusKind, message: string): void {
+  function setStatusState(kind: StatusKind, message: string, transactionHash?: Hex): void {
     setStatus({ kind, message });
+    if (transactionHash) {
+      setLastTransaction({
+        hash: transactionHash,
+        explorerUrl: buildSafeExplorerTransactionUrl(config.explorerUrl, transactionHash)
+      });
+    }
   }
 
   function parseNetuid(): number {
@@ -377,6 +429,16 @@ function App() {
     } catch (error) {
       const maybe = error as { code?: number };
       if (maybe.code === 4902) {
+        const publicPreset = chainPresets.find(
+          (candidate) => candidate.chainId === config.chainId && candidate.rpcUrl === config.rpcUrl
+        );
+        if (!publicPreset) {
+          setStatusState(
+            "error",
+            "The wallet does not know this custom chain. Add it in the wallet manually: this dApp will not pass a custom or token-bearing RPC URL into persistent wallet settings."
+          );
+          return;
+        }
         try {
           await window.ethereum.request({
             method: "wallet_addEthereumChain",
@@ -699,37 +761,120 @@ function App() {
       setStatusState("error", `Wallet chain mismatch. Switch wallet to ${config.chainId} first.`);
       return;
     }
+    if (genericWriteInFlight.current || isPendingTx) {
+      setStatusState("error", "Another transaction is already in progress.");
+      return;
+    }
 
+    const expectedProvider = window.ethereum;
+    const expectedConfig = { ...config };
+    const expectedAddress = address;
+    const expectedAccount = account;
+    const expectedArgs = args;
+    const expectedValue = value;
+    const expectedUiIntentKey = genericUiIntentKey;
+    const expectedTransactionIntentKey = serializeIntent({
+      chainId: expectedConfig.chainId,
+      address: expectedAddress.toLowerCase(),
+      account: expectedAccount.toLowerCase(),
+      functionName,
+      args: expectedArgs,
+      value: expectedValue
+    });
+    const assertCurrentIntent = (): void => {
+      if (
+        window.ethereum !== expectedProvider ||
+        genericUiIntentKeyRef.current !== expectedUiIntentKey ||
+        serializeIntent({
+          chainId: expectedConfig.chainId,
+          address: expectedAddress.toLowerCase(),
+          account: expectedAccount.toLowerCase(),
+          functionName,
+          args: expectedArgs,
+          value: expectedValue
+        }) !== expectedTransactionIntentKey
+      ) {
+        throw new Error("Wallet, route, account, or transaction fields changed during preflight; review and submit again.");
+      }
+    };
+
+    genericWriteInFlight.current = true;
     setIsPendingTx(true);
+    let submittedHash: Hex | undefined;
     try {
-      const walletClient = createWalletClient({
-        chain: toViemChain(config),
-        transport: custom(window.ethereum)
+      assertCurrentIntent();
+      const expectedChain = toViemChain(expectedConfig);
+      const injectedPublicClient = createPublicClient({
+        chain: expectedChain,
+        ccipRead: false,
+        transport: custom(expectedProvider)
       });
-      setStatusState("info", `${label}: awaiting wallet confirmation.`);
+      const walletClient = createWalletClient({
+        chain: expectedChain,
+        transport: custom(expectedProvider)
+      });
+      const assertInjectedWalletContext = async (): Promise<void> => {
+        const [injectedChainId, walletChainIdNow, injectedAccounts] = await Promise.all([
+          injectedPublicClient.getChainId(),
+          walletClient.getChainId(),
+          walletClient.getAddresses()
+        ]);
+        if (injectedChainId !== expectedConfig.chainId || walletChainIdNow !== expectedConfig.chainId) {
+          throw new Error(
+            `Connected wallet changed chain; expected ${expectedConfig.chainId}, received ${injectedChainId}/${walletChainIdNow}`
+          );
+        }
+        if (!injectedAccounts[0] || injectedAccounts[0].toLowerCase() !== expectedAccount.toLowerCase()) {
+          throw new Error("The active connected account changed; reconnect before signing.");
+        }
+        assertCurrentIntent();
+      };
+      await assertInjectedWalletContext();
 
       const simulation = await (
-        publicClient as unknown as { simulateContract: (request: unknown) => Promise<{ request: unknown }> }
+        injectedPublicClient as unknown as { simulateContract: (request: unknown) => Promise<{ request: unknown }> }
       ).simulateContract({
-        account,
-        address,
+        account: expectedAccount,
+        address: expectedAddress,
         abi,
         functionName,
-        args,
-        value
+        args: expectedArgs,
+        value: expectedValue
       });
+      const simulatedRequest = simulation.request as {
+        account?: unknown;
+        address?: unknown;
+        functionName?: unknown;
+        args?: unknown;
+        value?: unknown;
+      };
+      const simulatedAccount = requestAccountAddress(simulatedRequest.account);
+      if (
+        typeof simulatedRequest.address !== "string" ||
+        simulatedRequest.address.toLowerCase() !== expectedAddress.toLowerCase() ||
+        simulatedAccount?.toLowerCase() !== expectedAccount.toLowerCase() ||
+        simulatedRequest.functionName !== functionName ||
+        serializeIntent(simulatedRequest.args) !== serializeIntent(expectedArgs) ||
+        simulatedRequest.value !== expectedValue
+      ) {
+        throw new Error("Simulated transaction request does not match the captured transaction intent.");
+      }
+      await assertInjectedWalletContext();
+      setStatusState("info", `${label}: preflight verified; awaiting wallet confirmation.`);
       const txHash = (await (
         walletClient as unknown as { writeContract: (request: unknown) => Promise<`0x${string}`> }
       ).writeContract(simulation.request)) as `0x${string}`;
 
-      setLastTxHash(txHash);
-      setStatusState("info", `${label}: submitted ${formatShortHash(txHash)}. Waiting for confirmation.`);
-      await publicClient.waitForTransactionReceipt({ hash: txHash });
-      setStatusState("success", `${label}: confirmed ${formatShortHash(txHash)}.`);
+      submittedHash = txHash;
+      setStatusState("info", `${label}: submitted ${formatShortHash(txHash)}. Waiting for confirmation.`, txHash);
+      const receipt = await injectedPublicClient.waitForTransactionReceipt({ hash: txHash });
+      if (receipt.status !== "success") throw new Error(`${label}: transaction reverted on-chain.`);
       if (afterConfirm) await afterConfirm();
+      setStatusState("success", `${label}: confirmed ${formatShortHash(txHash)}.`, txHash);
     } catch (error) {
-      setStatusState("error", asErrorMessage(error));
+      setStatusState("error", asErrorMessage(error), submittedHash);
     } finally {
+      genericWriteInFlight.current = false;
       setIsPendingTx(false);
     }
   }
@@ -1008,17 +1153,22 @@ function App() {
         </ul>
       </section>
 
-      <section className={`status status-${status.kind}`} role="status" aria-live="polite">
+      <section
+        className={`status status-${status.kind}`}
+        role={status.kind === "error" ? "alert" : "status"}
+        aria-live={status.kind === "error" ? "assertive" : "polite"}
+      >
         <span>{status.message}</span>
         {txExplorerUrl ? (
-          <a href={txExplorerUrl} target="_blank" rel="noreferrer">
-            View TX
+          <a href={txExplorerUrl} target="_blank" rel="noreferrer" title={lastTransaction?.hash}>
+            View Last TX
           </a>
         ) : null}
       </section>
 
       <section className="card">
         <h2>Network & Contracts</h2>
+        <fieldset className="fieldset-reset" disabled={isPendingTx}>
         <div className="form-grid">
           <label>
             Preset
@@ -1064,7 +1214,7 @@ function App() {
             />
           </label>
           <label>
-            Settlement Address
+            Optimistic Settlement Address
             <input
               value={config.settlementAddress}
               onChange={(event) => updateConfigField("settlementAddress", event.target.value)}
@@ -1073,7 +1223,22 @@ function App() {
           </label>
         </div>
         <div className="button-row">
-          <button type="button" onClick={() => saveConfig(config)}>
+          <button
+            type="button"
+            onClick={() => {
+              const saved = saveConfig(config);
+              setStatusState(
+                "info",
+                saved === "storage-unavailable"
+                  ? "Browser storage is unavailable; configuration remains session-only."
+                  : saved === "disabled-shared-origin"
+                  ? "Local config is disabled on shared IPFS path-gateway origins. Use an isolated CID subdomain or local build."
+                  : saved === "preset"
+                    ? "Saved public preset and contract addresses locally."
+                    : "Saved contract addresses only; custom RPC routes are never persisted."
+              );
+            }}
+          >
             Save Local Config
           </button>
           <button type="button" className="secondary" onClick={() => void refreshSubnet()}>
@@ -1083,13 +1248,18 @@ function App() {
             Refresh Settlement
           </button>
         </div>
+        </fieldset>
         <p className="note">
-          URL overrides: <code>?chainId=&amp;rpc=&amp;core=&amp;settlement=</code>
+          Manual targets are untrusted routing inputs. URL routing is limited to a built-in public preset, for example
+          <code>?preset=pulse-testnet</code>. RPC URLs and contract addresses are never accepted from query parameters;
+          custom RPC routes are session-only and are not persisted by this dApp. If a custom chain is unknown, add it
+          manually in the wallet so the dApp never copies a token-bearing RPC route into wallet storage.
         </p>
       </section>
 
       <section className="card">
         <h2>Wallet</h2>
+        <fieldset className="fieldset-reset" disabled={isPendingTx}>
         <div className="wallet-row">
           <button type="button" onClick={() => void connectWallet()}>
             {account ? "Reconnect Wallet" : "Connect Wallet"}
@@ -1112,11 +1282,14 @@ function App() {
             </button>
           </div>
         ) : null}
+        </fieldset>
       </section>
 
-      <section className="panel-tabs">
+      <nav className="panel-tabs" aria-label="PulseTensor console">
         <button
           type="button"
+          disabled={isPendingTx}
+          aria-pressed={activePanel === "core"}
           className={activePanel === "core" ? "tab-active" : "secondary"}
           onClick={() => setActivePanel("core")}
         >
@@ -1124,15 +1297,26 @@ function App() {
         </button>
         <button
           type="button"
+          disabled={isPendingTx}
+          aria-pressed={activePanel === "settlement"}
           className={activePanel === "settlement" ? "tab-active" : "secondary"}
           onClick={() => setActivePanel("settlement")}
         >
           Settlement Console
         </button>
-      </section>
+        <button
+          type="button"
+          disabled={isPendingTx}
+          aria-pressed={activePanel === "exact"}
+          className={activePanel === "exact" ? "tab-active" : "secondary"}
+          onClick={() => setActivePanel("exact")}
+        >
+          Exact ZK Marketplace (Prelaunch)
+        </button>
+      </nav>
 
       {activePanel === "core" ? (
-        <>
+        <fieldset className="fieldset-reset" disabled={isPendingTx}>
           <section className="card">
             <h2>Core Monitor</h2>
             <div className="inline-form">
@@ -1438,9 +1622,9 @@ function App() {
               </button>
             </div>
           </section>
-        </>
-      ) : (
-        <>
+        </fieldset>
+      ) : activePanel === "settlement" ? (
+        <fieldset className="fieldset-reset" disabled={isPendingTx}>
           <section className="card">
             <h2>Settlement Monitor</h2>
             <div className="inline-form">
@@ -1890,7 +2074,22 @@ function App() {
               </label>
             </div>
           </section>
-        </>
+        </fieldset>
+      ) : (
+        <ExactInferenceConsole
+          config={config}
+          account={account}
+          walletChainMatches={walletChainMatches}
+          isPendingTx={isPendingTx}
+          onPendingChange={setIsPendingTx}
+          onStatus={setStatusState}
+          onTransaction={(hash) => {
+            setLastTransaction({
+              hash,
+              explorerUrl: buildSafeExplorerTransactionUrl(config.explorerUrl, hash)
+            });
+          }}
+        />
       )}
     </main>
   );

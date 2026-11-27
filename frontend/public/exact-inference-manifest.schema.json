@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:pulsetensor:schema:exact-inference-deployment-manifest:v1",
+  "title": "PulseTensor Exact-Inference Deployment Manifest V1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "chainId",
+    "sourceCommit",
+    "deploymentAnchor",
+    "core",
+    "exactSettlement",
+    "verifierConfigs",
+    "evidence"
+  ],
+  "properties": {
+    "schema": { "const": "pulsetensor/exact-inference-deployment-manifest/v1" },
+    "chainId": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+    "sourceCommit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "deploymentAnchor": { "$ref": "#/$defs/deploymentAnchor" },
+    "core": { "$ref": "#/$defs/codeIdentity" },
+    "exactSettlement": { "$ref": "#/$defs/codeIdentity" },
+    "verifierConfigs": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 1,
+      "items": { "$ref": "#/$defs/verifierConfig" }
+    },
+    "evidence": { "$ref": "#/$defs/evidence" }
+  },
+  "$defs": {
+    "uint64String": {
+      "type": "string",
+      "maxLength": 20,
+      "pattern": "^(?:0|[1-9][0-9]{0,18}|1[0-7][0-9]{18}|18[0-3][0-9]{17}|184[0-3][0-9]{16}|1844[0-5][0-9]{15}|18446[0-6][0-9]{14}|184467[0-3][0-9]{13}|1844674[0-3][0-9]{12}|184467440[0-6][0-9]{10}|1844674407[0-2][0-9]{9}|18446744073[0-6][0-9]{8}|1844674407370[0-8][0-9]{6}|18446744073709[0-4][0-9]{5}|184467440737095[0-4][0-9]{4}|18446744073709550[0-9]{3}|18446744073709551[0-5][0-9]{2}|1844674407370955160[0-9]|1844674407370955161[0-4]|18446744073709551615)$"
+    },
+    "nonzeroUint64String": {
+      "allOf": [
+        { "$ref": "#/$defs/uint64String" },
+        { "not": { "const": "0" } }
+      ]
+    },
+    "address": {
+      "type": "string",
+      "pattern": "^0x[0-9a-fA-F]{40}$",
+      "description": "The runtime parser additionally enforces EIP-55 when alphabetic hex digits use mixed case."
+    },
+    "nonzeroAddress": {
+      "type": "string",
+      "pattern": "^0x(?!0{40}$)[0-9a-fA-F]{40}$",
+      "description": "Nonzero EVM address. The runtime parser additionally enforces EIP-55 for mixed-case input."
+    },
+    "bytes32": {
+      "type": "string",
+      "pattern": "^0x[0-9a-fA-F]{64}$"
+    },
+    "nonzeroBytes32": {
+      "type": "string",
+      "pattern": "^0x(?!0{64}$)[0-9a-fA-F]{64}$"
+    },
+    "bytes4": {
+      "type": "string",
+      "pattern": "^0x[0-9a-fA-F]{8}$"
+    },
+    "nonzeroBytes4": {
+      "type": "string",
+      "pattern": "^0x(?!0{8}$)[0-9a-fA-F]{8}$"
+    },
+    "evidenceUri": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2048,
+      "format": "uri",
+      "pattern": "^(?!.*%(?![0-9a-fA-F]{2}))(?!.*%(?:0[0-9a-fA-F]|1[0-9a-fA-F]|20|7[fF]|[cC]2%(?:8[0-9a-fA-F]|9[0-9a-fA-F]|[aA]0)|[eE]1%9[aA]%80|[eE]2%80%(?:8[0-9aA]|[aA](?:8|9|[fF]))|[eE]2%81%9[fF]|[eE]3%80%80|[eE][fF]%[bB][bB]%[bB][fF]))(?:https://|ipfs://)(?![^/]*@)(?!/)[^/\\s\\u0000-\\u001f\\u007f-\\u009f?#\\\\]+(?:/[^\\s\\u0000-\\u001f\\u007f-\\u009f?#\\\\]*)?$",
+      "description": "Explicit credential-free HTTPS or IPFS URI with nonempty authority and no raw query, fragment, backslash, whitespace, control character, malformed percent escape, or percent-encoded Unicode whitespace/control sequence. Runtime WHATWG URL parsing and decodeURIComponent validation remain authoritative."
+    },
+    "codeIdentity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["address", "runtimeCodeHash"],
+      "properties": {
+        "address": { "$ref": "#/$defs/nonzeroAddress" },
+        "runtimeCodeHash": { "$ref": "#/$defs/nonzeroBytes32" }
+      }
+    },
+    "deploymentAnchor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["blockNumber", "blockHash", "minimumConfirmations"],
+      "properties": {
+        "blockNumber": { "$ref": "#/$defs/uint64String" },
+        "blockHash": { "$ref": "#/$defs/nonzeroBytes32" },
+        "minimumConfirmations": { "type": "integer", "minimum": 1, "maximum": 100000 }
+      }
+    },
+    "verifierConfig": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "netuid",
+        "configId",
+        "adapter",
+        "adapterRuntimeCodeHash",
+        "baseVerifier",
+        "verifierRuntimeCodeHash",
+        "programId",
+        "relationId",
+        "proofSystemId",
+        "proofSelector",
+        "verifierVersionHash",
+        "proofBytes",
+        "protocolFeeBps",
+        "treasury"
+      ],
+      "properties": {
+        "netuid": { "type": "integer", "minimum": 0, "maximum": 65535 },
+        "configId": { "$ref": "#/$defs/nonzeroUint64String" },
+        "adapter": { "$ref": "#/$defs/nonzeroAddress" },
+        "adapterRuntimeCodeHash": { "$ref": "#/$defs/nonzeroBytes32" },
+        "baseVerifier": { "$ref": "#/$defs/nonzeroAddress" },
+        "verifierRuntimeCodeHash": { "$ref": "#/$defs/nonzeroBytes32" },
+        "programId": { "$ref": "#/$defs/nonzeroBytes32" },
+        "relationId": { "$ref": "#/$defs/nonzeroBytes32" },
+        "proofSystemId": { "$ref": "#/$defs/nonzeroBytes32" },
+        "proofSelector": { "$ref": "#/$defs/nonzeroBytes4" },
+        "verifierVersionHash": { "$ref": "#/$defs/nonzeroBytes32" },
+        "proofBytes": { "type": "integer", "minimum": 4, "maximum": 16384 },
+        "protocolFeeBps": { "type": "integer", "minimum": 0, "maximum": 3000 },
+        "treasury": { "$ref": "#/$defs/address" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "protocolFeeBps": { "const": 0 } },
+            "required": ["protocolFeeBps"]
+          },
+          "then": {
+            "properties": {
+              "treasury": { "const": "0x0000000000000000000000000000000000000000" }
+            }
+          },
+          "else": {
+            "properties": {
+              "treasury": { "$ref": "#/$defs/nonzeroAddress" }
+            }
+          }
+        }
+      ]
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "guestSourceUri",
+        "guestSourceSha256",
+        "guestBuildRecipeUri",
+        "guestBuildRecipeSha256",
+        "genuineReceiptUri",
+        "genuineReceiptSha256",
+        "auditReportUri",
+        "auditReportSha256",
+        "pulsechainTestnetReceiptUri",
+        "pulsechainTestnetReceiptSha256"
+      ],
+      "properties": {
+        "guestSourceUri": { "$ref": "#/$defs/evidenceUri" },
+        "guestSourceSha256": { "$ref": "#/$defs/nonzeroBytes32" },
+        "guestBuildRecipeUri": { "$ref": "#/$defs/evidenceUri" },
+        "guestBuildRecipeSha256": { "$ref": "#/$defs/nonzeroBytes32" },
+        "genuineReceiptUri": { "$ref": "#/$defs/evidenceUri" },
+        "genuineReceiptSha256": { "$ref": "#/$defs/nonzeroBytes32" },
+        "auditReportUri": { "$ref": "#/$defs/evidenceUri" },
+        "auditReportSha256": { "$ref": "#/$defs/nonzeroBytes32" },
+        "pulsechainTestnetReceiptUri": { "$ref": "#/$defs/evidenceUri" },
+        "pulsechainTestnetReceiptSha256": { "$ref": "#/$defs/nonzeroBytes32" }
+      }
+    }
+  }
+}

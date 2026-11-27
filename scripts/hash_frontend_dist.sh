@@ -1,53 +1,55 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-DIST_DIR="${ROOT_DIR}/frontend/dist"
+ROOT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)"
+FRONTEND_DIR="${ROOT_DIR}/frontend"
+DIST_DIR="${FRONTEND_DIR}/dist"
 OUTPUT_DIR="${1:-${ROOT_DIR}/runs/frontend_release}"
 
+if [[ $# -gt 1 ]]; then
+  echo "Usage: bash scripts/hash_frontend_dist.sh [fresh-output-directory]" >&2
+  exit 1
+fi
+
+source "${ROOT_DIR}/scripts/frontend_release_lib.sh"
+
+ROOT_DIR="$(realpath -e -- "${ROOT_DIR}")"
+FRONTEND_DIR="$(realpath -e -- "${FRONTEND_DIR}")"
+OUTPUT_DIR="$(frontend_release_claim_output_dir "${ROOT_DIR}" "${FRONTEND_DIR}" "${OUTPUT_DIR}")"
+frontend_release_acquire_output_lock "${OUTPUT_DIR}"
+
+WORK_DIR=""
+cleanup() {
+  local status=$?
+  trap - EXIT
+  if [[ -n "${WORK_DIR}" ]]; then
+    rm -rf -- "${WORK_DIR}"
+  fi
+  frontend_release_release_output_lock
+  exit "${status}"
+}
+trap cleanup EXIT
+WORK_DIR="$(mktemp -d)"
+
 if [[ ! -d "${DIST_DIR}" ]]; then
-  echo "Frontend dist directory not found: ${DIST_DIR}"
-  echo "Run: npm --prefix frontend run build"
+  frontend_release_fail "frontend dist directory not found: ${DIST_DIR}; run npm --prefix frontend run build"
   exit 1
 fi
 
-mkdir -p "${OUTPUT_DIR}"
+SNAPSHOT_DIST="${WORK_DIR}/snapshot/dist"
+frontend_release_create_dist_snapshot "${DIST_DIR}" "${SNAPSHOT_DIST}"
+bash "${ROOT_DIR}/scripts/check_frontend_dist_portable.sh" "${SNAPSHOT_DIST}"
+frontend_release_write_hash_evidence "${SNAPSHOT_DIST}" "${OUTPUT_DIR}"
+frontend_release_verify_manifest "${SNAPSHOT_DIST}" "${OUTPUT_DIR}/frontend_dist.sha256.txt"
 
-MANIFEST_FILE="${OUTPUT_DIR}/frontend_dist.sha256.txt"
-TREE_HASH_FILE="${OUTPUT_DIR}/frontend_dist.tree.sha256"
-STATS_FILE="${OUTPUT_DIR}/frontend_dist.stats.tsv"
+tree_hash="$(frontend_release_read_named_sha256 "${OUTPUT_DIR}/frontend_dist.tree.sha256" frontend_dist.sha256.txt)"
+file_count="$(wc -l < "${OUTPUT_DIR}/frontend_dist.sha256.txt" | tr -d ' ')"
+total_bytes="$(awk -F '\t' '{sum += $1} END {print sum + 0}' "${OUTPUT_DIR}/frontend_dist.stats.tsv")"
 
-manifest_tmp="$(mktemp)"
-stats_tmp="$(mktemp)"
-trap 'rm -f "${manifest_tmp}" "${stats_tmp}"' EXIT
-
-while IFS= read -r -d '' artifact_file; do
-  rel_path="${artifact_file#${DIST_DIR}/}"
-  artifact_hash="$(sha256sum "${artifact_file}" | awk '{print $1}')"
-  artifact_size="$(stat -c %s "${artifact_file}")"
-
-  printf '%s  %s\n' "${artifact_hash}" "${rel_path}" >> "${manifest_tmp}"
-  printf '%s\t%s\n' "${artifact_size}" "${rel_path}" >> "${stats_tmp}"
-done < <(find "${DIST_DIR}" -type f -print0 | LC_ALL=C sort -z)
-
-if [[ ! -s "${manifest_tmp}" ]]; then
-  echo "No frontend artifacts found under: ${DIST_DIR}"
-  exit 1
-fi
-
-mv "${manifest_tmp}" "${MANIFEST_FILE}"
-sort -n "${stats_tmp}" > "${STATS_FILE}"
-
-tree_hash="$(sha256sum "${MANIFEST_FILE}" | awk '{print $1}')"
-printf '%s  frontend_dist.sha256.txt\n' "${tree_hash}" > "${TREE_HASH_FILE}"
-
-file_count="$(wc -l < "${MANIFEST_FILE}" | tr -d ' ')"
-total_bytes="$(awk -F '\t' '{sum += $1} END {print sum + 0}' "${STATS_FILE}")"
-
-echo "Frontend artifact hash manifest written:"
-echo "  manifest: ${MANIFEST_FILE}"
-echo "  tree-hash: ${TREE_HASH_FILE}"
-echo "  stats: ${STATS_FILE}"
+echo "Frontend artifact hash manifest written from one private snapshot:"
+echo "  manifest: ${OUTPUT_DIR}/frontend_dist.sha256.txt"
+echo "  tree-hash: ${OUTPUT_DIR}/frontend_dist.tree.sha256"
+echo "  stats: ${OUTPUT_DIR}/frontend_dist.stats.tsv"
 echo "FRONTEND_DIST_TREE_SHA256=${tree_hash}"
 echo "FRONTEND_DIST_FILE_COUNT=${file_count}"
 echo "FRONTEND_DIST_TOTAL_BYTES=${total_bytes}"

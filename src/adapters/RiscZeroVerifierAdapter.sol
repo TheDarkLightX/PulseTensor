@@ -12,7 +12,8 @@ import {IRiscZeroVerifierWithSelector} from "../interfaces/IRiscZeroVerifier.sol
 ///      is a program commitment, not a secret or signing key.
 contract RiscZeroVerifierAdapter is IPulseTensorProofVerifier, IPulseTensorProofVerifierMetadata {
     bytes32 public constant RISC_ZERO_GROTH16_V3_PROOF_SYSTEM_ID = keccak256("PULSETENSOR_RISC_ZERO_GROTH16_V3");
-    bytes32 public constant RISC_ZERO_VERSION_HASH = keccak256("3.0.0");
+    bytes32 public constant RISC_ZERO_VERSION_HASH = keccak256("3.1.0");
+    bytes4 public constant RISC_ZERO_GROTH16_V3_1_SELECTOR = 0xe71e6620;
     uint256 public constant RISC_ZERO_GROTH16_V3_SEAL_BYTES = 4 + 8 * 32;
 
     error InvalidVerifier();
@@ -39,6 +40,9 @@ contract RiscZeroVerifierAdapter is IPulseTensorProofVerifier, IPulseTensorProof
 
         bytes4 actualSelector = IRiscZeroVerifierWithSelector(verifierAddress).SELECTOR();
         if (actualSelector != expectedSelector) revert VerifierSelectorMismatch(expectedSelector, actualSelector);
+        if (actualSelector != RISC_ZERO_GROTH16_V3_1_SELECTOR) {
+            revert VerifierSelectorMismatch(RISC_ZERO_GROTH16_V3_1_SELECTOR, actualSelector);
+        }
         if (keccak256(bytes(IRiscZeroVerifierWithSelector(verifierAddress).VERSION())) != RISC_ZERO_VERSION_HASH) {
             revert VerifierVersionMismatch();
         }
