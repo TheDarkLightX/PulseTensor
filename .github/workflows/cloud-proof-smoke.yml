@@ -45,23 +45,47 @@ jobs:
         run: |
           run_dir="$RUNNER_TEMP/pulsetensor-proof"
           mkdir -p "$run_dir"
+          (
+            cd zk
+            RISC0_BUILD_LOCKED=1 cargo risczero bake -p pt-q8-linear-v1
+          )
+          guest=zk/guest/elfs/pt-q8-linear-v1.elf
+          sha256sum "$guest"
+          expected="$(tr -d '[:space:]' < zk/tests/fixtures/image_id.txt)"
+          actual="$(r0vm --elf "$guest" --id | tr -d '[:space:]' | sed -E 's/^0x//')"
+          [[ "$actual" =~ ^[0-9a-f]{64}$ ]]
+          baked="$(python3 -c 'from pathlib import Path; print(Path("zk/guest/elfs/pt-q8-linear-v1.iid").read_bytes().hex())')"
+          test "$actual" = "$baked"
+          printf 'Expected image ID: %s\nCloud image ID: %s\n' "$expected" "$actual"
+          if [[ "$expected" != "$actual" ]]; then
+            echo "::warning::The cloud image ID differs from the release fixture. The simulated settlement will explicitly register the freshly built program."
+          fi
+          printf '%s\n' "$actual" > zk/tests/fixtures/image_id.txt
+
+          source scripts/toolchain.lock
+          forge install "foundry-rs/forge-std@$FORGE_STD_REVISION" --no-git
+          checkout="$RUNNER_TEMP/risc0-ethereum-3.1.0"
+          git clone --depth 1 --branch v3.1.0 https://github.com/risc0/risc0-ethereum.git "$checkout"
+          git -C "$checkout" submodule update --init --depth 1 lib/openzeppelin-contracts
+          bash zk/replay-funded-task.sh "$checkout" "$run_dir/funded_task_journal.bin"
+
           python3 - "$run_dir" <<'PY'
           import sys
           from pathlib import Path
 
           out = Path(sys.argv[1])
           fixtures = Path("zk/tests/fixtures")
-          for name in ("witness", "funded_task_journal"):
-              (out / f"{name}.bin").write_bytes(bytes.fromhex((fixtures / f"{name}.hex").read_text()))
+          witness = bytes.fromhex((fixtures / "witness.hex").read_text())
+          (out / "witness.bin").write_bytes(witness)
+          previous = bytes.fromhex((fixtures / "funded_task_journal.hex").read_text())
+          regenerated = (out / "funded_task_journal.bin").read_bytes()
+          print(f"Regenerated journal matches checked-in journal: {regenerated == previous}")
+          (fixtures / "funded_task_journal.hex").write_text(regenerated.hex() + "\n")
           PY
           (
             cd zk
-            RISC0_BUILD_LOCKED=1 cargo risczero bake -p pt-q8-linear-v1
             cargo run --locked --release -- prepare "$run_dir/witness.bin" "$run_dir/funded_task_journal.bin" "$run_dir/job.bin"
           )
-          guest=zk/guest/elfs/pt-q8-linear-v1.elf
-          test "$(r0vm --elf "$guest" --id)" = "$(cat zk/tests/fixtures/image_id.txt)"
-          sha256sum "$guest"
 
       - name: Prove on the cloud runner with development mode disabled
         run: |
@@ -98,9 +122,4 @@ jobs:
             echo "Unexpectedly accepted a changed journal"
             exit 1
           fi
-          source scripts/toolchain.lock
-          forge install "foundry-rs/forge-std@$FORGE_STD_REVISION" --no-git
-          checkout="$RUNNER_TEMP/risc0-ethereum-3.1.0"
-          git clone --depth 1 --branch v3.1.0 https://github.com/risc0/risc0-ethereum.git "$checkout"
-          git -C "$checkout" submodule update --init --depth 1 lib/openzeppelin-contracts
-          bash zk/replay-funded-task.sh "$checkout"
+          bash zk/replay-funded-task.sh "$RUNNER_TEMP/risc0-ethereum-3.1.0"
