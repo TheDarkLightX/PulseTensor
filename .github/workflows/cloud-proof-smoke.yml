@@ -1,0 +1,106 @@
+name: Fresh cloud Groth16 settlement
+
+on:
+  push:
+    branches: [codex/cloud-proof-smoke-20261128]
+    paths: [.github/workflows/cloud-proof-smoke.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  funded-proof:
+    name: Generate a fresh CPU proof and settle the funded fixture
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Check out the test branch
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+
+      - name: Install pinned Foundry
+        uses: foundry-rs/foundry-toolchain@b00af27efadbc7b4ca8b82abbd903b17cc874d2a
+        with:
+          version: v1.1.0
+
+      - name: Set up pinned proof tooling
+        run: |
+          uname -m
+          nproc
+          free -h
+          df -h .
+          docker info --format '{{.ServerVersion}}'
+          curl --fail --silent --show-error --location https://risczero.com/install --output "$RUNNER_TEMP/install-risc0.sh"
+          bash "$RUNNER_TEMP/install-risc0.sh"
+          export PATH="$HOME/.risc0/bin:$PATH"
+          rzup install rust 1.88.0
+          rzup install cargo-risczero 3.1.0
+          rzup install r0vm 3.1.0
+          printf '%s\n' "$HOME/.risc0/bin" >> "$GITHUB_PATH"
+          docker pull risczero/risc0-groth16-prover:v2026-10-20.1
+
+      - name: Build the guest and prepare the funded job
+        run: |
+          run_dir="$RUNNER_TEMP/pulsetensor-proof"
+          mkdir -p "$run_dir"
+          python3 - "$run_dir" <<'PY'
+          import sys
+          from pathlib import Path
+
+          out = Path(sys.argv[1])
+          fixtures = Path("zk/tests/fixtures")
+          for name in ("witness", "funded_task_journal"):
+              (out / f"{name}.bin").write_bytes(bytes.fromhex((fixtures / f"{name}.hex").read_text()))
+          PY
+          (
+            cd zk
+            RISC0_BUILD_LOCKED=1 cargo risczero bake -p pt-q8-linear-v1
+            cargo run --locked --release -- prepare "$run_dir/witness.bin" "$run_dir/funded_task_journal.bin" "$run_dir/job.bin"
+          )
+          guest=zk/guest/elfs/pt-q8-linear-v1.elf
+          test "$(r0vm --elf "$guest" --id)" = "$(cat zk/tests/fixtures/image_id.txt)"
+          sha256sum "$guest"
+
+      - name: Prove on the cloud runner with development mode disabled
+        run: |
+          run_dir="$RUNNER_TEMP/pulsetensor-proof"
+          /usr/bin/time -v env -u RISC0_DEV_MODE r0vm -v \
+            --elf zk/guest/elfs/pt-q8-linear-v1.elf \
+            --initial-input "$run_dir/job.bin" \
+            --receipt "$run_dir/new.receipt" --receipt-kind groth16
+          (
+            cd zk
+            env -u RISC0_DEV_MODE cargo run --quiet --locked --release --features receipt --bin check-receipt -- \
+              "$(cat tests/fixtures/image_id.txt)" "$run_dir/funded_task_journal.bin" "$run_dir/new.receipt" \
+              > "$run_dir/new.seal"
+          )
+          grep -Eq '^0xe71e6620[0-9a-f]{512}$' "$run_dir/new.seal"
+          sha256sum "$run_dir/new.receipt"
+
+      - name: Reject a changed journal and settle with the freshly generated receipt
+        run: |
+          run_dir="$RUNNER_TEMP/pulsetensor-proof"
+          python3 - "$run_dir" <<'PY'
+          import sys
+          from pathlib import Path
+
+          out = Path(sys.argv[1])
+          new = (out / "new.receipt").read_bytes()
+          journal = bytearray((out / "funded_task_journal.bin").read_bytes())
+          journal[-1] ^= 1
+          (out / "changed-journal.bin").write_bytes(journal)
+          Path("zk/tests/fixtures/funded_task_receipt.hex").write_text(new.hex() + "\n")
+          PY
+          if env -u RISC0_DEV_MODE zk/target/release/check-receipt \
+            "$(cat zk/tests/fixtures/image_id.txt)" "$run_dir/changed-journal.bin" "$run_dir/new.receipt"; then
+            echo "Unexpectedly accepted a changed journal"
+            exit 1
+          fi
+          source scripts/toolchain.lock
+          forge install "foundry-rs/forge-std@$FORGE_STD_REVISION" --no-git
+          checkout="$RUNNER_TEMP/risc0-ethereum-3.1.0"
+          git clone --depth 1 --branch v3.1.0 https://github.com/risc0/risc0-ethereum.git "$checkout"
+          git -C "$checkout" submodule update --init --depth 1 lib/openzeppelin-contracts
+          bash zk/replay-funded-task.sh "$checkout"
